@@ -1,4 +1,4 @@
-# GVault Android
+﻿# GVault Android
 
 Android client target for the GVault vault.
 
@@ -9,5 +9,3 @@ Initial architecture:
 - biometric/PIN quick unlock guarded by OS secure hardware where available;
 - offline-first encrypted local cache;
 - self-hosted sync API only.
-
-No TwoFAS Android source is copied because current 2FAS Pass Android is BUSL 1.1.

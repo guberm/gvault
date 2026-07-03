@@ -1,12 +1,8 @@
-# GVault
+﻿# GVault
 
 GVault is a clean-room, self-hosted password manager and identity vault monorepo.
 
 The project is inspired by the user value of RoboForm-like password, identity, card, address, autofill, generator, and sync flows. It does not copy RoboForm code, branding, UI, assets, or proprietary implementation.
-
-## Why not fork TwoFAS Pass directly?
-
-TwoFAS Pass is the closest open-source reference in the TwoFAS organization, but the current `2fas-pass-*` repositories use Business Source License 1.1. GVault is therefore implemented as a new codebase. TwoFAS remains an architectural reference for local-first storage, zero-knowledge sync, browser/mobile bridge ideas, and user-controlled synchronization.
 
 ## Apps
 
