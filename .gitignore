@@ -1,5 +1,8 @@
 node_modules/
 dist/
+apps/mobile/build/
+apps/desktop/**/bin/
+apps/desktop/**/obj/
 .env
 .env.*
 !.env.example

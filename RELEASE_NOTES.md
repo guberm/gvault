@@ -1,3 +1,17 @@
+# GVault 0.1.1
+
+Platform artifact release.
+
+Added:
+- Android APK build target and signed preview APK;
+- Windows x64 desktop EXE build target;
+- reproducible PowerShell build scripts for APK and EXE artifacts.
+
+Validation:
+- Android APK verified with `aapt dump badging` and `apksigner verify`;
+- Windows EXE published with `dotnet publish`;
+- full `npm run check` passed.
+
 # GVault 0.1.0
 
 Initial clean-room monorepo release.

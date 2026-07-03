@@ -1,6 +1,6 @@
 {
   "name": "gvault",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Self-hosted, zero-knowledge password manager and identity vault.",
   "license": "MIT",
@@ -11,11 +11,14 @@
   ],
   "scripts": {
     "build": "node scripts/build/build-all.mjs",
+    "build:android": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-android-apk.ps1",
+    "build:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-windows-exe.ps1",
     "check": "npm run build && npm run lint && npm test && npm run smoke:server",
     "lint": "node scripts/dev/lint.mjs",
     "test": "node --test tests/**/*.test.mjs",
     "smoke:server": "node tests/integration/server-smoke.mjs",
-    "release:notes": "node scripts/release/print-release-notes.mjs"
+    "release:notes": "node scripts/release/print-release-notes.mjs",
+    "build:linux": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-linux-desktop.ps1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

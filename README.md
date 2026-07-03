@@ -36,6 +36,17 @@ npm test
 npm run smoke:server
 ```
 
+## Platform artifacts
+
+```bash
+npm run build:android
+npm run build:windows
+```
+
+Outputs:
+- `apps/mobile/dist/gvault-android-v0.1.0.apk`
+- `apps/desktop/dist/windows-x64/GVault.exe`
+
 ## Self-hosted server
 
 ```bash
