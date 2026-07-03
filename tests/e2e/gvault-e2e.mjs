@@ -30,8 +30,14 @@ try {
   await chromeExtensionE2e(webPort);
   results.push("chrome extension e2e ok");
 
+  await edgeExtensionE2e(webPort);
+  results.push("edge extension e2e ok");
+
   await windowsClientE2e();
   results.push("windows client launch smoke ok");
+
+  await linuxClientE2e();
+  results.push("linux client wsl smoke ok");
 
   api.kill();
   await closeServer(web);
@@ -67,10 +73,20 @@ async function webClientE2e(webPort, serverPort) {
 }
 
 async function chromeExtensionE2e(webPort) {
-  const extensionPath = join(root, "apps/browser-extension/dist/chrome");
+  await chromiumExtensionE2e(webPort, join(root, "apps/browser-extension/dist/chrome"));
+}
+
+async function edgeExtensionE2e(webPort) {
+  const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+  if (!existsSync(edge)) return;
+  await chromiumExtensionE2e(webPort, join(root, "apps/browser-extension/dist/edge"), edge);
+}
+
+async function chromiumExtensionE2e(webPort, extensionPath, executablePath) {
   const userDataDir = await mkdtemp(join(tmpdir(), "gvault-ext-"));
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
+    executablePath,
     args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`]
   });
   try {
@@ -109,6 +125,27 @@ async function windowsClientE2e() {
   await new Promise((resolve) => setTimeout(resolve, 1500));
   assert.equal(child.killed, false);
   process.kill(child.pid);
+}
+
+async function linuxClientE2e() {
+  if (process.platform !== "win32") return;
+  const binary = join(root, "apps/desktop/dist/linux-x64/GVault");
+  if (!existsSync(binary)) throw new Error("Linux GVault binary missing");
+  const linuxPath = `/mnt/${binary[0].toLowerCase()}${binary.slice(2).replaceAll("\\", "/")}`;
+  await run("wsl.exe", ["bash", "-lc", `chmod +x '${linuxPath}' && '${linuxPath}' | grep -q 'GVault desktop preview'`]);
+}
+
+async function run(command, args) {
+  await new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("exit", (code) => {
+      code === 0 ? resolve() : reject(new Error(`${command} ${args.join(" ")} failed with ${code}: ${stderr}`));
+    });
+  });
 }
 
 async function serveStatic(dir, port) {

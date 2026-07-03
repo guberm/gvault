@@ -3,6 +3,17 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+function Invoke-AdbInstall {
+  param([string]$DeviceSerial, [string]$ApkPath)
+  $oldPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    return & adb -s $DeviceSerial install -r $ApkPath 2>&1
+  } finally {
+    $ErrorActionPreference = $oldPreference
+  }
+}
 $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
 $apk = "apps/mobile/dist/gvault-android-v$version.apk"
 if (-not (Test-Path -LiteralPath $apk)) {
@@ -15,7 +26,11 @@ if (-not $Serial) {
 }
 if (-not $Serial) { throw "No authorized Android device found." }
 
-adb -s $Serial install -r $apk | Tee-Object -Variable installOutput | Out-Null
+$installOutput = Invoke-AdbInstall $Serial $apk
+if (($installOutput -join "`n") -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE") {
+  adb -s $Serial uninstall com.gvault.app | Out-Null
+  $installOutput = Invoke-AdbInstall $Serial $apk
+}
 if (($installOutput -join "`n") -notmatch "Success") { throw "APK install failed: $installOutput" }
 
 adb -s $Serial shell am force-stop com.gvault.app | Out-Null
