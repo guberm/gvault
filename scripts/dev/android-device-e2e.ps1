@@ -5,7 +5,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Invoke-AdbInstall {
-  param([string]$DeviceSerial, [string]$ApkPath)
+  param(
+    [string]$DeviceSerial,
+    [string]$ApkPath
+  )
+
   $oldPreference = $ErrorActionPreference
   $ErrorActionPreference = "Continue"
   try {
@@ -14,6 +18,7 @@ function Invoke-AdbInstall {
     $ErrorActionPreference = $oldPreference
   }
 }
+
 $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
 $apk = "apps/mobile/dist/gvault-android-v$version.apk"
 if (-not (Test-Path -LiteralPath $apk)) {
@@ -24,24 +29,39 @@ if (-not $Serial) {
   $devices = adb devices -l | Select-String " device " | ForEach-Object { ($_ -split "\s+")[0] }
   $Serial = $devices | Select-Object -First 1
 }
-if (-not $Serial) { throw "No authorized Android device found." }
+if (-not $Serial) {
+  throw "No authorized Android device found."
+}
 
 $installOutput = Invoke-AdbInstall $Serial $apk
 if (($installOutput -join "`n") -match "INSTALL_FAILED_UPDATE_INCOMPATIBLE") {
   adb -s $Serial uninstall com.gvault.app | Out-Null
   $installOutput = Invoke-AdbInstall $Serial $apk
 }
-if (($installOutput -join "`n") -notmatch "Success") { throw "APK install failed: $installOutput" }
+if (($installOutput -join "`n") -notmatch "Success") {
+  throw "APK install failed: $installOutput"
+}
 
 adb -s $Serial shell am force-stop com.gvault.app | Out-Null
 adb -s $Serial shell am start -n com.gvault.app/.MainActivity | Out-Null
 Start-Sleep -Seconds 2
 
 $package = adb -s $Serial shell dumpsys package com.gvault.app
-if (($package -join "`n") -notmatch "versionName=$version") { throw "Installed version mismatch." }
+if (($package -join "`n") -notmatch "versionName=$version") {
+  throw "Installed version mismatch."
+}
 
 adb -s $Serial shell uiautomator dump /sdcard/gvault-window.xml | Out-Null
 $ui = adb -s $Serial shell cat /sdcard/gvault-window.xml
-if (($ui -join "`n") -notmatch "GVault") { throw "GVault text not found in device UI." }
+$uiText = $ui -join "`n"
+if ($uiText -notmatch "GVault") {
+  throw "GVault text not found in device UI."
+}
+if ($uiText -notmatch "Self-hosted password and identity vault") {
+  throw "Android client subtitle not found in device UI."
+}
+if ($uiText -notmatch "Open Web Vault") {
+  throw "Android client action not found in device UI."
+}
 
-Write-Output "android device e2e ok: $Serial, GVault $version"
+"GVault Android device e2e ok on $Serial"

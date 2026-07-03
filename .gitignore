@@ -9,3 +9,4 @@ apps/desktop/**/obj/
 data/
 coverage/
 *.log
+release-artifacts/

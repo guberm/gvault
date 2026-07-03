@@ -1,3 +1,19 @@
+# GVault 0.1.5
+
+Client UI hardening and all-platform validation release.
+
+Added:
+- end-user web vault shell with lock/unlock, server connection, search, category counts, item list, detail panel, multi-type item editor, password generator, and encrypted sync status;
+- browser extension popup UI for manual autofill, detected-form status, and saved self-hosted server URL;
+- Windows desktop client shell with web vault/server entry points and native client status;
+- Android client onboarding/status UI with server, vault, security, and web vault action;
+- e2e coverage for web vault creation/sync, Chrome extension, Edge extension, Windows EXE launch, Linux WSL binary launch, Firefox extension lint, and physical Android device UI.
+
+Validation:
+- `npm run e2e:all -- -AndroidSerial 29221FDH300MLF` passed on Windows;
+- APK built and installed on Android device `29221FDH300MLF`;
+- Docker runtime smoke was skipped because Docker CLI is not installed on this machine.
+
 # GVault 0.1.1
 
 Platform artifact release.

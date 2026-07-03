@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { chromium } from "playwright";
@@ -11,19 +10,30 @@ import { chromium } from "playwright";
 const root = resolve(".");
 const results = [];
 
+let api;
+let web;
+
 try {
   const serverPort = 21080 + Math.floor(Math.random() * 1000);
   const webPort = serverPort + 1;
   const dataDir = await mkdtemp(join(tmpdir(), "gvault-e2e-"));
-  const api = spawn(process.execPath, ["apps/server/dist/index.js"], {
+
+  api = spawn(process.execPath, ["apps/server/dist/index.js"], {
     cwd: root,
-    env: { ...process.env, GV_DATA_DIR: dataDir, GV_SERVER_HOST: "127.0.0.1", GV_SERVER_PORT: String(serverPort), GV_ALLOWED_ORIGINS: "*" },
-    stdio: ["ignore", "pipe", "pipe"]
+    env: {
+      ...process.env,
+      GV_DATA_DIR: dataDir,
+      GV_SERVER_HOST: "127.0.0.1",
+      GV_SERVER_PORT: String(serverPort),
+      GV_ALLOWED_ORIGINS: "*",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
   });
+
   await waitForUrl(`http://127.0.0.1:${serverPort}/healthz`);
   results.push("server health ok");
 
-  const web = await serveStatic(join(root, "apps/web/dist"), webPort);
+  web = await serveStatic(join(root, "apps/web/dist"), webPort);
   await webClientE2e(webPort, serverPort);
   results.push("web client e2e ok");
 
@@ -39,79 +49,104 @@ try {
   await linuxClientE2e();
   results.push("linux client wsl smoke ok");
 
-  api.kill();
-  await closeServer(web);
   console.log(results.join("\n"));
 } catch (error) {
   console.error(results.join("\n"));
   throw error;
+} finally {
+  if (api) api.kill();
+  if (web) await closeServer(web);
 }
 
 async function webClientE2e(webPort, serverPort) {
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
   try {
     await page.goto(`http://127.0.0.1:${webPort}/`);
-    await page.getByLabel("Server").fill(`http://127.0.0.1:${serverPort}`);
-    await page.getByLabel("Email").fill(`e2e-${Date.now()}@example.local`);
-    await page.getByLabel("Account password").fill("change-me-strong-password");
+    await expectText(page, "body", "Self-hosted password and identity vault");
+    await expectText(page, "#status", "Connect a server");
+
+    await page.locator("#serverUrl").fill(`http://127.0.0.1:${serverPort}`);
+    await page.locator("#email").fill(`e2e-${Date.now()}@example.local`);
+    await page.locator("#accountPassword").fill("change-me-strong-password");
     await page.getByRole("button", { name: "Register" }).click();
+    await expectText(page, "#status", "Server session");
+
     await page.getByLabel("Master password").fill("correct horse battery staple");
-    await page.getByRole("button", { name: "Unlock local vault" }).click();
-    await page.locator("[name=title]").fill("Example Login");
-    await page.locator("[name=url]").fill("https://example.com/login");
-    await page.locator("[name=username]").fill("demo@example.com");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await expectText(page, "#lockState", "Unlocked");
+
+    await page.getByLabel("Title").fill("Example Login");
+    await page.getByLabel("URL").fill("https://example.com/login");
+    await page.getByLabel("Username").fill("demo@example.com");
     await page.getByRole("button", { name: "Generate" }).click();
-    await page.getByRole("button", { name: "Save login" }).click();
+    await page.getByRole("button", { name: "Save item" }).click();
+    await expectText(page, "#detailTitle", "Example Login");
+    assert.equal(await page.locator(".item-row").count(), 1);
+
     await page.getByLabel("Search vault").fill("Example");
-    await waitUntil(async () => (await page.locator(".item").count()) === 1, "saved item appears");
-    await page.getByRole("button", { name: "Sync" }).click();
-    await expectText(page, "#status", "Sync endpoint reachable");
+    assert.equal(await page.locator(".item-row").count(), 1);
+
+    await page.locator("#syncButton").click();
+    await expectText(page, "#status", "Sync complete");
+
+    await page.getByRole("button", { name: "Secure notes" }).click();
+    await expectText(page, "#items", "No matching items");
+
+    await page.setViewportSize({ width: 390, height: 900 });
+    await expectText(page, "body", "GVault");
   } finally {
     await browser.close();
   }
 }
 
 async function chromeExtensionE2e(webPort) {
-  await chromiumExtensionE2e(webPort, join(root, "apps/browser-extension/dist/chrome"));
+  await extensionE2e(chromium, undefined, join(root, "apps/browser-extension/dist/chrome"), webPort);
 }
 
 async function edgeExtensionE2e(webPort) {
-  const edge = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
-  if (!existsSync(edge)) return;
-  await chromiumExtensionE2e(webPort, join(root, "apps/browser-extension/dist/edge"), edge);
+  const edgePath = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+  if (!existsSync(edgePath)) return;
+  await extensionE2e(chromium, edgePath, join(root, "apps/browser-extension/dist/edge"), webPort);
 }
 
-async function chromiumExtensionE2e(webPort, extensionPath, executablePath) {
+async function extensionE2e(browserType, executablePath, extensionPath, webPort) {
+  assert.ok(existsSync(extensionPath), `extension missing: ${extensionPath}`);
   const userDataDir = await mkdtemp(join(tmpdir(), "gvault-ext-"));
-  const context = await chromium.launchPersistentContext(userDataDir, {
+  const context = await browserType.launchPersistentContext(userDataDir, {
     headless: false,
     executablePath,
-    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`]
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
   });
   try {
-    let serviceWorker = context.serviceWorkers()[0];
+    let [serviceWorker] = context.serviceWorkers();
     if (!serviceWorker) serviceWorker = await context.waitForEvent("serviceworker", { timeout: 10000 });
     const extensionId = serviceWorker.url().split("/")[2];
-    assert.ok(extensionId);
+    assert.ok(extensionId, "extension id missing");
 
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${webPort}/login-test.html`);
     await page.waitForSelector("input[type=password]");
+
     const tabId = await serviceWorker.evaluate(async (url) => {
       const tabs = await chrome.tabs.query({ url });
       return tabs[0]?.id;
     }, `http://127.0.0.1:${webPort}/login-test.html`);
     assert.ok(tabId, "test tab not visible to extension");
+
     await serviceWorker.evaluate(async ({ tabId }) => {
       await chrome.tabs.sendMessage(tabId, { type: "GV_FILL_LOGIN", username: "extension-user", password: "extension-pass" });
     }, { tabId });
+
     await waitUntil(async () => (await page.locator("#username").inputValue()) === "extension-user", "extension filled username");
     assert.equal(await page.locator("#password").inputValue(), "extension-pass");
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-    await expectText(popup, "body", "GVault");
+    await expectText(popup, "body", "Self-hosted autofill");
+    await popup.getByLabel("Username").fill("popup-user");
+    await popup.getByLabel("Password").fill("popup-pass");
+    await expectText(popup, "#status", "form");
   } finally {
     await context.close();
   }
@@ -130,34 +165,22 @@ async function windowsClientE2e() {
 async function linuxClientE2e() {
   if (process.platform !== "win32") return;
   const binary = join(root, "apps/desktop/dist/linux-x64/GVault");
-  if (!existsSync(binary)) throw new Error("Linux GVault binary missing");
-  const linuxPath = `/mnt/${binary[0].toLowerCase()}${binary.slice(2).replaceAll("\\", "/")}`;
-  await run("wsl.exe", ["bash", "-lc", `chmod +x '${linuxPath}' && '${linuxPath}' | grep -q 'GVault desktop preview'`]);
-}
-
-async function run(command, args) {
-  await new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("exit", (code) => {
-      code === 0 ? resolve() : reject(new Error(`${command} ${args.join(" ")} failed with ${code}: ${stderr}`));
-    });
-  });
+  assert.ok(existsSync(binary), "Linux GVault binary missing");
+  const linuxPath = `/mnt/${binary[0].toLowerCase()}${binary.slice(2).replaceAll("\\", "/").replace(":", "")}`;
+  const output = await run("wsl.exe", ["--exec", linuxPath]);
+  assert.match(output, /GVault/);
 }
 
 async function serveStatic(dir, port) {
   const server = createServer(async (req, res) => {
-    if (req.url === "/login-test.html") {
-      res.writeHead(200, { "content-type": "text/html" });
-      res.end(`<form><input id="username" type="text" autocomplete="username"><input id="password" type="password"><button>Login</button></form>`);
-      return;
-    }
-    const path = req.url === "/" ? "/index.html" : new URL(req.url, "http://localhost").pathname;
-    const file = join(dir, path);
     try {
+      if (req.url === "/login-test.html") {
+        res.writeHead(200, { "content-type": "text/html" });
+        res.end(`<form><input id="username" autocomplete="username"><input id="password" type="password"><button>Login</button></form>`);
+        return;
+      }
+      const pathname = req.url === "/" ? "/index.html" : new URL(req.url ?? "/", "http://localhost").pathname;
+      const file = join(dir, pathname);
       const body = await readFile(file);
       res.writeHead(200, { "content-type": contentType(file) });
       res.end(body);
@@ -171,7 +194,9 @@ async function serveStatic(dir, port) {
 }
 
 function contentType(file) {
-  return extname(file) === ".js" ? "text/javascript" : extname(file) === ".css" ? "text/css" : "text/html";
+  if (file.endsWith(".js")) return "text/javascript";
+  if (file.endsWith(".css")) return "text/css";
+  return "text/html";
 }
 
 async function waitForUrl(url) {
@@ -179,10 +204,12 @@ async function waitForUrl(url) {
   while (Date.now() < deadline) {
     try {
       if ((await fetch(url)).ok) return;
-    } catch {}
+    } catch {
+      // retry while server starts
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`Timed out waiting for ${url}`);
+  throw new Error(`Timed out waiting ${url}`);
 }
 
 async function expectText(page, selector, text) {
@@ -199,5 +226,23 @@ async function waitUntil(predicate, label) {
     if (await predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`Timed out waiting for ${label}`);
+  throw new Error(`Timed out waiting ${label}`);
+}
+
+async function run(command, args) {
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(command, args, { cwd: root, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.on("exit", (code) => {
+      if (code === 0) resolveRun(stdout + stderr);
+      else reject(new Error(`${command} ${args.join(" ")} failed ${code}: ${stdout}${stderr}`));
+    });
+  });
 }
