@@ -1,21 +1,25 @@
 const status = document.getElementById("status");
 const serverUrl = document.getElementById("serverUrl");
+const username = document.getElementById("username");
+const password = document.getElementById("password");
+const sessionAutofill = document.getElementById("sessionAutofill");
 
 function setStatus(message) {
   status.textContent = message;
 }
 
 document.getElementById("fill").onclick = async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.id) {
-    setStatus("No active tab available.");
+  const payload = { username: username.value, password: password.value };
+  const filled = await chrome.runtime.sendMessage({ type: "GV_FILL_ACTIVE_TAB", ...payload });
+  if (!filled?.ok) {
+    setStatus(filled?.error || "Fill failed.");
     return;
   }
-  await chrome.tabs.sendMessage(tab.id, {
-    type: "GV_FILL_LOGIN",
-    username: document.getElementById("username").value,
-    password: document.getElementById("password").value,
-  });
+  if (sessionAutofill.checked) {
+    await chrome.runtime.sendMessage({ type: "GV_SAVE_SESSION_LOGIN", ...payload });
+    setStatus("Filled page and enabled session autofill for this site.");
+    return;
+  }
   setStatus("Fill command sent to the current page.");
 };
 

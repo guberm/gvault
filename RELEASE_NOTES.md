@@ -1,3 +1,16 @@
+# GVault 0.1.6
+
+Autofill service release.
+
+Added:
+- Android `AutofillService` registration with login-field detection and a GVault dataset entry;
+- browser extension service-worker autofill routing for active-tab fill and session-only per-site autofill;
+- Android device e2e assertion that the autofill service is registered in the installed APK.
+
+Validation:
+- `npm run e2e:all -- -AndroidSerial 29221FDH300MLF` passed on Windows;
+- Docker runtime smoke skipped because Docker CLI is not installed on this machine.
+
 # GVault 0.1.5
 
 Client UI hardening and all-platform validation release.

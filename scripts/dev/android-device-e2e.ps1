@@ -50,6 +50,9 @@ $package = adb -s $Serial shell dumpsys package com.gvault.app
 if (($package -join "`n") -notmatch "versionName=$version") {
   throw "Installed version mismatch."
 }
+if (($package -join "`n") -notmatch "GVaultAutofillService") {
+  throw "Android AutofillService not registered."
+}
 
 adb -s $Serial shell uiautomator dump /sdcard/gvault-window.xml | Out-Null
 $ui = adb -s $Serial shell cat /sdcard/gvault-window.xml

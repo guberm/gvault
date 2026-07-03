@@ -45,10 +45,16 @@
         padding: 14px;
       }
 
-      .brand {
+      .brand,
+      .links,
+      .check {
         display: flex;
         align-items: center;
         gap: 10px;
+      }
+
+      .links {
+        justify-content: space-between;
       }
 
       .mark {
@@ -77,33 +83,30 @@
         font-size: 12px;
       }
 
-      .status {
+      .status,
+      .card {
         border: 1px solid #d8e2e6;
         border-radius: 8px;
-        padding: 10px;
         background: #ffffff;
+      }
+
+      .status {
+        padding: 10px;
         font-weight: 700;
       }
 
-      label {
+      label,
+      .card {
         display: grid;
-        gap: 5px;
+        gap: 10px;
+      }
+
+      label {
         font-weight: 720;
       }
 
       .card {
-        display: grid;
-        gap: 10px;
         padding: 12px;
-        border: 1px solid #d8e2e6;
-        border-radius: 8px;
-        background: #ffffff;
-      }
-
-      .links {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
       }
 
       .link-button {
@@ -112,6 +115,18 @@
         padding: 0;
         background: transparent;
         color: #0f766e;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 650;
+      }
+
+      .check input {
+        width: auto;
+        min-height: auto;
       }
     </style>
   </head>
@@ -135,6 +150,10 @@
         <label>
           <span>Password</span>
           <input id="password" placeholder="Password" type="password" autocomplete="current-password" />
+        </label>
+        <label class="check">
+          <input id="sessionAutofill" type="checkbox" />
+          <span>Use for this site during this browser session</span>
         </label>
         <button id="fill" type="button">Fill current page</button>
       </section>

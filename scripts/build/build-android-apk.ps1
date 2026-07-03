@@ -106,14 +106,16 @@ Invoke-Checked $aapt2 @(
   "--version-code", [string]$versionCode,
   "--version-name", $version
 )
-Invoke-Checked "javac" @(
+$javaFiles = Get-ChildItem (Join-Path $app "src\main\java") -Recurse -Filter "*.java" | ForEach-Object FullName
+$javacArgs = @(
   "-source", "1.8",
   "-target", "1.8",
   "-bootclasspath", $androidJar,
-  "-d", $classes,
-  (Join-Path $app "src\main\java\com\gvault\app\MainActivity.java"),
-  (Join-Path $build "com\gvault\app\R.java")
+  "-d", $classes
 )
+$javacArgs += $javaFiles
+$javacArgs += (Join-Path $build "com\gvault\app\R.java")
+Invoke-Checked "javac" $javacArgs
 $classFiles = Get-ChildItem $classes -Recurse -Filter "*.class" | ForEach-Object FullName
 Invoke-Checked $d8 (@("--lib", $androidJar, "--output", $build) + $classFiles)
 Invoke-Checked $aapt2 @(
