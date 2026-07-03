@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GVault Admin</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; background: #f8fafc; color: #0f172a; }
+      main { max-width: 720px; }
+      input, button { font: inherit; min-height: 36px; }
+      button { background: #2563eb; color: white; border: 0; border-radius: 6px; padding: 0 12px; }
+      pre { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>GVault Admin</h1>
+      <p>Self-hosted health and deployment checks.</p>
+      <input id="server" value="http://127.0.0.1:8080" aria-label="Server URL" />
+      <button id="check">Check health</button>
+      <pre id="output">Not checked.</pre>
+    </main>
+    <script>
+      document.getElementById("check").onclick = async () => {
+        const server = document.getElementById("server").value;
+        const output = document.getElementById("output");
+        try {
+          output.textContent = JSON.stringify(await (await fetch(new URL("/healthz", server))).json(), null, 2);
+        } catch (error) {
+          output.textContent = error.message;
+        }
+      };
+    </script>
+  </body>
+</html>

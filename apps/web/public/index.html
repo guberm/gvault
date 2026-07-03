@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GVault</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="sidebar" aria-label="Vault navigation">
+        <div class="brand">GVault</div>
+        <button id="lockButton" type="button">Lock</button>
+        <input id="search" type="search" placeholder="Search vault" aria-label="Search vault" />
+        <nav>
+          <button data-filter="all" class="active" type="button">All items</button>
+          <button data-filter="login" type="button">Logins</button>
+          <button data-filter="secure-note" type="button">Secure notes</button>
+          <button data-filter="identity" type="button">Identities</button>
+          <button data-filter="payment-card" type="button">Payment cards</button>
+          <button data-filter="address" type="button">Addresses</button>
+          <button data-filter="favorite" type="button">Favorites</button>
+        </nav>
+      </section>
+
+      <section class="content">
+        <header class="toolbar">
+          <label>Server <input id="serverUrl" value="http://127.0.0.1:8080" /></label>
+          <label>Email <input id="email" value="admin@example.local" /></label>
+          <label>Account password <input id="accountPassword" type="password" placeholder="Server account password" /></label>
+          <button id="registerButton" type="button">Register</button>
+          <button id="loginButton" type="button">Login</button>
+          <button id="syncButton" type="button">Sync</button>
+        </header>
+
+        <section id="unlockPanel" class="panel">
+          <h1>Unlock GVault</h1>
+          <p>Vault encryption happens locally. The self-hosted server stores encrypted records only.</p>
+          <label>Master password <input id="masterPassword" type="password" autocomplete="current-password" /></label>
+          <button id="unlockButton" type="button">Unlock local vault</button>
+        </section>
+
+        <section id="vaultPanel" class="grid hidden">
+          <form id="itemForm" class="panel">
+            <h2>New login</h2>
+            <label>Title <input name="title" required /></label>
+            <label>URL <input name="url" type="url" placeholder="https://example.com" /></label>
+            <label>Username <input name="username" autocomplete="username" /></label>
+            <label>Password <input name="password" autocomplete="new-password" /></label>
+            <div class="row">
+              <button id="generateButton" type="button">Generate</button>
+              <button type="submit">Save login</button>
+            </div>
+          </form>
+          <section class="panel">
+            <h2>Vault</h2>
+            <div id="status" role="status">Locked</div>
+            <div id="items" class="items"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GVault</title>
+    <style>
+      body { min-width: 280px; font-family: system-ui, sans-serif; margin: 12px; color: #0f172a; }
+      button, input { font: inherit; width: 100%; min-height: 34px; margin-top: 8px; box-sizing: border-box; }
+      button { background: #2563eb; color: white; border: 0; border-radius: 6px; }
+      .muted { color: #64748b; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <strong>GVault</strong>
+    <p class="muted" id="status">Manual fill prototype.</p>
+    <input id="username" placeholder="Username" autocomplete="username" />
+    <input id="password" placeholder="Password" type="password" autocomplete="current-password" />
+    <button id="fill">Fill current page</button>
+    <script src="popup.js"></script>
+  </body>
+</html>

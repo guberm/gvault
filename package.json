@@ -1,0 +1,28 @@
+{
+  "name": "gvault",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted, zero-knowledge password manager and identity vault.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "node scripts/build/build-all.mjs",
+    "check": "npm run build && npm run lint && npm test && npm run smoke:server",
+    "lint": "node scripts/dev/lint.mjs",
+    "test": "node --test tests/**/*.test.mjs",
+    "smoke:server": "node tests/integration/server-smoke.mjs",
+    "release:notes": "node scripts/release/print-release-notes.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

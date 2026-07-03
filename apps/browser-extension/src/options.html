@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GVault Options</title>
+  </head>
+  <body>
+    <h1>GVault Options</h1>
+    <label>Self-hosted server URL <input id="serverUrl" value="http://127.0.0.1:8080" /></label>
+    <button id="save">Save</button>
+    <script>
+      chrome.storage.local.get("serverUrl").then(({ serverUrl }) => {
+        if (serverUrl) document.getElementById("serverUrl").value = serverUrl;
+      });
+      document.getElementById("save").onclick = () => chrome.storage.local.set({ serverUrl: document.getElementById("serverUrl").value });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* tsconfig.base.json ./
+COPY packages ./packages
+COPY apps/server ./apps/server
+RUN npm install
+RUN npm run build -w @gvault/server
+
+FROM node:22-alpine
+WORKDIR /app
+ENV GV_SERVER_HOST=0.0.0.0
+ENV GV_SERVER_PORT=8080
+ENV GV_DATA_DIR=/data
+COPY --from=build /app/package.json /app/package-lock.json* ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/server ./apps/server
+VOLUME ["/data"]
+EXPOSE 8080
+CMD ["npm", "start", "-w", "@gvault/server"]

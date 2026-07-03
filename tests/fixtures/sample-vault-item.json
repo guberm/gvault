@@ -1,0 +1,13 @@
+{
+  "id": "item_sample",
+  "type": "login",
+  "title": "Example",
+  "username": "demo",
+  "password": "not-real",
+  "urls": ["https://example.com"],
+  "tags": ["demo"],
+  "favorite": true,
+  "createdAt": "2026-07-03T00:00:00.000Z",
+  "updatedAt": "2026-07-03T00:00:00.000Z",
+  "customFields": []
+}

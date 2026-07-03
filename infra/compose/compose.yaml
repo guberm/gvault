@@ -1,0 +1,22 @@
+services:
+  gvault-server:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.server
+    environment:
+      GV_SERVER_HOST: 0.0.0.0
+      GV_SERVER_PORT: 8080
+      GV_DATA_DIR: /data
+      GV_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - gvault-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  gvault-data:
