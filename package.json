@@ -1,6 +1,6 @@
 {
   "name": "gvault",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Self-hosted, zero-knowledge password manager and identity vault.",
   "license": "MIT",

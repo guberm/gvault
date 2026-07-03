@@ -44,8 +44,10 @@ npm run build:windows
 ```
 
 Outputs:
-- `apps/mobile/dist/gvault-android-v0.1.0.apk`
+- `apps/mobile/dist/gvault-android-v<version>.apk`
 - `apps/desktop/dist/windows-x64/GVault.exe`
+
+Android preview builds use the checked-in debug keystore. Production signing uses environment variables; see `docs/deployment/android-signing.md`.
 
 ## Self-hosted server
 
