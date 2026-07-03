@@ -3,11 +3,35 @@
   <head>
     <meta charset="utf-8" />
     <title>GVault Options</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7f9;
+        --surface: #ffffff;
+        --ink: #102027;
+        --border: #d8e2e6;
+        --accent: #0f766e;
+      }
+
+      body[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #071316;
+        --surface: #102027;
+        --ink: #eef7f7;
+        --border: #315057;
+      }
+
+      body { margin: 24px; max-width: 560px; background: var(--bg); color: var(--ink); font-family: system-ui, sans-serif; }
+      label { display: grid; gap: 6px; margin-bottom: 12px; }
+      input { min-height: 36px; border: 1px solid var(--border); border-radius: 7px; padding: 0 10px; background: var(--surface); color: var(--ink); }
+      button { min-height: 36px; border: 0; border-radius: 7px; padding: 0 12px; background: var(--accent); color: white; font: inherit; font-weight: 700; }
+    </style>
   </head>
   <body>
     <h1>GVault Options</h1>
     <label>Self-hosted server URL <input id="serverUrl" value="http://127.0.0.1:8080" /></label>
     <button id="save">Save</button>
+    <button id="themeButton" type="button">Dark mode</button>
     <script src="options.js"></script>
   </body>
 </html>

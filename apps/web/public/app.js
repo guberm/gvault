@@ -1,5 +1,6 @@
 const deviceId = localStorage.getItem("gv.deviceId") || crypto.randomUUID();
 localStorage.setItem("gv.deviceId", deviceId);
+const savedTheme = localStorage.getItem("gv.theme") || "light";
 
 const state = {
   token: localStorage.getItem("gv.token") || "",
@@ -54,6 +55,12 @@ const typeFields = {
 const passphraseWords = ["cedar", "harbor", "signal", "matrix", "orbit", "ember", "forest", "summit", "anchor", "cobalt", "vector", "meadow"];
 
 const $ = (id) => document.getElementById(id);
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem("gv.theme", theme);
+  $("themeButton").textContent = theme === "dark" ? "Light mode" : "Dark mode";
+}
 
 function escapeHtml(value = "") {
   return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
@@ -454,6 +461,7 @@ $("registerButton").addEventListener("click", () => auth("/api/auth/register").c
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
 $("search").addEventListener("input", render);
+$("themeButton").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -464,5 +472,6 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
   });
 });
 
+applyTheme(savedTheme);
 renderTypeFields();
 render();

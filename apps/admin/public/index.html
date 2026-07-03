@@ -5,11 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GVault Admin</title>
     <style>
-      body { font-family: system-ui, sans-serif; margin: 24px; background: #f8fafc; color: #0f172a; }
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --ink: #0f172a;
+        --border: #e2e8f0;
+        --accent: #2563eb;
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #071316;
+        --surface: #102027;
+        --ink: #eef7f7;
+        --border: #315057;
+        --accent: #0f766e;
+      }
+
+      body { font-family: system-ui, sans-serif; margin: 24px; background: var(--bg); color: var(--ink); }
       main { max-width: 720px; }
       input, button { font: inherit; min-height: 36px; }
-      button { background: #2563eb; color: white; border: 0; border-radius: 6px; padding: 0 12px; }
-      pre { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; overflow: auto; }
+      input { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; }
+      button { background: var(--accent); color: white; border: 0; border-radius: 6px; padding: 0 12px; }
+      pre { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow: auto; }
     </style>
   </head>
   <body>
@@ -18,9 +37,18 @@
       <p>Self-hosted health and deployment checks.</p>
       <input id="server" value="http://127.0.0.1:8080" aria-label="Server URL" />
       <button id="check">Check health</button>
+      <button id="themeButton" type="button">Dark mode</button>
       <pre id="output">Not checked.</pre>
     </main>
     <script>
+      const themeButton = document.getElementById("themeButton");
+      function applyTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem("gv.admin.theme", theme);
+        themeButton.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+      }
+      applyTheme(localStorage.getItem("gv.admin.theme") || "light");
+      themeButton.onclick = () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
       document.getElementById("check").onclick = async () => {
         const server = document.getElementById("server").value;
         const output = document.getElementById("output");

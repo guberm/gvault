@@ -3,9 +3,16 @@ const serverUrl = document.getElementById("serverUrl");
 const username = document.getElementById("username");
 const password = document.getElementById("password");
 const sessionAutofill = document.getElementById("sessionAutofill");
+const themeButton = document.getElementById("themeButton");
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+async function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  themeButton.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+  await chrome.storage.sync.set({ gvTheme: theme });
 }
 
 document.getElementById("fill").onclick = async () => {
@@ -32,8 +39,11 @@ document.getElementById("openOptions").onclick = () => {
   chrome.runtime.openOptionsPage();
 };
 
-chrome.storage.sync.get("gvServerUrl").then(({ gvServerUrl }) => {
+themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+
+chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
+  applyTheme(gvTheme || "light");
 });
 
 chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {

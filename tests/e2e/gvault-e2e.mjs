@@ -65,6 +65,9 @@ async function webClientE2e(webPort, serverPort) {
     await page.goto(`http://127.0.0.1:${webPort}/`);
     await expectText(page, "body", "Self-hosted password and identity vault");
     await expectText(page, "#status", "Connect a server");
+    await page.getByRole("button", { name: "Dark mode" }).click();
+    await expectText(page, "#themeButton", "Light mode");
+    await page.getByRole("button", { name: "Light mode" }).click();
 
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${serverPort}`);
     await page.locator("#email").fill(`e2e-${Date.now()}@example.local`);
@@ -144,6 +147,8 @@ async function extensionE2e(browserType, executablePath, extensionPath, webPort)
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expectText(popup, "body", "Self-hosted autofill");
+    await popup.getByRole("button", { name: "Dark mode" }).click();
+    await expectText(popup, "#themeButton", "Light mode");
     await popup.getByLabel("Username").fill("popup-user");
     await popup.getByLabel("Password").fill("popup-pass");
     await expectText(popup, "#status", "form");

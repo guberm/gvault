@@ -1,8 +1,11 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Windows.Forms;
 
 ApplicationConfiguration.Initialize();
+var themePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GVault", "theme.txt");
+var darkMode = File.Exists(themePath) && File.ReadAllText(themePath).Trim() == "dark";
 
 var form = new Form
 {
@@ -100,10 +103,47 @@ var openRepo = new Button
 };
 openRepo.Click += (_, _) => Process.Start(new ProcessStartInfo("https://github.com/guberm/gvault") { UseShellExecute = true });
 
+var themeButton = new Button
+{
+    Width = 160,
+    Height = 40,
+    Location = new Point(376, 382),
+    FlatStyle = FlatStyle.Flat
+};
+themeButton.Click += (_, _) =>
+{
+    darkMode = !darkMode;
+    ApplyTheme(darkMode);
+};
+
 form.Controls.Add(title);
 form.Controls.Add(subtitle);
 form.Controls.Add(statusPanel);
 form.Controls.Add(checklist);
 form.Controls.Add(openWeb);
 form.Controls.Add(openRepo);
+form.Controls.Add(themeButton);
+ApplyTheme(darkMode);
 Application.Run(form);
+
+void ApplyTheme(bool dark)
+{
+    Directory.CreateDirectory(Path.GetDirectoryName(themePath)!);
+    File.WriteAllText(themePath, dark ? "dark" : "light");
+    var bg = dark ? Color.FromArgb(7, 19, 22) : Color.FromArgb(244, 247, 249);
+    var surface = dark ? Color.FromArgb(16, 32, 39) : Color.White;
+    var ink = dark ? Color.FromArgb(238, 247, 247) : Color.FromArgb(16, 32, 39);
+    var muted = dark ? Color.FromArgb(173, 196, 200) : Color.FromArgb(99, 114, 122);
+
+    form.BackColor = bg;
+    title.ForeColor = ink;
+    subtitle.ForeColor = muted;
+    statusPanel.BackColor = surface;
+    statusTitle.ForeColor = ink;
+    statusText.ForeColor = muted;
+    checklist.BackColor = surface;
+    checklist.ForeColor = ink;
+    themeButton.Text = dark ? "Light mode" : "Dark mode";
+    themeButton.BackColor = surface;
+    themeButton.ForeColor = ink;
+}

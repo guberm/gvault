@@ -66,5 +66,8 @@ if ($uiText -notmatch "Self-hosted password and identity vault") {
 if ($uiText -notmatch "Open Web Vault") {
   throw "Android client action not found in device UI."
 }
+if ($uiText -notmatch "Dark mode") {
+  throw "Android theme toggle not found in device UI."
+}
 
 "GVault Android device e2e ok on $Serial"

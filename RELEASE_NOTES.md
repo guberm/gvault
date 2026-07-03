@@ -1,3 +1,19 @@
+# GVault 0.1.7
+
+Light and dark mode release.
+
+Added:
+- light/dark mode switch in the web vault;
+- light/dark mode switch in the admin client;
+- light/dark mode switch in Chrome, Firefox, and Edge extension popup/options;
+- light/dark mode switch in the Windows desktop client;
+- light/dark mode switch in the Android client;
+- e2e assertions for web, browser extension, and Android theme controls.
+
+Validation:
+- `npm run e2e:all -- -AndroidSerial 29221FDH300MLF` passed on Windows;
+- Docker runtime smoke skipped because Docker CLI is not installed on this machine.
+
 # GVault 0.1.6
 
 Autofill service release.
