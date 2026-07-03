@@ -2,7 +2,7 @@
 import { glob } from "node:fs/promises";
 
 const forbidden = [/RoboForm/g];
-const allowedReferenceFiles = ["README.md", "NOTICE", "docs/roboform-parity-backlog.md"];
+const allowedReferenceFiles = ["README.md", "NOTICE", "docs/roboform-parity-backlog.md", "docs/roboform-parity-checklist.md"];
 let failed = false;
 
 for await (const file of glob("**/*.{ts,js,json,md,html,css,yaml,conf}", { exclude: ["node_modules/**", "dist/**"] })) {
