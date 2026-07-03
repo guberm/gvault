@@ -1,3 +1,17 @@
+# GVault 0.1.8
+
+Web vault reference-alignment release.
+
+Changed:
+- rebuilt the web vault dashboard to match the provided reference layout more closely;
+- switched the web vault to a light sidebar, top server/account/sync bar, item list pane, detail panel, generator card, edit form, create card, and bottom health strip;
+- kept existing unlock, item creation, password generation, sync, and theme toggle flows working against the new layout.
+
+Validation:
+- `npm run e2e:all -- -AndroidSerial 29221FDH300MLF` passed on Windows;
+- rendered web dashboard screenshot checked against the provided reference;
+- Docker runtime smoke skipped because Docker CLI is not installed on this machine.
+
 # GVault 0.1.7
 
 Light and dark mode release.

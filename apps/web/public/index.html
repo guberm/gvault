@@ -10,20 +10,22 @@
     <main class="app-shell">
       <aside class="sidebar" aria-label="Vault navigation">
         <div class="brand-block">
-          <div class="brand-mark" aria-hidden="true">G</div>
-          <div>
-            <div class="brand">GVault</div>
-            <div id="lockState" class="caption">Locked</div>
-          </div>
+          <div class="brand-mark" aria-hidden="true">◆</div>
+          <div class="brand">GVault</div>
         </div>
 
-        <button id="lockButton" class="ghost-button" type="button">Lock vault</button>
+        <section class="unlock-card">
+          <div class="unlock-row">
+            <span class="lock-icon" aria-hidden="true">▣</span>
+            <div>
+              <strong id="lockState">Locked</strong>
+              <span>Vault is locked</span>
+            </div>
+          </div>
+          <button id="lockButton" class="secondary-button" type="button">Lock now</button>
+        </section>
 
-        <label class="field compact">
-          <span>Search</span>
-          <input id="search" type="search" placeholder="Find logins, cards, notes" aria-label="Search vault" />
-        </label>
-
+        <div class="nav-section">Vault</div>
         <nav class="nav-list" aria-label="Vault categories">
           <button data-filter="all" class="active" type="button">All items <span id="countAll">0</span></button>
           <button data-filter="login" type="button">Logins <span id="countLogin">0</span></button>
@@ -33,24 +35,42 @@
           <button data-filter="address" type="button">Addresses <span id="countAddress">0</span></button>
           <button data-filter="favorite" type="button">Favorites <span id="countFavorite">0</span></button>
         </nav>
+
+        <div class="nav-divider"></div>
+        <div class="nav-section">Tools</div>
+        <button class="tool-row" type="button">Password generator</button>
+        <button class="tool-row" type="button">Health check <span>Beta</span></button>
+        <button class="tool-row" type="button">Import data</button>
+        <button class="tool-row" type="button">Export vault</button>
+
+        <div class="sidebar-footer">
+          <button id="themeButton" class="tool-row" type="button">Dark mode</button>
+          <span>v1.2.0</span>
+        </div>
       </aside>
 
       <section class="workspace">
-        <header class="topbar">
-          <div>
-            <h1>Vault</h1>
-            <p>Self-hosted password and identity vault. Decrypted data stays in this client session.</p>
-          </div>
-          <div class="top-actions">
-            <button id="themeButton" class="secondary-button" type="button">Dark mode</button>
-            <div id="status" class="status" role="status">Connect a server and unlock the vault.</div>
-          </div>
+        <header class="server-bar">
+          <label class="inline-field">
+            <span>Server</span>
+            <strong class="connected">Connected</strong>
+            <input id="serverUrl" value="http://127.0.0.1:8080" autocomplete="url" />
+          </label>
+          <div class="account-pill">Account <strong id="emailLabel">admin</strong></div>
+          <button id="registerButton" class="plain-button" type="button">Register</button>
+          <button id="loginButton" class="plain-button" type="button">Login</button>
+          <button id="syncButton" class="plain-button" type="button">Sync</button>
+          <div id="status" class="sync-status" role="status">Connect a server and unlock the vault.</div>
         </header>
 
-        <section class="server-card" aria-label="Self-hosted server connection">
+        <section id="unlockPanel" class="unlock-panel">
+          <div>
+            <h1>Unlock GVault</h1>
+            <p>Use a master password to encrypt sync records before they leave the client.</p>
+          </div>
           <label class="field">
-            <span>Server</span>
-            <input id="serverUrl" value="http://127.0.0.1:8080" autocomplete="url" />
+            <span>Master password</span>
+            <input id="masterPassword" type="password" autocomplete="current-password" />
           </label>
           <label class="field">
             <span>Email</span>
@@ -60,110 +80,118 @@
             <span>Account password</span>
             <input id="accountPassword" type="password" placeholder="Server account password" autocomplete="current-password" />
           </label>
-          <div class="button-row">
-            <button id="registerButton" type="button">Register</button>
-            <button id="loginButton" class="secondary-button" type="button">Login</button>
-            <button id="syncButton" class="secondary-button" type="button">Sync</button>
-          </div>
-        </section>
-
-        <section id="unlockPanel" class="unlock-panel">
-          <div>
-            <h2>Unlock local vault</h2>
-            <p>Use a master password to encrypt sync records before they leave the client.</p>
-          </div>
-          <label class="field">
-            <span>Master password</span>
-            <input id="masterPassword" type="password" autocomplete="current-password" />
-          </label>
           <button id="unlockButton" type="button">Unlock vault</button>
         </section>
 
-        <section id="vaultPanel" class="vault-grid hidden" aria-label="Unlocked vault workspace">
-          <section class="list-panel" aria-label="Vault item list">
-            <div class="panel-head">
-              <div>
-                <h2>Items</h2>
-                <p id="listSummary">No unlocked items.</p>
-              </div>
-              <button id="newItemButton" class="icon-button" type="button" title="New item">+</button>
+        <section id="vaultPanel" class="vault-layout hidden" aria-label="Unlocked vault workspace">
+          <section class="list-pane" aria-label="Vault item list">
+            <div class="list-toolbar">
+              <label class="search-field">
+                <span aria-hidden="true">⌕</span>
+                <input id="search" type="search" placeholder="Search vault" aria-label="Search vault" />
+              </label>
+              <button class="secondary-button square-button" type="button">⚱</button>
+              <button id="newItemButton" class="square-button" type="button" title="New item">+</button>
+            </div>
+            <div class="list-meta">
+              <span id="listSummary">No unlocked items.</span>
+              <span>Sort: Updated (newest)</span>
             </div>
             <div id="items" class="items" aria-live="polite"></div>
+            <p class="end-note">No more items to load</p>
           </section>
 
-          <section class="detail-panel" aria-label="Selected item details">
-            <div class="panel-head">
+          <section class="detail-workspace">
+            <header class="item-header">
+              <div class="item-avatar" aria-hidden="true">G</div>
               <div>
-                <h2 id="detailTitle">No item selected</h2>
+                <h1 id="detailTitle">No item selected</h1>
                 <p id="detailSubtitle">Create or select a vault item.</p>
               </div>
               <button id="favoriteButton" class="secondary-button" type="button">Favorite</button>
-            </div>
-            <div id="detailBody" class="detail-body empty-state">
-              <strong>Ready for your first record</strong>
-              <span>Add a login, secure note, identity, payment card, or address. Then sync encrypted records to your server.</span>
-            </div>
-          </section>
+              <button class="secondary-button" type="button">More</button>
+            </header>
 
-          <form id="itemForm" class="editor-panel" aria-label="Vault item editor">
-            <div class="panel-head">
-              <div>
-                <h2 id="formTitle">New login</h2>
-                <p>Fields adapt by item type. Tags use comma-separated values.</p>
+            <section class="detail-grid">
+              <div id="detailBody" class="detail-card empty-state">
+                <strong>Ready for your first record</strong>
+                <span>Add a login, secure note, identity, payment card, or address. Then sync encrypted records to your server.</span>
               </div>
-            </div>
 
-            <label class="field">
-              <span>Item type</span>
-              <select id="itemType" name="type">
-                <option value="login">Login</option>
-                <option value="secure-note">Secure note</option>
-                <option value="identity">Identity</option>
-                <option value="payment-card">Payment card</option>
-                <option value="address">Address</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Title</span>
-              <input name="title" required placeholder="Example account" />
-            </label>
-            <label class="field">
-              <span>Folder</span>
-              <input name="folder" placeholder="Personal, Work, Finance" />
-            </label>
-            <label class="field">
-              <span>Tags</span>
-              <input name="tags" placeholder="finance, client, travel" />
-            </label>
-
-            <div id="typeFields" class="type-fields"></div>
-
-            <section class="generator" aria-label="Password generator">
-              <div class="panel-head compact-head">
-                <div>
-                  <h3>Password generator</h3>
-                  <p id="strengthLabel">20 characters, strong</p>
+              <section class="generator detail-card" aria-label="Password generator">
+                <div class="strength-row">
+                  <span>Password strength</span>
+                  <strong>Very strong</strong>
                 </div>
-                <button id="generateButton" class="secondary-button" type="button">Generate</button>
-              </div>
-              <label class="field">
-                <span>Length</span>
-                <input id="passwordLength" type="range" min="12" max="36" value="20" />
-              </label>
-              <div class="toggle-row">
-                <label><input id="useSymbols" type="checkbox" checked /> Symbols</label>
-                <label><input id="useNumbers" type="checkbox" checked /> Numbers</label>
-                <label><input id="usePassphrase" type="checkbox" /> Passphrase</label>
-              </div>
+                <div class="strength-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+                <label class="field">
+                  <span>Password generator</span>
+                  <input id="generatedPassword" value="d!9Tq8#vR$zL2@mP*k7Qw" readonly />
+                </label>
+                <label class="field">
+                  <span>Length</span>
+                  <input id="passwordLength" type="range" min="12" max="36" value="20" />
+                </label>
+                <div class="toggle-row">
+                  <label>A-Z <input id="useUpper" type="checkbox" checked /></label>
+                  <label>a-z <input id="useLower" type="checkbox" checked /></label>
+                  <label>0-9 <input id="useNumbers" type="checkbox" checked /></label>
+                  <label>!@#$%^&* <input id="useSymbols" type="checkbox" checked /></label>
+                  <label>Avoid ambiguous characters <input id="usePassphrase" type="checkbox" /></label>
+                </div>
+                <button id="generateButton" class="secondary-button" type="button">Generate new</button>
+                <p id="strengthLabel" class="muted">20 characters, strong</p>
+              </section>
             </section>
 
-            <div class="button-row">
-              <button type="submit">Save item</button>
-              <button id="clearFormButton" class="secondary-button" type="button">Clear</button>
-            </div>
-          </form>
+            <section class="bottom-grid">
+              <form id="itemForm" class="editor-panel detail-card" aria-label="Vault item editor">
+                <h2 id="formTitle">Edit item</h2>
+                <label class="field">
+                  <span>Item type</span>
+                  <select id="itemType" name="type">
+                    <option value="login">Login</option>
+                    <option value="secure-note">Secure note</option>
+                    <option value="identity">Identity</option>
+                    <option value="payment-card">Payment card</option>
+                    <option value="address">Address</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Name *</span>
+                  <input name="title" required placeholder="GitHub" />
+                </label>
+                <label class="field">
+                  <span>Folder</span>
+                  <input name="folder" placeholder="Work" />
+                </label>
+                <label class="field">
+                  <span>Tags</span>
+                  <input name="tags" placeholder="Login, Work" />
+                </label>
+                <div id="typeFields" class="type-fields"></div>
+                <div class="button-row">
+                  <button id="clearFormButton" class="secondary-button" type="button">Cancel</button>
+                  <button type="submit">Save changes</button>
+                </div>
+              </form>
+
+              <section class="create-card detail-card">
+                <div class="create-icon" aria-hidden="true">⊕</div>
+                <h2>Create new item</h2>
+                <p>Select an item from the list or create a new one.</p>
+                <button type="button">Create new item</button>
+                <span>Tip: Use ⌘ N to create quickly.</span>
+              </section>
+            </section>
+          </section>
         </section>
+
+        <footer class="health-strip">
+          <div><strong>All good</strong><span>Your vault is healthy and up to date.</span></div>
+          <div><strong>Synced</strong><span>All changes are synced.</span></div>
+          <div><strong>Backed up</strong><span>Last backup: May 17, 2025 at 8:15 AM</span></div>
+        </footer>
       </section>
     </main>
     <script src="./app.js" type="module"></script>

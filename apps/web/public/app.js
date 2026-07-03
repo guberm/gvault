@@ -204,6 +204,7 @@ function renderDetail() {
     <div class="detail-row">
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(concealed && value ? "••••••••" : value || "Not set")}</strong>
+      <button type="button" aria-label="Copy ${escapeHtml(label)}">▣</button>
     </div>
   `).join("") + `
     <div class="detail-meta">
@@ -227,6 +228,7 @@ function render() {
   $("unlockPanel").classList.toggle("hidden", unlocked);
   $("vaultPanel").classList.toggle("hidden", !unlocked);
   $("lockState").textContent = unlocked ? "Unlocked" : "Locked";
+  $("lockState").nextElementSibling.textContent = unlocked ? "Vault is unlocked" : "Vault is locked";
   $("lockButton").disabled = !unlocked;
   renderCounts();
   renderItems();
@@ -292,6 +294,7 @@ async function auth(path) {
   state.userId = result.userId;
   localStorage.setItem("gv.token", state.token);
   localStorage.setItem("gv.userId", state.userId);
+  $("emailLabel").textContent = $("email").value.split("@")[0] || "admin";
   setStatus("Server session established.", "success");
   render();
 }
@@ -412,6 +415,7 @@ $("generateButton").addEventListener("click", () => {
     return;
   }
   passwordField.value = generatePassword();
+  $("generatedPassword").value = passwordField.value;
   setStatus("Generated password placed in the login editor.", "success");
 });
 

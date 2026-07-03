@@ -63,7 +63,7 @@ async function webClientE2e(webPort, serverPort) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
   try {
     await page.goto(`http://127.0.0.1:${webPort}/`);
-    await expectText(page, "body", "Self-hosted password and identity vault");
+    await expectText(page, "body", "Unlock GVault");
     await expectText(page, "#status", "Connect a server");
     await page.getByRole("button", { name: "Dark mode" }).click();
     await expectText(page, "#themeButton", "Light mode");
@@ -79,11 +79,11 @@ async function webClientE2e(webPort, serverPort) {
     await page.getByRole("button", { name: "Unlock vault" }).click();
     await expectText(page, "#lockState", "Unlocked");
 
-    await page.getByLabel("Title").fill("Example Login");
-    await page.getByLabel("URL").fill("https://example.com/login");
-    await page.getByLabel("Username").fill("demo@example.com");
-    await page.getByRole("button", { name: "Generate" }).click();
-    await page.getByRole("button", { name: "Save item" }).click();
+    await page.locator("[name=title]").fill("Example Login");
+    await page.locator("[name=url]").fill("https://example.com/login");
+    await page.locator("[name=username]").fill("demo@example.com");
+    await page.locator("#generateButton").click();
+    await page.getByRole("button", { name: "Save changes" }).click();
     await expectText(page, "#detailTitle", "Example Login");
     assert.equal(await page.locator(".item-row").count(), 1);
 
