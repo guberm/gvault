@@ -15,6 +15,7 @@
     "build:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-windows-exe.ps1",
     "check": "npm run build && npm run lint && npm test && npm run smoke:server",
     "e2e": "node tests/e2e/gvault-e2e.mjs",
+    "e2e:android-device": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/android-device-e2e.ps1",
     "lint": "node scripts/dev/lint.mjs",
     "test": "node --test tests/**/*.test.mjs",
     "smoke:server": "node tests/integration/server-smoke.mjs",
