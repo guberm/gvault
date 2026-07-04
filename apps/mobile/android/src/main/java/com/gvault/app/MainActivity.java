@@ -159,6 +159,28 @@ public final class MainActivity extends Activity {
     root.addView(itemDetail, spaced());
     renderVaultList(new String[0], new String[0], MobileAuthState.syncStatusMessage(0));
 
+    TextView addLoginTitle = body("Add Login");
+    addLoginTitle.setTypeface(null, 1);
+    addLoginTitle.setPadding(0, 18, 0, 0);
+    root.addView(addLoginTitle, fullWidth());
+    final EditText newTitle = field("Login title", false);
+    final EditText newUrl = field("URL", false);
+    newUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    final EditText newUsername = field("Username", false);
+    newUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    final EditText newPassword = field("Password", true);
+    final EditText newNotes = field("Notes", false);
+    root.addView(newTitle, spaced());
+    root.addView(newUrl, spaced());
+    root.addView(newUsername, spaced());
+    root.addView(newPassword, spaced());
+    root.addView(newNotes, spaced());
+    Button saveLogin = actionButton("Save Login");
+    saveLogin.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { submitCreateLogin(newTitle, newUrl, newUsername, newPassword, newNotes); }
+    });
+    root.addView(saveLogin, spaced());
+
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { syncPull(); }
@@ -176,6 +198,63 @@ public final class MainActivity extends Activity {
     });
     root.addView(signOut, spaced());
     setScrollable(root);
+  }
+
+  private void submitCreateLogin(final EditText titleField, final EditText urlField, final EditText usernameField, final EditText passwordField, final EditText notesField) {
+    if (token.isEmpty()) return;
+    final String title = titleField.getText().toString().trim();
+    if (title.isEmpty()) {
+      setStatus("Login title is required.", true);
+      return;
+    }
+    final String url = urlField.getText().toString().trim();
+    final String username = usernameField.getText().toString().trim();
+    final String password = passwordField.getText().toString();
+    final String notes = notesField.getText().toString();
+    setStatus("Saving encrypted login to server...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          String id = "android-login-" + System.currentTimeMillis();
+          String itemJson = MobileVaultItem.loginItemJson(id, title, url, username, password, notes);
+          String[] encrypted = MobileVaultItem.encryptItemJson(itemJson, masterPassword);
+          JSONObject record = new JSONObject();
+          record.put("id", id);
+          record.put("deviceId", "android-app");
+          record.put("collection", "vault-items");
+          record.put("ciphertext", encrypted[0]);
+          record.put("nonce", encrypted[1]);
+          record.put("salt", encrypted[2]);
+          record.put("schemaVersion", 1);
+          record.put("deleted", false);
+          record.put("updatedAt", isoNow());
+          record.put("revision", 1);
+          JSONArray records = new JSONArray();
+          records.put(record);
+          JSONObject body = new JSONObject();
+          body.put("deviceId", "android-app");
+          body.put("records", records);
+          postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/push"), body, token);
+          runOnMain(new Runnable() { @Override public void run() {
+            titleField.setText("");
+            urlField.setText("");
+            usernameField.setText("");
+            passwordField.setText("");
+            notesField.setText("");
+            setStatus("Login saved. Syncing list...", false);
+            syncPull();
+          } });
+        } catch (Exception error) {
+          setStatusOnMain(friendlyError(error), true);
+        }
+      }
+    }).start();
+  }
+
+  private static String isoNow() {
+    java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US);
+    format.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+    return format.format(new java.util.Date());
   }
 
   private void syncPull() {

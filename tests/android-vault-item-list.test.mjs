@@ -34,6 +34,11 @@ public final class TestMobileVaultItem {
     assertContains(detail, "Title: Example Login");
     assertContains(detail, "Username: michael@example.com");
     assertContains(detail, "URL: https://example.com/login");
+    String createdJson = MobileVaultItem.loginItemJson("android-created-1", "Android Created Login", "https://created.example/login", "created@example.com", "CreatedPass123", "Created from Android");
+    String[] encryptedCreated = MobileVaultItem.encryptItemJson(createdJson, "${masterPassword}");
+    String decryptedCreated = MobileVaultItem.decryptItemJson(encryptedCreated[0], encryptedCreated[1], encryptedCreated[2], "${masterPassword}");
+    assertContains(decryptedCreated, "Android Created Login");
+    assertContains(decryptedCreated, "created@example.com");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 

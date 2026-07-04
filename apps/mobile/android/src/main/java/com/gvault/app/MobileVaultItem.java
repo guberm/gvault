@@ -1,6 +1,7 @@
 package com.gvault.app;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.regex.Matcher;
@@ -23,13 +24,48 @@ public final class MobileVaultItem {
     byte[] salt = Base64.getDecoder().decode(saltBase64);
     byte[] nonce = Base64.getDecoder().decode(nonceBase64);
     byte[] ciphertext = Base64.getDecoder().decode(ciphertextBase64);
-    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-    KeySpec spec = new PBEKeySpec(masterPassword.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_BITS);
-    SecretKey secret = factory.generateSecret(spec);
-    SecretKeySpec key = new SecretKeySpec(secret.getEncoded(), "AES");
+    SecretKeySpec key = deriveAesKey(masterPassword, salt);
     Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
     cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, nonce));
     return new String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8);
+  }
+
+  public static String[] encryptItemJson(String itemJson, String masterPassword) throws Exception {
+    SecureRandom random = new SecureRandom();
+    byte[] salt = new byte[16];
+    byte[] nonce = new byte[12];
+    random.nextBytes(salt);
+    random.nextBytes(nonce);
+    SecretKeySpec key = deriveAesKey(masterPassword, salt);
+    Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+    cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, nonce));
+    byte[] ciphertext = cipher.doFinal(itemJson.getBytes(StandardCharsets.UTF_8));
+    return new String[] {
+      Base64.getEncoder().encodeToString(ciphertext),
+      Base64.getEncoder().encodeToString(nonce),
+      Base64.getEncoder().encodeToString(salt)
+    };
+  }
+
+  public static String loginItemJson(String id, String title, String url, String username, String password, String notes) {
+    return "{"
+      + "\"id\":\"" + escapeJson(id) + "\"," 
+      + "\"type\":\"login\"," 
+      + "\"title\":\"" + escapeJson(title) + "\"," 
+      + "\"url\":\"" + escapeJson(url) + "\"," 
+      + "\"username\":\"" + escapeJson(username) + "\"," 
+      + "\"password\":\"" + escapeJson(password) + "\"," 
+      + "\"notes\":\"" + escapeJson(notes) + "\"," 
+      + "\"urls\":[\"" + escapeJson(url) + "\"],"
+      + "\"tags\":[],\"favorite\":false,\"customFields\":[]"
+      + "}";
+  }
+
+  private static SecretKeySpec deriveAesKey(String masterPassword, byte[] salt) throws Exception {
+    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+    KeySpec spec = new PBEKeySpec(masterPassword.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_BITS);
+    SecretKey secret = factory.generateSecret(spec);
+    return new SecretKeySpec(secret.getEncoded(), "AES");
   }
 
   public static String listLineFromItemJson(String itemJson) {
@@ -76,5 +112,10 @@ public final class MobileVaultItem {
 
   private static String unescapeJsonString(String value) {
     return value.replace("\\\"", "\"").replace("\\/", "/").replace("\\\\", "\\");
+  }
+
+  private static String escapeJson(String value) {
+    if (value == null) return "";
+    return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
   }
 }
