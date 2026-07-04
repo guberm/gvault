@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 343
+Total unchecked checklist task issues linked here: 342
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -147,7 +147,7 @@ Parent issue: #7 — https://github.com/guberm/gvault/issues/7
 - [x] #136 Password generator. — https://github.com/guberm/gvault/issues/136
 - [x] #137 Settings screen. — https://github.com/guberm/gvault/issues/137
 - [x] #138 Account screen. — https://github.com/guberm/gvault/issues/138
-- [ ] #139 Material-style polish. — https://github.com/guberm/gvault/issues/139
+- [x] #139 Material-style polish. — https://github.com/guberm/gvault/issues/139
 
 ## 3. Android client — 3.3 Android Autofill
 

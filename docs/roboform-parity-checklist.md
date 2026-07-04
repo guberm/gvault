@@ -181,7 +181,7 @@ Last updated: 2026-07-03
 - [x] Password generator.
 - [x] Settings screen.
 - [x] Account screen.
-- [ ] Material-style polish.
+- [x] Material-style polish.
 
 ## 3.3 Android Autofill
 

@@ -6,6 +6,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -71,6 +72,7 @@ public final class MainActivity extends Activity {
     super.onCreate(savedInstanceState);
     prefs = getSharedPreferences("gvault", MODE_PRIVATE);
     serverUrl = prefs.getString("serverUrl", MobileAuthState.DEFAULT_SERVER_URL);
+    getWindow().setStatusBarColor(MobileUiStyle.PRIMARY_DARK);
     showAccountScreen();
   }
 
@@ -78,7 +80,7 @@ public final class MainActivity extends Activity {
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
-    root.setBackgroundColor(Color.rgb(244, 247, 249));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
 
     TextView title = title("GVault");
     TextView subtitle = body("Sign in or create an account to use your server-backed encrypted vault.");
@@ -171,7 +173,7 @@ public final class MainActivity extends Activity {
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
-    root.setBackgroundColor(Color.rgb(244, 247, 249));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
     root.addView(title("GVault"), fullWidth());
     TextView account = body("Signed in as " + email + "\nServer: " + serverUrl);
     account.setPadding(0, 12, 0, 20);
@@ -316,7 +318,7 @@ public final class MainActivity extends Activity {
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
-    root.setBackgroundColor(Color.rgb(244, 247, 249));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
     root.addView(title("GVault " + MobileAuthState.settingsTitle()), fullWidth());
     root.addView(card(MobileAuthState.settingsTitle(), MobileAuthState.settingsAccountLine(email) + "\n" + MobileAuthState.settingsServerLine(serverUrl) + "\n" + MobileAuthState.sessionStoragePolicyMessage()), fullWidth());
     Button back = actionButton("Back to vault");
@@ -673,7 +675,7 @@ public final class MainActivity extends Activity {
   private void setStatus(String text, boolean warning) {
     if (status == null) return;
     status.setText(text);
-    status.setTextColor(warning ? Color.rgb(185, 28, 28) : Color.rgb(16, 32, 39));
+    status.setTextColor(warning ? MobileUiStyle.DANGER : MobileUiStyle.TEXT);
   }
 
   private static void setAuthControlsEnabled(boolean enabled, Button signIn, Button createAccount) {
@@ -723,7 +725,7 @@ public final class MainActivity extends Activity {
     TextView view = new TextView(this);
     view.setText(text);
     view.setTextSize(30);
-    view.setTextColor(Color.rgb(16, 32, 39));
+    view.setTextColor(MobileUiStyle.TEXT);
     view.setTypeface(null, 1);
     view.setGravity(Gravity.CENTER);
     return view;
@@ -733,15 +735,16 @@ public final class MainActivity extends Activity {
     TextView view = new TextView(this);
     view.setText(text);
     view.setTextSize(16);
-    view.setTextColor(Color.rgb(76, 91, 99));
+    view.setTextColor(MobileUiStyle.MUTED_TEXT);
     return view;
   }
 
   private TextView card(String label, String detail) {
     TextView view = body(label + "\n" + detail);
-    view.setTextColor(Color.rgb(16, 32, 39));
-    view.setBackgroundColor(Color.WHITE);
-    view.setPadding(28, 24, 28, 24);
+    view.setTextColor(MobileUiStyle.TEXT);
+    view.setBackground(rounded(MobileUiStyle.SURFACE, 0, MobileUiStyle.CORNER_RADIUS_DP));
+    view.setElevation(dp(2));
+    view.setPadding(dp(20), dp(18), dp(20), dp(18));
     return view;
   }
 
@@ -750,6 +753,10 @@ public final class MainActivity extends Activity {
     field.setHint(hint);
     field.setSingleLine(true);
     field.setTextSize(16);
+    field.setTextColor(MobileUiStyle.TEXT);
+    field.setHintTextColor(MobileUiStyle.MUTED_TEXT);
+    field.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.BUTTON_RADIUS_DP));
+    field.setPadding(dp(16), 0, dp(16), 0);
     field.setInputType(secret ? (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD) : (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS));
     return field;
   }
@@ -759,7 +766,8 @@ public final class MainActivity extends Activity {
     button.setText(text);
     button.setAllCaps(false);
     button.setTextColor(Color.WHITE);
-    button.setBackgroundColor(Color.rgb(15, 118, 110));
+    button.setBackground(rounded(MobileUiStyle.PRIMARY, 0, MobileUiStyle.BUTTON_RADIUS_DP));
+    button.setElevation(dp(2));
     return button;
   }
 
@@ -767,9 +775,22 @@ public final class MainActivity extends Activity {
     Button button = new Button(this);
     button.setText(text);
     button.setAllCaps(false);
-    button.setTextColor(Color.rgb(16, 32, 39));
-    button.setBackgroundColor(Color.WHITE);
+    button.setTextColor(MobileUiStyle.TEXT);
+    button.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.BUTTON_RADIUS_DP));
+    button.setElevation(dp(1));
     return button;
+  }
+
+  private GradientDrawable rounded(int fill, int stroke, int radiusDp) {
+    GradientDrawable drawable = new GradientDrawable();
+    drawable.setColor(fill);
+    drawable.setCornerRadius(dp(radiusDp));
+    if (stroke != 0) drawable.setStroke(dp(1), stroke);
+    return drawable;
+  }
+
+  private int dp(int value) {
+    return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
   }
 
   private static LinearLayout.LayoutParams fullWidth() {

@@ -6,12 +6,14 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const source = "apps/mobile/android/src/main/java/com/gvault/app/MobileAuthState.java";
+const styleSource = "apps/mobile/android/src/main/java/com/gvault/app/MobileUiStyle.java";
 
 test("Android auth state defaults to public GVault and validates account forms", async () => {
   const dir = await mkdtemp(join(tmpdir(), "gvault-android-auth-test-"));
   const testSource = join(dir, "TestMobileAuthState.java");
   await writeFile(testSource, `
 import com.gvault.app.MobileAuthState;
+import com.gvault.app.MobileUiStyle;
 
 public final class TestMobileAuthState {
   public static void main(String[] args) {
@@ -45,6 +47,11 @@ public final class TestMobileAuthState {
     assertEquals("Settings", MobileAuthState.settingsTitle());
     assertEquals("Account: michael@example.com", MobileAuthState.settingsAccountLine("michael@example.com"));
     assertEquals("Server: https://gvault.guber.dev", MobileAuthState.settingsServerLine("https://gvault.guber.dev"));
+    assertEquals("Material-style polish", MobileUiStyle.POLISH_NAME);
+    assertIntEquals(0xFF0F766E, MobileUiStyle.PRIMARY);
+    assertIntEquals(0xFFFFFFFF, MobileUiStyle.SURFACE);
+    assertIntEquals(24, MobileUiStyle.CORNER_RADIUS_DP);
+    assertEquals("Rounded cards, elevated actions, and calm vault colors.", MobileUiStyle.polishSummary());
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 
@@ -55,9 +62,13 @@ public final class TestMobileAuthState {
   private static void assertLongEquals(long expected, long actual) {
     if (expected != actual) throw new AssertionError("expected=" + expected + " actual=" + actual);
   }
+
+  private static void assertIntEquals(int expected, int actual) {
+    if (expected != actual) throw new AssertionError("expected=" + expected + " actual=" + actual);
+  }
 }
 `);
-  const compile = spawnSync("javac", ["-d", dir, source, testSource], { encoding: "utf8" });
+  const compile = spawnSync("javac", ["-d", dir, source, styleSource, testSource], { encoding: "utf8" });
   assert.equal(compile.status, 0, compile.stderr || compile.stdout);
   const run = spawnSync("java", ["-cp", dir, "TestMobileAuthState"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr || run.stdout);
