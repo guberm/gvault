@@ -85,6 +85,18 @@ public final class MobileAuthState {
     return revealed ? "Password revealed." : "Password hidden.";
   }
 
+  public static String settingsTitle() {
+    return "Settings";
+  }
+
+  public static String settingsAccountLine(String email) {
+    return "Account: " + (isBlank(email) ? "Not signed in" : email.trim());
+  }
+
+  public static String settingsServerLine(String serverUrl) {
+    return "Server: " + (isBlank(serverUrl) ? DEFAULT_SERVER_URL : serverUrl.trim());
+  }
+
   public static String sessionStoragePolicyMessage() {
     return "Session tokens are kept in memory only; sign in again after app restart.";
   }

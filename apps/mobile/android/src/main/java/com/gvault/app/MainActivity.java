@@ -189,6 +189,12 @@ public final class MainActivity extends Activity {
     });
     root.addView(refreshVault, spaced());
 
+    Button settingsButton = secondaryButton(MobileAuthState.settingsTitle());
+    settingsButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { showSettingsScreen(); }
+    });
+    root.addView(settingsButton, spaced());
+
     searchVault = field("Search vault", false);
     searchVault.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
     searchVault.addTextChangedListener(new TextWatcher() {
@@ -300,15 +306,40 @@ public final class MainActivity extends Activity {
 
     Button signOut = secondaryButton("Sign out");
     signOut.setOnClickListener(new View.OnClickListener() {
-      @Override public void onClick(View view) {
-        token = "";
-        email = "";
-        masterPassword = "";
-        showAccountScreen();
-      }
+      @Override public void onClick(View view) { signOutToAccountScreen(); }
     });
     root.addView(signOut, spaced());
     setScrollable(root);
+  }
+
+  private void showSettingsScreen() {
+    root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(40, 48, 40, 40);
+    root.setBackgroundColor(Color.rgb(244, 247, 249));
+    root.addView(title("GVault " + MobileAuthState.settingsTitle()), fullWidth());
+    root.addView(card(MobileAuthState.settingsTitle(), MobileAuthState.settingsAccountLine(email) + "\n" + MobileAuthState.settingsServerLine(serverUrl) + "\n" + MobileAuthState.sessionStoragePolicyMessage()), fullWidth());
+    Button back = actionButton("Back to vault");
+    back.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        showVaultScreen("Settings closed.");
+        renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
+      }
+    });
+    root.addView(back, spaced());
+    Button signOut = secondaryButton("Sign out");
+    signOut.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { signOutToAccountScreen(); }
+    });
+    root.addView(signOut, spaced());
+    setScrollable(root);
+  }
+
+  private void signOutToAccountScreen() {
+    token = "";
+    email = "";
+    masterPassword = "";
+    showAccountScreen();
   }
 
   private void generatePasswordForEditor() {

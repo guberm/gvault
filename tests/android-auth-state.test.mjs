@@ -42,6 +42,9 @@ public final class TestMobileAuthState {
     assertEquals("Hide password", MobileAuthState.passwordRevealButtonLabel(true));
     assertEquals("Password revealed.", MobileAuthState.passwordRevealStatus(true));
     assertEquals("Password hidden.", MobileAuthState.passwordRevealStatus(false));
+    assertEquals("Settings", MobileAuthState.settingsTitle());
+    assertEquals("Account: michael@example.com", MobileAuthState.settingsAccountLine("michael@example.com"));
+    assertEquals("Server: https://gvault.guber.dev", MobileAuthState.settingsServerLine("https://gvault.guber.dev"));
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 

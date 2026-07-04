@@ -179,7 +179,7 @@ Last updated: 2026-07-03
 - [x] Copy username/password.
 - [x] Reveal/hide password.
 - [x] Password generator.
-- [ ] Settings screen.
+- [x] Settings screen.
 - [x] Account screen.
 - [ ] Material-style polish.
 
