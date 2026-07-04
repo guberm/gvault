@@ -435,7 +435,59 @@ function parseLoginCsv(text) {
   const headerRow = parseCsvRows(text).find((row) => row.some((cell) => cell.trim() !== "")) || [];
   const headers = new Set(headerRow.map((header) => normalizeCsvHeader(header)));
   if (["name", "url", "login", "pwd"].every((header) => headers.has(header))) return parseRoboFormCsv(text);
+  if (["type", "name", "login_uri", "login_username", "login_password"].every((header) => headers.has(header))) return parseBitwardenCsv(text);
   return parseGenericLoginCsv(text);
+}
+
+function parseBitwardenCsv(text) {
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) throw new Error("Bitwarden CSV is empty.");
+  const headers = rows[0].map((header) => header.trim());
+  const headerIndex = new Map(headers.map((header, index) => [normalizeCsvHeader(header), index]));
+  const required = ["type", "name", "login_uri", "login_username", "login_password"];
+  const missing = required.filter((header) => !headerIndex.has(header));
+  if (missing.length > 0) throw new Error(`Unsupported Bitwarden CSV. Missing: ${missing.join(", ")}.`);
+  const value = (row, header) => (row[headerIndex.get(header)] || "").trim();
+  const imported = [];
+  let skipped = 0;
+  for (const row of rows.slice(1)) {
+    if (value(row, "type").toLowerCase() !== "login") {
+      skipped += 1;
+      continue;
+    }
+    const title = value(row, "name");
+    const url = value(row, "login_uri");
+    const username = value(row, "login_username");
+    const password = value(row, "login_password");
+    const notes = value(row, "notes");
+    if (!title && !url && !username && !password && !notes) {
+      skipped += 1;
+      continue;
+    }
+    const customFields = [];
+    const totp = value(row, "login_totp");
+    if (totp) customFields.push({ name: "totp", value: totp, concealed: true });
+    const fields = value(row, "fields");
+    if (fields) customFields.push({ name: "bitwarden fields", value: fields, concealed: false });
+    const now = new Date().toISOString();
+    imported.push({
+      id: crypto.randomUUID(),
+      type: "login",
+      title: title || url || `Bitwarden import ${imported.length + 1}`,
+      folder: value(row, "folder"),
+      tags: ["bitwarden-import"],
+      favorite: ["1", "true", "yes"].includes(value(row, "favorite").toLowerCase()),
+      createdAt: now,
+      updatedAt: now,
+      customFields,
+      username,
+      password,
+      url,
+      urls: [url].filter(Boolean),
+      notes,
+    });
+  }
+  return { source: "bitwarden", items: imported, skipped };
 }
 
 function importKey(item) {
@@ -453,7 +505,7 @@ async function importCsvFile(file) {
   state.selectedId = imported[0]?.id || state.selectedId;
   fillForm(state.items.find((item) => item.id === state.selectedId));
   render();
-  const label = result.source === "roboform" ? "RoboForm login" : "CSV login";
+  const label = result.source === "roboform" ? "RoboForm login" : result.source === "bitwarden" ? "Bitwarden login" : "CSV login";
   const summary = `Imported ${imported.length} ${label}${imported.length === 1 ? "" : "s"}${duplicates ? `, skipped ${duplicates} duplicate${duplicates === 1 ? "" : "s"}` : ""}${result.skipped ? `, ignored ${result.skipped} empty row${result.skipped === 1 ? "" : "s"}` : ""}.`;
   setStatus(state.token ? `${summary} Syncing encrypted records...` : `${summary} Login and sync to upload encrypted records.`, "success");
   if (state.token && imported.length > 0) await syncVault();

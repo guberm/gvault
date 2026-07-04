@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 370
+Total unchecked checklist task issues linked here: 369
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -461,7 +461,7 @@ Parent issue: #29 — https://github.com/guberm/gvault/issues/29
 
 - [x] #341 RoboForm import. — https://github.com/guberm/gvault/issues/341
 - [x] #342 CSV import. — https://github.com/guberm/gvault/issues/342
-- [ ] #343 Bitwarden import. — https://github.com/guberm/gvault/issues/343
+- [x] #343 Bitwarden import. — https://github.com/guberm/gvault/issues/343
 - [ ] #344 1Password import. — https://github.com/guberm/gvault/issues/344
 - [ ] #345 Field mapping preview. — https://github.com/guberm/gvault/issues/345
 - [ ] #346 Duplicate handling. — https://github.com/guberm/gvault/issues/346

@@ -16,7 +16,7 @@ export interface RoboFormImportResult {
 }
 
 export interface LoginCsvImportResult {
-  source: "roboform" | "generic-csv";
+  source: "roboform" | "generic-csv" | "bitwarden";
   items: LoginItem[];
   skippedRows: number;
   warnings: string[];
@@ -153,6 +153,9 @@ export function parseLoginCsv(csvText: string, now = nowIso): LoginCsvImportResu
     const result = parseRoboFormCsv(csvText, now);
     return { source: "roboform", ...result };
   }
+  if (["type", "name", "login_uri", "login_username", "login_password"].every((header) => lookup.has(header))) {
+    return parseBitwardenCsv(csvText, now);
+  }
 
   const titleHeader = firstHeader(lookup, ["title", "name", "label"]);
   const urlHeader = firstHeader(lookup, ["url", "website", "site", "login_url", "loginurl"]);
@@ -201,6 +204,57 @@ export function parseLoginCsv(csvText: string, now = nowIso): LoginCsvImportResu
     });
   }
   return { source: "generic-csv", items, skippedRows, warnings: [] };
+}
+
+export function parseBitwardenCsv(csvText: string, now = nowIso): LoginCsvImportResult {
+  const rows = parseCsvRows(csvText).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) return { source: "bitwarden", items: [], skippedRows: 0, warnings: ["CSV is empty"] };
+  const headers = rows[0].map((header) => header.trim());
+  const lookup = new Map(headers.map((header, index) => [normalizeHeader(header), index]));
+  const required = ["type", "name", "login_uri", "login_username", "login_password"];
+  const missing = required.filter((header) => !lookup.has(header));
+  if (missing.length > 0) throw new Error(`Unsupported Bitwarden CSV: missing ${missing.join(", ")}`);
+  const value = (row: string[], header: string): string => row[lookup.get(header) ?? -1]?.trim() ?? "";
+  const items: LoginItem[] = [];
+  let skippedRows = 0;
+  for (const row of rows.slice(1)) {
+    if (value(row, "type").toLowerCase() !== "login") {
+      skippedRows += 1;
+      continue;
+    }
+    const title = value(row, "name");
+    const url = value(row, "login_uri");
+    const username = value(row, "login_username");
+    const password = value(row, "login_password");
+    const notes = value(row, "notes");
+    if (!title && !url && !username && !password && !notes) {
+      skippedRows += 1;
+      continue;
+    }
+    const timestamp = now();
+    const customFields: CustomField[] = [];
+    const totp = value(row, "login_totp");
+    if (totp) customFields.push({ name: "totp", value: totp, concealed: true });
+    const fields = value(row, "fields");
+    if (fields) customFields.push({ name: "bitwarden fields", value: fields, concealed: false });
+    items.push({
+      id: uid("item"),
+      type: "login",
+      title: title || url || `Bitwarden import ${items.length + 1}`,
+      folder: value(row, "folder") || undefined,
+      tags: ["bitwarden-import"],
+      favorite: ["1", "true", "yes"].includes(value(row, "favorite").toLowerCase()),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      customFields,
+      username,
+      password,
+      url,
+      urls: uniqueStrings([url]),
+      notes: notes || undefined
+    });
+  }
+  return { source: "bitwarden", items, skippedRows, warnings: [] };
 }
 
 export function parseCsvRows(text: string): string[][] {

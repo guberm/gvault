@@ -477,7 +477,7 @@ Last updated: 2026-07-03
 
 - [x] RoboForm import.
 - [x] CSV import.
-- [ ] Bitwarden import.
+- [x] Bitwarden import.
 - [ ] 1Password import.
 - [ ] Field mapping preview.
 - [ ] Duplicate handling.
