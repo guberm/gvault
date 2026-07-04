@@ -77,7 +77,7 @@ public final class MainActivity extends Activity {
       }
     });
 
-    status = body("Ready. Registration is available from this screen.");
+    status = body("Ready. Registration is available from this screen.\n" + MobileAuthState.sessionStoragePolicyMessage());
     status.setPadding(0, 18, 0, 0);
 
     root.addView(title, fullWidth());

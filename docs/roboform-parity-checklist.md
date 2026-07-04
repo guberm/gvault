@@ -157,7 +157,7 @@ Last updated: 2026-07-03
 - [x] Loading state during login/register.
 - [x] Logout.
 - [x] App restart behavior is defined and verified.
-- [ ] Local token/session storage policy is implemented.
+- [x] Local token/session storage policy is implemented.
 - [ ] PIN unlock, if chosen.
 - [ ] Biometric unlock, if chosen.
 

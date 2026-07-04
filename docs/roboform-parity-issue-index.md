@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 358
+Total unchecked checklist task issues linked here: 357
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -122,7 +122,7 @@ Parent issue: #6 — https://github.com/guberm/gvault/issues/6
 - [x] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
 - [x] #117 Logout. — https://github.com/guberm/gvault/issues/117
 - [x] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118
-- [ ] #119 Local token/session storage policy is implemented. — https://github.com/guberm/gvault/issues/119
+- [x] #119 Local token/session storage policy is implemented. — https://github.com/guberm/gvault/issues/119
 - [ ] #120 PIN unlock, if chosen. — https://github.com/guberm/gvault/issues/120
 - [ ] #121 Biometric unlock, if chosen. — https://github.com/guberm/gvault/issues/121
 
