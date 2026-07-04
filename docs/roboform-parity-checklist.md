@@ -476,7 +476,7 @@ Last updated: 2026-07-03
 # 12. Import/export/backup/restore
 
 - [x] RoboForm import.
-- [ ] CSV import.
+- [x] CSV import.
 - [ ] Bitwarden import.
 - [ ] 1Password import.
 - [ ] Field mapping preview.

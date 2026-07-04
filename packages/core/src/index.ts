@@ -15,6 +15,13 @@ export interface RoboFormImportResult {
   warnings: string[];
 }
 
+export interface LoginCsvImportResult {
+  source: "roboform" | "generic-csv";
+  items: LoginItem[];
+  skippedRows: number;
+  warnings: string[];
+}
+
 const sets = {
   uppercase: "ABCDEFGHJKLMNPQRSTUVWXYZ",
   lowercase: "abcdefghijkmnopqrstuvwxyz",
@@ -136,6 +143,66 @@ export function parseRoboFormCsv(csvText: string, now = nowIso): RoboFormImportR
   return { items, skippedRows, warnings };
 }
 
+export function parseLoginCsv(csvText: string, now = nowIso): LoginCsvImportResult {
+  const rows = parseCsvRows(csvText).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) return { source: "generic-csv", items: [], skippedRows: 0, warnings: ["CSV is empty"] };
+  const headers = rows[0].map((header) => header.trim());
+  const lookup = new Map(headers.map((header, index) => [normalizeHeader(header), index]));
+
+  if (["name", "url", "login", "pwd"].every((header) => lookup.has(header))) {
+    const result = parseRoboFormCsv(csvText, now);
+    return { source: "roboform", ...result };
+  }
+
+  const titleHeader = firstHeader(lookup, ["title", "name", "label"]);
+  const urlHeader = firstHeader(lookup, ["url", "website", "site", "login_url", "loginurl"]);
+  const usernameHeader = firstHeader(lookup, ["username", "user", "login", "email"]);
+  const passwordHeader = firstHeader(lookup, ["password", "pwd", "pass"]);
+  const noteHeader = firstHeader(lookup, ["notes", "note", "comments", "comment"]);
+  const folderHeader = firstHeader(lookup, ["folder", "group", "category"]);
+  const missing = [
+    titleHeader ? "" : "title/name",
+    urlHeader ? "" : "url",
+    usernameHeader ? "" : "username/login",
+    passwordHeader ? "" : "password/pwd"
+  ].filter(Boolean);
+  if (missing.length > 0) throw new Error(`Unsupported login CSV: missing ${missing.join(", ")}`);
+
+  const value = (row: string[], header: string): string => row[lookup.get(header) ?? -1]?.trim() ?? "";
+  const items: LoginItem[] = [];
+  let skippedRows = 0;
+  for (const row of rows.slice(1)) {
+    const title = value(row, titleHeader);
+    const url = value(row, urlHeader);
+    const username = value(row, usernameHeader);
+    const password = value(row, passwordHeader);
+    const notes = noteHeader ? value(row, noteHeader) : "";
+    const folder = folderHeader ? value(row, folderHeader) : "";
+    if (!title && !url && !username && !password && !notes) {
+      skippedRows += 1;
+      continue;
+    }
+    const timestamp = now();
+    items.push({
+      id: uid("item"),
+      type: "login",
+      title: title || url || `CSV import ${items.length + 1}`,
+      folder: folder || undefined,
+      tags: ["csv-import"],
+      favorite: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      customFields: [],
+      username,
+      password,
+      url,
+      urls: uniqueStrings([url]),
+      notes: notes || undefined
+    });
+  }
+  return { source: "generic-csv", items, skippedRows, warnings: [] };
+}
+
 export function parseCsvRows(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -195,6 +262,15 @@ function parseRoboFormFields(value: string): CustomField[] {
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+}
+
+function normalizeHeader(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function firstHeader(lookup: Map<string, number>, names: string[]): string {
+  const found = names.find((name) => lookup.has(name));
+  return found ?? "";
 }
 
 function safeSearchProjection(item: VaultItem): unknown {

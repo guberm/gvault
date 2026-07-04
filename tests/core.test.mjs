@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseCsvRows, parseRoboFormCsv } from "../packages/core/dist/index.js";
+import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseCsvRows, parseLoginCsv, parseRoboFormCsv } from "../packages/core/dist/index.js";
 import { decryptJson, encryptJson } from "../packages/crypto/dist/index.js";
 
 test("password generator and strength indicator work", () => {
@@ -57,4 +57,26 @@ test("RoboForm CSV import maps login rows without leaking plaintext in metadata"
   assert.equal(result.items[0].customFields.length, 2);
   assert.equal(result.items[0].customFields[1].concealed, true);
   assert.deepEqual(result.items[0].tags, ["roboform-import"]);
+});
+
+test("generic CSV import maps common login columns", () => {
+  const csv = [
+    "Title,URL,Username,Password,Notes,Folder",
+    'GitHub,https://github.com/login,octo@example.com,"secret,with,comma",Main account,Work',
+    "Docs,https://docs.example.com,reader,reader-pass,,Reference"
+  ].join("\n");
+
+  const result = parseLoginCsv(csv, () => "2026-07-04T00:00:00.000Z");
+  assert.equal(result.source, "generic-csv");
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].title, "GitHub");
+  assert.equal(result.items[0].username, "octo@example.com");
+  assert.equal(result.items[0].password, "secret,with,comma");
+  assert.equal(result.items[0].notes, "Main account");
+  assert.equal(result.items[0].folder, "Work");
+  assert.deepEqual(result.items[0].tags, ["csv-import"]);
+});
+
+test("generic CSV import rejects files without login columns", () => {
+  assert.throws(() => parseLoginCsv("Column,Value\nfoo,bar"), /missing title\/name, url, username\/login, password\/pwd/i);
 });

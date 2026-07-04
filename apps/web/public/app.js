@@ -372,17 +372,80 @@ function parseRoboFormCsv(text) {
       notes,
     });
   }
-  return { items: imported, skipped };
+  return { source: "roboform", items: imported, skipped };
+}
+
+function normalizeCsvHeader(value) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function firstCsvHeader(headerIndex, names) {
+  return names.find((name) => headerIndex.has(name)) || "";
+}
+
+function parseGenericLoginCsv(text) {
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) throw new Error("CSV is empty.");
+  const headers = rows[0].map((header) => header.trim());
+  const headerIndex = new Map(headers.map((header, index) => [normalizeCsvHeader(header), index]));
+  const titleHeader = firstCsvHeader(headerIndex, ["title", "name", "label"]);
+  const urlHeader = firstCsvHeader(headerIndex, ["url", "website", "site", "login_url", "loginurl"]);
+  const usernameHeader = firstCsvHeader(headerIndex, ["username", "user", "login", "email"]);
+  const passwordHeader = firstCsvHeader(headerIndex, ["password", "pwd", "pass"]);
+  const noteHeader = firstCsvHeader(headerIndex, ["notes", "note", "comments", "comment"]);
+  const folderHeader = firstCsvHeader(headerIndex, ["folder", "group", "category"]);
+  const missing = [titleHeader ? "" : "title/name", urlHeader ? "" : "url", usernameHeader ? "" : "username/login", passwordHeader ? "" : "password/pwd"].filter(Boolean);
+  if (missing.length > 0) throw new Error(`Unsupported login CSV. Missing: ${missing.join(", ")}.`);
+  const value = (row, header) => (row[headerIndex.get(header)] || "").trim();
+  const imported = [];
+  let skipped = 0;
+  for (const row of rows.slice(1)) {
+    const title = value(row, titleHeader);
+    const url = value(row, urlHeader);
+    const username = value(row, usernameHeader);
+    const password = value(row, passwordHeader);
+    const notes = noteHeader ? value(row, noteHeader) : "";
+    const folder = folderHeader ? value(row, folderHeader) : "";
+    if (!title && !url && !username && !password && !notes) {
+      skipped += 1;
+      continue;
+    }
+    const now = new Date().toISOString();
+    imported.push({
+      id: crypto.randomUUID(),
+      type: "login",
+      title: title || url || `CSV import ${imported.length + 1}`,
+      folder,
+      tags: ["csv-import"],
+      favorite: false,
+      createdAt: now,
+      updatedAt: now,
+      customFields: [],
+      username,
+      password,
+      url,
+      urls: [url].filter(Boolean),
+      notes,
+    });
+  }
+  return { source: "generic-csv", items: imported, skipped };
+}
+
+function parseLoginCsv(text) {
+  const headerRow = parseCsvRows(text).find((row) => row.some((cell) => cell.trim() !== "")) || [];
+  const headers = new Set(headerRow.map((header) => normalizeCsvHeader(header)));
+  if (["name", "url", "login", "pwd"].every((header) => headers.has(header))) return parseRoboFormCsv(text);
+  return parseGenericLoginCsv(text);
 }
 
 function importKey(item) {
   return [item.type, item.title, item.username || "", item.url || item.urls?.[0] || ""].join("\u0000").toLowerCase();
 }
 
-async function importRoboFormFile(file) {
+async function importCsvFile(file) {
   if (!requireUnlocked()) return;
   const text = await file.text();
-  const result = parseRoboFormCsv(text);
+  const result = parseLoginCsv(text);
   const existing = new Set(state.items.map(importKey));
   const imported = result.items.filter((item) => !existing.has(importKey(item)));
   const duplicates = result.items.length - imported.length;
@@ -390,7 +453,8 @@ async function importRoboFormFile(file) {
   state.selectedId = imported[0]?.id || state.selectedId;
   fillForm(state.items.find((item) => item.id === state.selectedId));
   render();
-  const summary = `Imported ${imported.length} RoboForm login${imported.length === 1 ? "" : "s"}${duplicates ? `, skipped ${duplicates} duplicate${duplicates === 1 ? "" : "s"}` : ""}${result.skipped ? `, ignored ${result.skipped} empty row${result.skipped === 1 ? "" : "s"}` : ""}.`;
+  const label = result.source === "roboform" ? "RoboForm login" : "CSV login";
+  const summary = `Imported ${imported.length} ${label}${imported.length === 1 ? "" : "s"}${duplicates ? `, skipped ${duplicates} duplicate${duplicates === 1 ? "" : "s"}` : ""}${result.skipped ? `, ignored ${result.skipped} empty row${result.skipped === 1 ? "" : "s"}` : ""}.`;
   setStatus(state.token ? `${summary} Syncing encrypted records...` : `${summary} Login and sync to upload encrypted records.`, "success");
   if (state.token && imported.length > 0) await syncVault();
 }
@@ -593,7 +657,7 @@ $("roboFormImportFile").addEventListener("change", (event) => {
   const input = event.currentTarget;
   const file = input.files?.[0];
   if (!file) return;
-  importRoboFormFile(file)
+  importCsvFile(file)
     .catch((error) => setStatus(error.message, "warning"))
     .finally(() => {
       input.value = "";
