@@ -107,6 +107,7 @@ public final class MainActivity extends Activity {
     serverUrl = nextServerUrl.isEmpty() ? MobileAuthState.DEFAULT_SERVER_URL : nextServerUrl;
     setAuthControlsEnabled(false, signIn, createAccount);
     setStatus(MobileAuthState.authLoadingMessage(create), false);
+    final long authStartedAt = System.currentTimeMillis();
     new Thread(new Runnable() {
       @Override public void run() {
         try {
@@ -117,11 +118,16 @@ public final class MainActivity extends Activity {
           token = response.getString("token");
           email = nextEmail;
           prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
-          runOnMain(new Runnable() { @Override public void run() { showVaultScreen("Server session established."); } });
-          syncPull();
+          finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
+            showVaultScreen("Server session established.");
+            syncPull();
+          } });
         } catch (Exception error) {
-          runOnMain(new Runnable() { @Override public void run() { setAuthControlsEnabled(true, signIn, createAccount); } });
-          setStatusOnMain(friendlyError(error), true);
+          final String message = friendlyError(error);
+          finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
+            setAuthControlsEnabled(true, signIn, createAccount);
+            setStatus(message, true);
+          } });
         }
       }
     }).start();
@@ -233,6 +239,11 @@ public final class MainActivity extends Activity {
 
   private void runOnMain(Runnable runnable) {
     main.post(runnable);
+  }
+
+  private void finishAuthAfterLoading(long startedAtMs, Runnable runnable) {
+    long delayMs = MobileAuthState.remainingLoadingDelayMs(startedAtMs, System.currentTimeMillis());
+    main.postDelayed(runnable, delayMs);
   }
 
   private void setScrollable(LinearLayout content) {

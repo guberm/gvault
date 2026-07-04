@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 361
+Total unchecked checklist task issues linked here: 360
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -119,7 +119,7 @@ Parent issue: #6 — https://github.com/guberm/gvault/issues/6
 - [x] #113 Registration through Android is verified. — https://github.com/guberm/gvault/issues/113
 - [x] #114 Wrong-password error state. — https://github.com/guberm/gvault/issues/114
 - [x] #115 Server-unavailable error state. — https://github.com/guberm/gvault/issues/115
-- [ ] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
+- [x] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
 - [ ] #117 Logout. — https://github.com/guberm/gvault/issues/117
 - [ ] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118
 - [ ] #119 Local token/session storage policy is implemented. — https://github.com/guberm/gvault/issues/119

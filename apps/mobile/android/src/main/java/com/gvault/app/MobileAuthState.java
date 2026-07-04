@@ -2,6 +2,7 @@ package com.gvault.app;
 
 public final class MobileAuthState {
   public static final String DEFAULT_SERVER_URL = "https://gvault.guber.dev";
+  public static final long MIN_AUTH_LOADING_MS = 1500L;
 
   private MobileAuthState() {}
 
@@ -41,6 +42,11 @@ public final class MobileAuthState {
 
   public static String networkErrorMessage(String detail) {
     return "Server unavailable. Check connection or server URL.";
+  }
+
+  public static long remainingLoadingDelayMs(long startedAtMs, long nowMs) {
+    long elapsed = nowMs - startedAtMs;
+    return elapsed >= MIN_AUTH_LOADING_MS ? 0L : MIN_AUTH_LOADING_MS - elapsed;
   }
 
   public static String syncStatusMessage(int encryptedRecordCount) {

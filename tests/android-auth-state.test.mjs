@@ -24,12 +24,20 @@ public final class TestMobileAuthState {
     assertEquals("Creating account...", MobileAuthState.authLoadingMessage(true));
     assertEquals("Wrong email or account password.", MobileAuthState.authErrorMessage(401, "Invalid credentials"));
     assertEquals("Server unavailable. Check connection or server URL.", MobileAuthState.networkErrorMessage("Connection refused"));
+    assertLongEquals(1500L, MobileAuthState.MIN_AUTH_LOADING_MS);
+    assertLongEquals(1500L, MobileAuthState.remainingLoadingDelayMs(1000L, 1000L));
+    assertLongEquals(550L, MobileAuthState.remainingLoadingDelayMs(1000L, 1950L));
+    assertLongEquals(0L, MobileAuthState.remainingLoadingDelayMs(1000L, 2600L));
     assertEquals("No vault items yet. Add a login on web or import, then sync again.", MobileAuthState.syncStatusMessage(0));
     assertEquals("Sync complete: 2 encrypted records pulled from server.", MobileAuthState.syncStatusMessage(2));
   }
 
   private static void assertEquals(String expected, String actual) {
     if (!expected.equals(actual)) throw new AssertionError("expected=" + expected + " actual=" + actual);
+  }
+
+  private static void assertLongEquals(long expected, long actual) {
+    if (expected != actual) throw new AssertionError("expected=" + expected + " actual=" + actual);
   }
 }
 `);

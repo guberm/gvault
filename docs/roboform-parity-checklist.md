@@ -154,7 +154,7 @@ Last updated: 2026-07-03
 - [x] Registration through Android is verified.
 - [x] Wrong-password error state.
 - [x] Server-unavailable error state.
-- [ ] Loading state during login/register.
+- [x] Loading state during login/register.
 - [ ] Logout.
 - [ ] App restart behavior is defined and verified.
 - [ ] Local token/session storage policy is implemented.
