@@ -155,8 +155,8 @@ Last updated: 2026-07-03
 - [x] Wrong-password error state.
 - [x] Server-unavailable error state.
 - [x] Loading state during login/register.
-- [ ] Logout.
-- [ ] App restart behavior is defined and verified.
+- [x] Logout.
+- [x] App restart behavior is defined and verified.
 - [ ] Local token/session storage policy is implemented.
 - [ ] PIN unlock, if chosen.
 - [ ] Biometric unlock, if chosen.
