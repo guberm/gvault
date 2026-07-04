@@ -26,22 +26,29 @@ public final class GVaultAutofillService extends AutofillService {
       return;
     }
 
-    RemoteViews presentation = new RemoteViews(getPackageName(), android.R.layout.simple_list_item_1);
-    presentation.setTextViewText(android.R.id.text1, "Open GVault");
-
-    Dataset.Builder dataset = new Dataset.Builder(presentation);
-    if (fields.usernameId != null) {
-      dataset.setValue(fields.usernameId, AutofillValue.forText(""));
-    }
-    if (fields.passwordId != null) {
-      dataset.setValue(fields.passwordId, AutofillValue.forText(""));
+    MobileAutofillVault.LoginEntry[] loginEntries = MobileAutofillVault.cachedLoginEntries();
+    if (loginEntries.length == 0) {
+      callback.onSuccess(null);
+      return;
     }
 
-    FillResponse response = new FillResponse.Builder()
-      .addDataset(dataset.build())
-      .setSaveInfo(new SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_PASSWORD, fields.requiredIds()).build())
-      .build();
-    callback.onSuccess(response);
+    FillResponse.Builder response = new FillResponse.Builder();
+    for (MobileAutofillVault.LoginEntry entry : loginEntries) {
+      RemoteViews presentation = new RemoteViews(getPackageName(), android.R.layout.simple_list_item_1);
+      presentation.setTextViewText(android.R.id.text1, entry.label());
+
+      Dataset.Builder dataset = new Dataset.Builder(presentation);
+      if (fields.usernameId != null && !entry.username().isEmpty()) {
+        dataset.setValue(fields.usernameId, AutofillValue.forText(entry.username()));
+      }
+      if (fields.passwordId != null) {
+        dataset.setValue(fields.passwordId, AutofillValue.forText(entry.password()));
+      }
+      response.addDataset(dataset.build());
+    }
+
+    response.setSaveInfo(new SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_PASSWORD, fields.requiredIds()).build());
+    callback.onSuccess(response.build());
   }
 
   @Override
