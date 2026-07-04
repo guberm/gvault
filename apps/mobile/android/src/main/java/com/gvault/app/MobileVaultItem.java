@@ -61,6 +61,11 @@ public final class MobileVaultItem {
       + "}";
   }
 
+  public static String updateLoginItemJson(String existingItemJson, String title, String url, String username, String password, String notes) {
+    String id = firstNonEmpty(extractString(existingItemJson, "id"), "android-login-" + System.currentTimeMillis());
+    return loginItemJson(id, title, url, username, password, notes);
+  }
+
   private static SecretKeySpec deriveAesKey(String masterPassword, byte[] salt) throws Exception {
     SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
     KeySpec spec = new PBEKeySpec(masterPassword.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_BITS);
@@ -83,6 +88,10 @@ public final class MobileVaultItem {
     return itemCount + " item" + (itemCount == 1 ? "" : "s") + " in your vault";
   }
 
+  public static int nextRevision(int currentRevision, boolean editing) {
+    return editing ? Math.max(1, currentRevision) + 1 : 1;
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");
@@ -96,6 +105,10 @@ public final class MobileVaultItem {
     if (!url.isEmpty()) builder.append("\nURL: ").append(url);
     if (!notes.isEmpty()) builder.append("\nNotes: ").append(notes);
     return builder.toString();
+  }
+
+  public static String stringFieldFromItemJson(String itemJson, String field) {
+    return extractString(itemJson, field);
   }
 
   private static String firstNonEmpty(String value, String fallback) {

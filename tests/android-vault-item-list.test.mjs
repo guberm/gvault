@@ -39,6 +39,16 @@ public final class TestMobileVaultItem {
     String decryptedCreated = MobileVaultItem.decryptItemJson(encryptedCreated[0], encryptedCreated[1], encryptedCreated[2], "${masterPassword}");
     assertContains(decryptedCreated, "Android Created Login");
     assertContains(decryptedCreated, "created@example.com");
+    String updatedJson = MobileVaultItem.updateLoginItemJson(createdJson, "Android Edited Login", "https://edited.example/login", "edited@example.com", "EditedPass123", "Edited from Android");
+    assertContains(updatedJson, "android-created-1");
+    assertContains(updatedJson, "Android Edited Login");
+    assertContains(updatedJson, "edited@example.com");
+    assertContains(updatedJson, "Edited from Android");
+    assertEquals("Android Edited Login — edited@example.com", MobileVaultItem.listLineFromItemJson(updatedJson));
+    assertContains(MobileVaultItem.detailTextFromItemJson(updatedJson), "Title: Android Edited Login");
+    assertEquals("EditedPass123", MobileVaultItem.stringFieldFromItemJson(updatedJson, "password"));
+    assertEquals(2, MobileVaultItem.nextRevision(1, true));
+    assertEquals(1, MobileVaultItem.nextRevision(0, false));
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 
@@ -48,6 +58,10 @@ public final class TestMobileVaultItem {
 
   private static void assertEquals(String expected, String actual) {
     if (!expected.equals(actual)) throw new AssertionError("expected [" + expected + "] got [" + actual + "]");
+  }
+
+  private static void assertEquals(int expected, int actual) {
+    if (expected != actual) throw new AssertionError("expected [" + expected + "] got [" + actual + "]");
   }
 }
 `);

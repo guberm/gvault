@@ -31,7 +31,15 @@ public final class MainActivity extends Activity {
   private TextView status;
   private LinearLayout itemList;
   private TextView itemDetail;
+  private EditText editTitle;
+  private EditText editUrl;
+  private EditText editUsername;
+  private EditText editPassword;
+  private EditText editNotes;
+  private Button saveLoginButton;
   private String[] currentItemJsons = new String[0];
+  private int[] currentItemRevisions = new int[0];
+  private int selectedItemIndex = -1;
   private String token = "";
   private String email = "";
   private String masterPassword = "";
@@ -157,29 +165,29 @@ public final class MainActivity extends Activity {
     root.addView(itemList, fullWidth());
     itemDetail = card("Item detail", "Select a vault item to view details.");
     root.addView(itemDetail, spaced());
-    renderVaultList(new String[0], new String[0], MobileAuthState.syncStatusMessage(0));
+    renderVaultList(new String[0], new String[0], new int[0], MobileAuthState.syncStatusMessage(0));
 
     TextView addLoginTitle = body("Add Login");
     addLoginTitle.setTypeface(null, 1);
     addLoginTitle.setPadding(0, 18, 0, 0);
     root.addView(addLoginTitle, fullWidth());
-    final EditText newTitle = field("Login title", false);
-    final EditText newUrl = field("URL", false);
-    newUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-    final EditText newUsername = field("Username", false);
-    newUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-    final EditText newPassword = field("Password", true);
-    final EditText newNotes = field("Notes", false);
-    root.addView(newTitle, spaced());
-    root.addView(newUrl, spaced());
-    root.addView(newUsername, spaced());
-    root.addView(newPassword, spaced());
-    root.addView(newNotes, spaced());
-    Button saveLogin = actionButton("Save Login");
-    saveLogin.setOnClickListener(new View.OnClickListener() {
-      @Override public void onClick(View view) { submitCreateLogin(newTitle, newUrl, newUsername, newPassword, newNotes); }
+    editTitle = field("Login title", false);
+    editUrl = field("URL", false);
+    editUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    editUsername = field("Username", false);
+    editUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    editPassword = field("Password", true);
+    editNotes = field("Notes", false);
+    root.addView(editTitle, spaced());
+    root.addView(editUrl, spaced());
+    root.addView(editUsername, spaced());
+    root.addView(editPassword, spaced());
+    root.addView(editNotes, spaced());
+    saveLoginButton = actionButton("Save Login");
+    saveLoginButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { submitSaveLogin(); }
     });
-    root.addView(saveLogin, spaced());
+    root.addView(saveLoginButton, spaced());
 
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
@@ -200,23 +208,30 @@ public final class MainActivity extends Activity {
     setScrollable(root);
   }
 
-  private void submitCreateLogin(final EditText titleField, final EditText urlField, final EditText usernameField, final EditText passwordField, final EditText notesField) {
+  private void submitSaveLogin() {
     if (token.isEmpty()) return;
-    final String title = titleField.getText().toString().trim();
+    final String title = editTitle == null ? "" : editTitle.getText().toString().trim();
     if (title.isEmpty()) {
       setStatus("Login title is required.", true);
       return;
     }
-    final String url = urlField.getText().toString().trim();
-    final String username = usernameField.getText().toString().trim();
-    final String password = passwordField.getText().toString();
-    final String notes = notesField.getText().toString();
-    setStatus("Saving encrypted login to server...", false);
+    final String url = editUrl == null ? "" : editUrl.getText().toString().trim();
+    final String username = editUsername == null ? "" : editUsername.getText().toString().trim();
+    final String password = editPassword == null ? "" : editPassword.getText().toString();
+    final String notes = editNotes == null ? "" : editNotes.getText().toString();
+    final int editIndex = selectedItemIndex;
+    final boolean editing = editIndex >= 0 && editIndex < currentItemJsons.length && !currentItemJsons[editIndex].isEmpty();
+    setStatus(editing ? "Updating encrypted login on server..." : "Saving encrypted login to server...", false);
     new Thread(new Runnable() {
       @Override public void run() {
         try {
-          String id = "android-login-" + System.currentTimeMillis();
-          String itemJson = MobileVaultItem.loginItemJson(id, title, url, username, password, notes);
+          String id = editing
+            ? MobileVaultItem.stringFieldFromItemJson(currentItemJsons[editIndex], "id")
+            : "android-login-" + System.currentTimeMillis();
+          int nextRevision = MobileVaultItem.nextRevision(editing && editIndex < currentItemRevisions.length ? currentItemRevisions[editIndex] : 0, editing);
+          String itemJson = editing
+            ? MobileVaultItem.updateLoginItemJson(currentItemJsons[editIndex], title, url, username, password, notes)
+            : MobileVaultItem.loginItemJson(id, title, url, username, password, notes);
           String[] encrypted = MobileVaultItem.encryptItemJson(itemJson, masterPassword);
           JSONObject record = new JSONObject();
           record.put("id", id);
@@ -228,7 +243,7 @@ public final class MainActivity extends Activity {
           record.put("schemaVersion", 1);
           record.put("deleted", false);
           record.put("updatedAt", isoNow());
-          record.put("revision", 1);
+          record.put("revision", nextRevision);
           JSONArray records = new JSONArray();
           records.put(record);
           JSONObject body = new JSONObject();
@@ -236,12 +251,9 @@ public final class MainActivity extends Activity {
           body.put("records", records);
           postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/push"), body, token);
           runOnMain(new Runnable() { @Override public void run() {
-            titleField.setText("");
-            urlField.setText("");
-            usernameField.setText("");
-            passwordField.setText("");
-            notesField.setText("");
-            setStatus("Login saved. Syncing list...", false);
+            selectedItemIndex = -1;
+            clearLoginForm();
+            setStatus(editing ? "Login updated. Syncing list..." : "Login saved. Syncing list...", false);
             syncPull();
           } });
         } catch (Exception error) {
@@ -268,8 +280,10 @@ public final class MainActivity extends Activity {
           int count = records == null ? 0 : records.length();
           final String[] lines = new String[count];
           final String[] itemJsons = new String[count];
+          final int[] revisions = new int[count];
           for (int index = 0; index < count; index++) {
             JSONObject record = records.getJSONObject(index);
+            revisions[index] = record.optInt("revision", 1);
             try {
               String itemJson = MobileVaultItem.decryptItemJson(record.optString("ciphertext"), record.optString("nonce"), record.optString("salt"), masterPassword);
               itemJsons[index] = itemJson;
@@ -280,7 +294,7 @@ public final class MainActivity extends Activity {
             }
           }
           runOnMain(new Runnable() { @Override public void run() {
-            renderVaultList(lines, itemJsons, MobileVaultItem.itemListStatus(lines.length));
+            renderVaultList(lines, itemJsons, revisions, MobileVaultItem.itemListStatus(lines.length));
           } });
         } catch (Exception error) {
           setStatusOnMain(friendlyError(error), true);
@@ -289,8 +303,10 @@ public final class MainActivity extends Activity {
     }).start();
   }
 
-  private void renderVaultList(String[] lines, String[] itemJsons, String summary) {
+  private void renderVaultList(String[] lines, String[] itemJsons, int[] revisions, String summary) {
     currentItemJsons = itemJsons;
+    currentItemRevisions = revisions;
+    selectedItemIndex = -1;
     setStatus(summary, false);
     if (itemList == null) return;
     itemList.removeAllViews();
@@ -300,6 +316,7 @@ public final class MainActivity extends Activity {
     if (lines.length == 0) {
       itemList.addView(card("Empty vault", MobileAuthState.syncStatusMessage(0)), spaced());
       if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
+      clearLoginForm();
       return;
     }
     for (int index = 0; index < lines.length; index++) {
@@ -310,12 +327,29 @@ public final class MainActivity extends Activity {
       });
       itemList.addView(row, spaced());
     }
-    showItemDetail(0);
+    if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
   }
 
   private void showItemDetail(int index) {
     if (itemDetail == null || index < 0 || index >= currentItemJsons.length || currentItemJsons[index].isEmpty()) return;
-    itemDetail.setText("Item detail\n" + MobileVaultItem.detailTextFromItemJson(currentItemJsons[index]));
+    selectedItemIndex = index;
+    String itemJson = currentItemJsons[index];
+    itemDetail.setText("Item detail\n" + MobileVaultItem.detailTextFromItemJson(itemJson));
+    if (editTitle != null) editTitle.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "title"));
+    if (editUrl != null) editUrl.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "url"));
+    if (editUsername != null) editUsername.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "username"));
+    if (editPassword != null) editPassword.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "password"));
+    if (editNotes != null) editNotes.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "notes"));
+    if (saveLoginButton != null) saveLoginButton.setText("Update Login");
+  }
+
+  private void clearLoginForm() {
+    if (editTitle != null) editTitle.setText("");
+    if (editUrl != null) editUrl.setText("");
+    if (editUsername != null) editUsername.setText("");
+    if (editPassword != null) editPassword.setText("");
+    if (editNotes != null) editNotes.setText("");
+    if (saveLoginButton != null) saveLoginButton.setText("Save Login");
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {

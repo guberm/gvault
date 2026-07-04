@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 354
+Total unchecked checklist task issues linked here: 353
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -133,7 +133,7 @@ Parent issue: #7 — https://github.com/guberm/gvault/issues/7
 - [x] #122 Full item list screen. — https://github.com/guberm/gvault/issues/122
 - [x] #123 Item detail screen. — https://github.com/guberm/gvault/issues/123
 - [x] #124 Create Login item. — https://github.com/guberm/gvault/issues/124
-- [ ] #125 Edit Login item. — https://github.com/guberm/gvault/issues/125
+- [x] #125 Edit Login item. — https://github.com/guberm/gvault/issues/125
 - [ ] #126 Delete/trash item. — https://github.com/guberm/gvault/issues/126
 - [ ] #127 Search. — https://github.com/guberm/gvault/issues/127
 - [ ] #128 Type filters/categories. — https://github.com/guberm/gvault/issues/128
