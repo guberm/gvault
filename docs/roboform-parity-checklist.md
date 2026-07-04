@@ -150,8 +150,8 @@ Last updated: 2026-07-03
 - [x] Android manifest has network permission.
 - [x] Android can login through `https://gvault.guber.dev`.
 - [x] Android reaches connected/server-backed vault state after login.
-- [ ] Clean install defaults to `https://gvault.guber.dev` without manual correction.
-- [ ] Registration through Android is verified.
+- [x] Clean install defaults to `https://gvault.guber.dev` without manual correction.
+- [x] Registration through Android is verified.
 - [ ] Wrong-password error state.
 - [ ] Server-unavailable error state.
 - [ ] Loading state during login/register.
@@ -180,7 +180,7 @@ Last updated: 2026-07-03
 - [ ] Reveal/hide password.
 - [ ] Password generator.
 - [ ] Settings screen.
-- [ ] Account screen.
+- [x] Account screen.
 - [ ] Material-style polish.
 
 ## 3.3 Android Autofill

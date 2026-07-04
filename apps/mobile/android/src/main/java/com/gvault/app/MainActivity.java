@@ -1,132 +1,291 @@
 package com.gvault.app;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
+  private final Handler main = new Handler(Looper.getMainLooper());
+  private SharedPreferences prefs;
+  private LinearLayout root;
+  private TextView status;
+  private String token = "";
+  private String email = "";
+  private String serverUrl = MobileAuthState.DEFAULT_SERVER_URL;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    SharedPreferences prefs = getSharedPreferences("gvault", MODE_PRIVATE);
-    final boolean[] darkMode = new boolean[] { prefs.getString("theme", "light").equals("dark") };
+    prefs = getSharedPreferences("gvault", MODE_PRIVATE);
+    serverUrl = prefs.getString("serverUrl", MobileAuthState.DEFAULT_SERVER_URL);
+    showAccountScreen();
+  }
 
-    LinearLayout root = new LinearLayout(this);
+  private void showAccountScreen() {
+    root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setGravity(Gravity.CENTER_HORIZONTAL);
-    root.setPadding(48, 56, 48, 48);
+    root.setPadding(40, 48, 40, 40);
     root.setBackgroundColor(Color.rgb(244, 247, 249));
 
-    TextView mark = new TextView(this);
-    mark.setText("G");
-    mark.setTextSize(26);
-    mark.setTextColor(Color.rgb(6, 37, 33));
-    mark.setGravity(Gravity.CENTER);
-    mark.setTypeface(null, 1);
-    mark.setBackgroundColor(Color.rgb(34, 199, 184));
-    LinearLayout.LayoutParams markParams = new LinearLayout.LayoutParams(96, 96);
-    root.addView(mark, markParams);
-
-    TextView title = new TextView(this);
-    title.setText("GVault");
-    title.setTextSize(30);
-    title.setTextColor(Color.rgb(16, 32, 39));
-    title.setTypeface(null, 1);
-    title.setGravity(Gravity.CENTER);
-    title.setPadding(0, 22, 0, 0);
-    root.addView(title, fullWidth());
-
-    TextView subtitle = new TextView(this);
-    subtitle.setText("Self-hosted password and identity vault");
-    subtitle.setTextSize(16);
-    subtitle.setTextColor(Color.rgb(99, 114, 122));
+    TextView title = title("GVault");
+    TextView subtitle = body("Sign in or create an account to use your server-backed encrypted vault.");
     subtitle.setGravity(Gravity.CENTER);
-    subtitle.setPadding(0, 8, 0, 28);
+    subtitle.setPadding(0, 8, 0, 24);
+
+    final EditText server = field("Server URL", false);
+    server.setText(serverUrl);
+    server.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+
+    final EditText emailField = field("Email", false);
+    emailField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+
+    final EditText accountPassword = field("Account password", true);
+    final EditText masterPassword = field("Master password", true);
+    final EditText confirmMaster = field("Confirm master password (create account)", true);
+
+    Button signIn = actionButton("Sign in");
+    signIn.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        submitAuth(false, server, emailField, accountPassword, masterPassword, confirmMaster);
+      }
+    });
+
+    Button createAccount = secondaryButton("Create account");
+    createAccount.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster);
+      }
+    });
+
+    status = body("Ready. Registration is available from this screen.");
+    status.setPadding(0, 18, 0, 0);
+
+    root.addView(title, fullWidth());
     root.addView(subtitle, fullWidth());
+    root.addView(server, spaced());
+    root.addView(emailField, spaced());
+    root.addView(accountPassword, spaced());
+    root.addView(masterPassword, spaced());
+    root.addView(confirmMaster, spaced());
+    root.addView(signIn, spaced());
+    root.addView(createAccount, spaced());
+    root.addView(status, fullWidth());
+    setScrollable(root);
+  }
 
-    TextView serverCard = statusCard("Server", "http://127.0.0.1:8080", "Use your own GVault server for encrypted sync.");
-    TextView vaultCard = statusCard("Vault", "Locked by default", "Native Android sync and biometric unlock are prepared for the mobile track.");
-    TextView securityCard = statusCard("Security", "Client-side encryption", "The server is designed to store encrypted vault records only.");
-    TextView[] cards = new TextView[] { serverCard, vaultCard, securityCard };
-    root.addView(serverCard);
-    root.addView(vaultCard);
-    root.addView(securityCard);
+  private void submitAuth(boolean create, EditText server, EditText emailField, EditText accountPassword, EditText masterPassword, EditText confirmMaster) {
+    final String nextServerUrl = server.getText().toString().trim();
+    final String nextEmail = emailField.getText().toString().trim();
+    final String accountSecret = accountPassword.getText().toString();
+    final String masterSecret = masterPassword.getText().toString();
+    final String confirmSecret = confirmMaster.getText().toString();
+    String validation = MobileAuthState.validate(nextEmail, accountSecret, masterSecret, confirmSecret, create);
+    if (!validation.isEmpty()) {
+      setStatus(validation, true);
+      return;
+    }
+    serverUrl = nextServerUrl.isEmpty() ? MobileAuthState.DEFAULT_SERVER_URL : nextServerUrl;
+    setStatus(create ? "Creating account..." : "Signing in...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          JSONObject body = new JSONObject();
+          body.put("email", nextEmail);
+          body.put("password", accountSecret);
+          JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, create ? "/api/auth/register" : "/api/auth/login"), body, "");
+          token = response.getString("token");
+          email = nextEmail;
+          prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
+          runOnMain(new Runnable() { @Override public void run() { showVaultScreen("Server session established."); } });
+          syncPull();
+        } catch (Exception error) {
+          setStatusOnMain(error.getMessage(), true);
+        }
+      }
+    }).start();
+  }
 
-    Button openWeb = new Button(this);
-    openWeb.setText("Open Web Vault");
-    openWeb.setAllCaps(false);
-    openWeb.setTextColor(Color.WHITE);
-    openWeb.setBackgroundColor(Color.rgb(15, 118, 110));
-    openWeb.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://127.0.0.1:5173")));
+  private void showVaultScreen(String message) {
+    root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(40, 48, 40, 40);
+    root.setBackgroundColor(Color.rgb(244, 247, 249));
+    root.addView(title("GVault"), fullWidth());
+    TextView account = body("Signed in as " + email + "\nServer: " + serverUrl);
+    account.setPadding(0, 12, 0, 20);
+    root.addView(account, fullWidth());
+
+    status = card("Vault", message + "\nSyncing server-backed encrypted records...");
+    root.addView(status, fullWidth());
+
+    Button sync = actionButton("Sync now");
+    sync.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { syncPull(); }
+    });
+    root.addView(sync, spaced());
+
+    Button signOut = secondaryButton("Sign out");
+    signOut.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        token = "";
+        email = "";
+        showAccountScreen();
       }
     });
-    LinearLayout.LayoutParams buttonParams = fullWidth();
-    buttonParams.setMargins(0, 28, 0, 0);
-    root.addView(openWeb, buttonParams);
+    root.addView(signOut, spaced());
+    setScrollable(root);
+  }
 
-    Button themeButton = new Button(this);
-    themeButton.setAllCaps(false);
-    themeButton.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        darkMode[0] = !darkMode[0];
-        prefs.edit().putString("theme", darkMode[0] ? "dark" : "light").apply();
-        applyTheme(darkMode[0], root, title, subtitle, cards, openWeb, themeButton);
+  private void syncPull() {
+    if (token.isEmpty()) return;
+    setStatusOnMain("Syncing server-backed encrypted records...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/pull"), new JSONObject(), token);
+          JSONArray records = response.optJSONArray("records");
+          int count = records == null ? 0 : records.length();
+          setStatusOnMain("Sync complete: " + count + " encrypted record" + (count == 1 ? "" : "s") + " pulled from server.", false);
+        } catch (Exception error) {
+          setStatusOnMain(error.getMessage(), true);
+        }
       }
-    });
-    LinearLayout.LayoutParams themeParams = fullWidth();
-    themeParams.setMargins(0, 14, 0, 0);
-    root.addView(themeButton, themeParams);
+    }).start();
+  }
 
-    applyTheme(darkMode[0], root, title, subtitle, cards, openWeb, themeButton);
-    setContentView(root);
+  private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {
+    HttpURLConnection connection = (HttpURLConnection) new URL(target).openConnection();
+    connection.setRequestMethod("POST");
+    connection.setConnectTimeout(15000);
+    connection.setReadTimeout(15000);
+    connection.setRequestProperty("content-type", "application/json; charset=utf-8");
+    if (bearerToken != null && !bearerToken.isEmpty()) {
+      connection.setRequestProperty("authorization", "Bearer " + bearerToken);
+    }
+    connection.setDoOutput(true);
+    byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
+    try (OutputStream out = connection.getOutputStream()) {
+      out.write(payload);
+    }
+    int code = connection.getResponseCode();
+    String raw = readAll(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
+    JSONObject parsed = raw.isEmpty() ? new JSONObject() : new JSONObject(raw);
+    if (code < 200 || code >= 300) {
+      throw new Exception(parsed.optString("error", "HTTP " + code));
+    }
+    return parsed;
+  }
+
+  private static String readAll(InputStream stream) throws Exception {
+    if (stream == null) return "";
+    StringBuilder builder = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) builder.append(line);
+    }
+    return builder.toString();
+  }
+
+  private void setStatus(String text, boolean warning) {
+    if (status == null) return;
+    status.setText(text);
+    status.setTextColor(warning ? Color.rgb(185, 28, 28) : Color.rgb(16, 32, 39));
+  }
+
+  private void setStatusOnMain(final String text, final boolean warning) {
+    runOnMain(new Runnable() { @Override public void run() { setStatus(text, warning); } });
+  }
+
+  private void runOnMain(Runnable runnable) {
+    main.post(runnable);
+  }
+
+  private void setScrollable(LinearLayout content) {
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(content);
+    setContentView(scroll);
+  }
+
+  private TextView title(String text) {
+    TextView view = new TextView(this);
+    view.setText(text);
+    view.setTextSize(30);
+    view.setTextColor(Color.rgb(16, 32, 39));
+    view.setTypeface(null, 1);
+    view.setGravity(Gravity.CENTER);
+    return view;
+  }
+
+  private TextView body(String text) {
+    TextView view = new TextView(this);
+    view.setText(text);
+    view.setTextSize(16);
+    view.setTextColor(Color.rgb(76, 91, 99));
+    return view;
+  }
+
+  private TextView card(String label, String detail) {
+    TextView view = body(label + "\n" + detail);
+    view.setTextColor(Color.rgb(16, 32, 39));
+    view.setBackgroundColor(Color.WHITE);
+    view.setPadding(28, 24, 28, 24);
+    return view;
+  }
+
+  private EditText field(String hint, boolean secret) {
+    EditText field = new EditText(this);
+    field.setHint(hint);
+    field.setSingleLine(true);
+    field.setTextSize(16);
+    field.setInputType(secret ? (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD) : (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS));
+    return field;
+  }
+
+  private Button actionButton(String text) {
+    Button button = new Button(this);
+    button.setText(text);
+    button.setAllCaps(false);
+    button.setTextColor(Color.WHITE);
+    button.setBackgroundColor(Color.rgb(15, 118, 110));
+    return button;
+  }
+
+  private Button secondaryButton(String text) {
+    Button button = new Button(this);
+    button.setText(text);
+    button.setAllCaps(false);
+    button.setTextColor(Color.rgb(16, 32, 39));
+    button.setBackgroundColor(Color.WHITE);
+    return button;
   }
 
   private static LinearLayout.LayoutParams fullWidth() {
     return new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
   }
 
-  private TextView statusCard(String label, String value, String detail) {
-    TextView card = new TextView(this);
-    card.setText(label + "\n" + value + "\n" + detail);
-    card.setTextSize(15);
-    card.setTextColor(Color.rgb(16, 32, 39));
-    card.setGravity(Gravity.START);
-    card.setPadding(26, 22, 26, 22);
-    card.setBackgroundColor(Color.WHITE);
+  private static LinearLayout.LayoutParams spaced() {
     LinearLayout.LayoutParams params = fullWidth();
-    params.setMargins(0, 0, 0, 14);
-    card.setLayoutParams(params);
-    return card;
-  }
-
-  private static void applyTheme(boolean dark, LinearLayout root, TextView title, TextView subtitle, TextView[] cards, Button openWeb, Button themeButton) {
-    int bg = dark ? Color.rgb(7, 19, 22) : Color.rgb(244, 247, 249);
-    int surface = dark ? Color.rgb(16, 32, 39) : Color.WHITE;
-    int ink = dark ? Color.rgb(238, 247, 247) : Color.rgb(16, 32, 39);
-    int muted = dark ? Color.rgb(173, 196, 200) : Color.rgb(99, 114, 122);
-    root.setBackgroundColor(bg);
-    title.setTextColor(ink);
-    subtitle.setTextColor(muted);
-    for (TextView card : cards) {
-      card.setTextColor(ink);
-      card.setBackgroundColor(surface);
-    }
-    openWeb.setTextColor(Color.WHITE);
-    openWeb.setBackgroundColor(Color.rgb(15, 118, 110));
-    themeButton.setText(dark ? "Light mode" : "Dark mode");
-    themeButton.setTextColor(ink);
-    themeButton.setBackgroundColor(surface);
+    params.setMargins(0, 12, 0, 0);
+    return params;
   }
 }
