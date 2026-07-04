@@ -70,6 +70,13 @@ public final class MobileAuthState {
     return "Loading vault\nDecrypting server-backed encrypted records...";
   }
 
+  public static String copyStatusMessage(String field) {
+    String normalized = field == null ? "" : field.trim().toLowerCase();
+    if ("password".equals(normalized)) return "Password copied to clipboard.";
+    if ("username".equals(normalized)) return "Username copied to clipboard.";
+    return "Copied to clipboard.";
+  }
+
   public static String sessionStoragePolicyMessage() {
     return "Session tokens are kept in memory only; sign in again after app restart.";
   }

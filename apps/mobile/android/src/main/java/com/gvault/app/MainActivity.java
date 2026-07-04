@@ -1,6 +1,9 @@
 package com.gvault.app;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -45,6 +48,8 @@ public final class MainActivity extends Activity {
   private EditText editNotes;
   private Button saveLoginButton;
   private Button deleteLoginButton;
+  private Button copyUsernameButton;
+  private Button copyPasswordButton;
   private String[] currentItemJsons = new String[0];
   private int[] currentItemRevisions = new int[0];
   private String[] allItemJsons = new String[0];
@@ -228,6 +233,21 @@ public final class MainActivity extends Activity {
     root.addView(itemList, fullWidth());
     itemDetail = card("Item detail", "Select a vault item to view details.");
     root.addView(itemDetail, spaced());
+    LinearLayout copyActions = new LinearLayout(this);
+    copyActions.setOrientation(LinearLayout.HORIZONTAL);
+    copyUsernameButton = secondaryButton("Copy username");
+    copyPasswordButton = secondaryButton("Copy password");
+    copyUsernameButton.setEnabled(false);
+    copyPasswordButton.setEnabled(false);
+    copyUsernameButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { copySelectedField("username"); }
+    });
+    copyPasswordButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { copySelectedField("password"); }
+    });
+    copyActions.addView(copyUsernameButton, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    copyActions.addView(copyPasswordButton, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    root.addView(copyActions, spaced());
     renderVaultLoading();
 
     TextView addLoginTitle = body("Add Login");
@@ -463,6 +483,7 @@ public final class MainActivity extends Activity {
     itemList.addView(header, fullWidth());
     itemList.addView(card("Loading vault", "Decrypting server-backed encrypted records..."), spaced());
     if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
+    clearLoginForm();
   }
 
   private void renderVaultList(String[] lines, String[] itemJsons, int[] revisions, String summary) {
@@ -490,6 +511,7 @@ public final class MainActivity extends Activity {
       itemList.addView(row, spaced());
     }
     if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
+    clearLoginForm();
   }
 
   private void showItemDetail(int index) {
@@ -504,6 +526,22 @@ public final class MainActivity extends Activity {
     if (editNotes != null) editNotes.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "notes"));
     if (saveLoginButton != null) saveLoginButton.setText("Update Login");
     if (deleteLoginButton != null) deleteLoginButton.setEnabled(true);
+    if (copyUsernameButton != null) copyUsernameButton.setEnabled(true);
+    if (copyPasswordButton != null) copyPasswordButton.setEnabled(true);
+  }
+
+  private void copySelectedField(String field) {
+    if (selectedItemIndex < 0 || selectedItemIndex >= currentItemJsons.length || currentItemJsons[selectedItemIndex].isEmpty()) return;
+    String value = MobileVaultItem.stringFieldFromItemJson(currentItemJsons[selectedItemIndex], field);
+    if (value == null || value.isEmpty()) {
+      setStatus("No " + field + " saved for selected item.", true);
+      return;
+    }
+    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+    if (clipboard != null) {
+      clipboard.setPrimaryClip(ClipData.newPlainText("GVault " + field, value));
+    }
+    setStatus(MobileAuthState.copyStatusMessage(field), false);
   }
 
   private void clearLoginForm() {
@@ -514,6 +552,8 @@ public final class MainActivity extends Activity {
     if (editNotes != null) editNotes.setText("");
     if (saveLoginButton != null) saveLoginButton.setText("Save Login");
     if (deleteLoginButton != null) deleteLoginButton.setEnabled(false);
+    if (copyUsernameButton != null) copyUsernameButton.setEnabled(false);
+    if (copyPasswordButton != null) copyPasswordButton.setEnabled(false);
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {

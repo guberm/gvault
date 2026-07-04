@@ -36,6 +36,8 @@ public final class TestMobileAuthState {
     assertEquals("Sync complete: 2 encrypted records pulled from server.", MobileAuthState.syncStatusMessage(2));
     assertEquals("Refreshing vault from server...", MobileAuthState.refreshLoadingMessage());
     assertEquals("Loading vault\\nDecrypting server-backed encrypted records...", MobileAuthState.vaultLoadingMessage());
+    assertEquals("Username copied to clipboard.", MobileAuthState.copyStatusMessage("username"));
+    assertEquals("Password copied to clipboard.", MobileAuthState.copyStatusMessage("password"));
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 
