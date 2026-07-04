@@ -30,6 +30,10 @@ public final class TestMobileVaultItem {
     assertContains(json, "Example Login");
     assertContains(json, "michael@example.com");
     assertEquals("Example Login — michael@example.com", MobileVaultItem.listLineFromItemJson(json));
+    String detail = MobileVaultItem.detailTextFromItemJson(json);
+    assertContains(detail, "Title: Example Login");
+    assertContains(detail, "Username: michael@example.com");
+    assertContains(detail, "URL: https://example.com/login");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 

@@ -47,6 +47,21 @@ public final class MobileVaultItem {
     return itemCount + " item" + (itemCount == 1 ? "" : "s") + " in your vault";
   }
 
+  public static String detailTextFromItemJson(String itemJson) {
+    String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
+    String type = firstNonEmpty(extractString(itemJson, "type"), "item");
+    String username = extractString(itemJson, "username");
+    String url = extractString(itemJson, "url");
+    String notes = extractString(itemJson, "notes");
+    StringBuilder builder = new StringBuilder();
+    builder.append("Title: ").append(title);
+    builder.append("\nType: ").append(type);
+    if (!username.isEmpty()) builder.append("\nUsername: ").append(username);
+    if (!url.isEmpty()) builder.append("\nURL: ").append(url);
+    if (!notes.isEmpty()) builder.append("\nNotes: ").append(notes);
+    return builder.toString();
+  }
+
   private static String firstNonEmpty(String value, String fallback) {
     return value == null || value.trim().isEmpty() ? fallback : value.trim();
   }

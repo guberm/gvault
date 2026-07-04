@@ -165,7 +165,7 @@ Last updated: 2026-07-03
 
 - [x] Android can show at least one server-backed item after login.
 - [x] Full item list screen.
-- [ ] Item detail screen.
+- [x] Item detail screen.
 - [ ] Create Login item.
 - [ ] Edit Login item.
 - [ ] Delete/trash item.

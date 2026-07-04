@@ -30,6 +30,8 @@ public final class MainActivity extends Activity {
   private LinearLayout root;
   private TextView status;
   private LinearLayout itemList;
+  private TextView itemDetail;
+  private String[] currentItemJsons = new String[0];
   private String token = "";
   private String email = "";
   private String masterPassword = "";
@@ -153,7 +155,9 @@ public final class MainActivity extends Activity {
     itemList.setOrientation(LinearLayout.VERTICAL);
     itemList.setPadding(0, 12, 0, 8);
     root.addView(itemList, fullWidth());
-    renderVaultList(new String[0], MobileAuthState.syncStatusMessage(0));
+    itemDetail = card("Item detail", "Select a vault item to view details.");
+    root.addView(itemDetail, spaced());
+    renderVaultList(new String[0], new String[0], MobileAuthState.syncStatusMessage(0));
 
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
@@ -184,17 +188,20 @@ public final class MainActivity extends Activity {
           JSONArray records = response.optJSONArray("records");
           int count = records == null ? 0 : records.length();
           final String[] lines = new String[count];
+          final String[] itemJsons = new String[count];
           for (int index = 0; index < count; index++) {
             JSONObject record = records.getJSONObject(index);
             try {
               String itemJson = MobileVaultItem.decryptItemJson(record.optString("ciphertext"), record.optString("nonce"), record.optString("salt"), masterPassword);
+              itemJsons[index] = itemJson;
               lines[index] = MobileVaultItem.listLineFromItemJson(itemJson);
             } catch (Exception decryptError) {
+              itemJsons[index] = "";
               lines[index] = "Encrypted item could not be decrypted";
             }
           }
           runOnMain(new Runnable() { @Override public void run() {
-            renderVaultList(lines, MobileVaultItem.itemListStatus(lines.length));
+            renderVaultList(lines, itemJsons, MobileVaultItem.itemListStatus(lines.length));
           } });
         } catch (Exception error) {
           setStatusOnMain(friendlyError(error), true);
@@ -203,7 +210,8 @@ public final class MainActivity extends Activity {
     }).start();
   }
 
-  private void renderVaultList(String[] lines, String summary) {
+  private void renderVaultList(String[] lines, String[] itemJsons, String summary) {
+    currentItemJsons = itemJsons;
     setStatus(summary, false);
     if (itemList == null) return;
     itemList.removeAllViews();
@@ -212,11 +220,23 @@ public final class MainActivity extends Activity {
     itemList.addView(header, fullWidth());
     if (lines.length == 0) {
       itemList.addView(card("Empty vault", MobileAuthState.syncStatusMessage(0)), spaced());
+      if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
       return;
     }
-    for (String line : lines) {
-      itemList.addView(card("Login", line), spaced());
+    for (int index = 0; index < lines.length; index++) {
+      final int selectedIndex = index;
+      Button row = secondaryButton(lines[index]);
+      row.setOnClickListener(new View.OnClickListener() {
+        @Override public void onClick(View view) { showItemDetail(selectedIndex); }
+      });
+      itemList.addView(row, spaced());
     }
+    showItemDetail(0);
+  }
+
+  private void showItemDetail(int index) {
+    if (itemDetail == null || index < 0 || index >= currentItemJsons.length || currentItemJsons[index].isEmpty()) return;
+    itemDetail.setText("Item detail\n" + MobileVaultItem.detailTextFromItemJson(currentItemJsons[index]));
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {
