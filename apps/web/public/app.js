@@ -274,6 +274,127 @@ function fillForm(item) {
   $("itemForm").elements.namedItem("tags").value = (item.tags || []).join(", ");
 }
 
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+  const input = text.replace(/^\uFEFF/, "");
+  for (let index = 0; index < input.length; index += 1) {
+    const char = input[index];
+    const next = input[index + 1];
+    if (inQuotes) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n") {
+      row.push(cell.replace(/\r$/, ""));
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell.replace(/\r$/, ""));
+  rows.push(row);
+  return rows;
+}
+
+function parseRoboFormFields(value = "") {
+  if (!value.trim()) return [];
+  const fields = parseCsvRows(value)[0] || [];
+  const customFields = [];
+  for (let index = 0; index + 4 < fields.length; index += 5) {
+    const rawName = fields[index] || fields[index + 2];
+    const fieldType = fields[index + 3] || "txt";
+    const fieldValue = fields[index + 4] || "";
+    const name = rawName.trim();
+    if (!name || fieldValue === "") continue;
+    customFields.push({
+      name,
+      value: fieldValue,
+      concealed: /pass|pwd|secret|card|cvv|pin/i.test(`${name} ${fieldType}`),
+    });
+  }
+  return customFields;
+}
+
+function parseRoboFormCsv(text) {
+  const rows = parseCsvRows(text).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) throw new Error("RoboForm CSV is empty.");
+  const headers = rows[0].map((header) => header.trim());
+  const headerIndex = new Map(headers.map((header, index) => [header.toLowerCase(), index]));
+  const required = ["name", "url", "login", "pwd"];
+  const missing = required.filter((header) => !headerIndex.has(header));
+  if (missing.length > 0) throw new Error(`Unsupported RoboForm CSV. Missing: ${missing.join(", ")}.`);
+  const value = (row, header) => (row[headerIndex.get(header.toLowerCase())] || "").trim();
+  const imported = [];
+  let skipped = 0;
+  for (const row of rows.slice(1)) {
+    const title = value(row, "Name") || value(row, "Url") || value(row, "MatchUrl");
+    const username = value(row, "Login");
+    const password = value(row, "Pwd");
+    const url = value(row, "Url");
+    const matchUrl = value(row, "MatchUrl");
+    const notes = value(row, "Note");
+    const folder = value(row, "Folder");
+    const rfFields = value(row, "RfFieldsV2");
+    if (!title && !username && !password && !url && !notes) {
+      skipped += 1;
+      continue;
+    }
+    const now = new Date().toISOString();
+    imported.push({
+      id: crypto.randomUUID(),
+      type: "login",
+      title: title || `RoboForm import ${imported.length + 1}`,
+      folder,
+      tags: ["roboform-import"],
+      favorite: false,
+      createdAt: now,
+      updatedAt: now,
+      customFields: parseRoboFormFields(rfFields),
+      username,
+      password,
+      url,
+      urls: [...new Set([url, matchUrl].map((candidate) => candidate.trim()).filter(Boolean))],
+      notes,
+    });
+  }
+  return { items: imported, skipped };
+}
+
+function importKey(item) {
+  return [item.type, item.title, item.username || "", item.url || item.urls?.[0] || ""].join("\u0000").toLowerCase();
+}
+
+async function importRoboFormFile(file) {
+  if (!requireUnlocked()) return;
+  const text = await file.text();
+  const result = parseRoboFormCsv(text);
+  const existing = new Set(state.items.map(importKey));
+  const imported = result.items.filter((item) => !existing.has(importKey(item)));
+  const duplicates = result.items.length - imported.length;
+  state.items = [...imported, ...state.items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  state.selectedId = imported[0]?.id || state.selectedId;
+  fillForm(state.items.find((item) => item.id === state.selectedId));
+  render();
+  const summary = `Imported ${imported.length} RoboForm login${imported.length === 1 ? "" : "s"}${duplicates ? `, skipped ${duplicates} duplicate${duplicates === 1 ? "" : "s"}` : ""}${result.skipped ? `, ignored ${result.skipped} empty row${result.skipped === 1 ? "" : "s"}` : ""}.`;
+  setStatus(state.token ? `${summary} Syncing encrypted records...` : `${summary} Login and sync to upload encrypted records.`, "success");
+  if (state.token && imported.length > 0) await syncVault();
+}
+
 async function api(path, body, method = "POST") {
   const response = await fetch(new URL(path, $("serverUrl").value), {
     method,
@@ -464,6 +585,20 @@ $("items").addEventListener("click", (event) => {
 $("registerButton").addEventListener("click", () => auth("/api/auth/register").catch((error) => setStatus(error.message, "warning")));
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
+$("importRoboFormButton").addEventListener("click", () => {
+  if (!requireUnlocked()) return;
+  $("roboFormImportFile").click();
+});
+$("roboFormImportFile").addEventListener("change", (event) => {
+  const input = event.currentTarget;
+  const file = input.files?.[0];
+  if (!file) return;
+  importRoboFormFile(file)
+    .catch((error) => setStatus(error.message, "warning"))
+    .finally(() => {
+      input.value = "";
+    });
+});
 $("search").addEventListener("input", render);
 $("themeButton").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 

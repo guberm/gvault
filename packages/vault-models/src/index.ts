@@ -23,6 +23,8 @@ export interface LoginItem extends VaultItemBase {
   type: "login";
   username: string;
   password: string;
+  /** Primary URL kept for simple clients; urls stores every match/open URL. */
+  url?: string;
   urls: string[];
   notes?: string;
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl } from "../packages/core/dist/index.js";
+import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseCsvRows, parseRoboFormCsv } from "../packages/core/dist/index.js";
 import { decryptJson, encryptJson } from "../packages/crypto/dist/index.js";
 
 test("password generator and strength indicator work", () => {
@@ -32,4 +32,29 @@ test("URL matching finds login records by normalized host", () => {
     customFields: []
   }];
   assert.equal(findLoginsForUrl(items, "https://www.example.com/account").length, 1);
+});
+
+test("CSV parser handles quoted commas and escaped quotes", () => {
+  assert.deepEqual(parseCsvRows('Name,Note\n"Bank, Inc.","say ""hello"""'), [["Name", "Note"], ["Bank, Inc.", 'say "hello"']]);
+});
+
+test("RoboForm CSV import maps login rows without leaking plaintext in metadata", () => {
+  const csv = [
+    "Name,Url,MatchUrl,Login,Pwd,Note,Folder,RfFieldsV2",
+    'Example,"https://example.com/login","https://example.com/*",user@example.com,"secret,with,comma","private note",Work,"email,,email,txt,user@example.com,password,,password,pwd,secret"',
+    'Only Url,https://only.example/login,,only-user,only-pass,,,""'
+  ].join("\n");
+
+  const result = parseRoboFormCsv(csv, () => "2026-07-04T00:00:00.000Z");
+  assert.equal(result.items.length, 2);
+  assert.equal(result.skippedRows, 0);
+  assert.equal(result.items[0].type, "login");
+  assert.equal(result.items[0].title, "Example");
+  assert.equal(result.items[0].folder, "Work");
+  assert.equal(result.items[0].username, "user@example.com");
+  assert.equal(result.items[0].password, "secret,with,comma");
+  assert.deepEqual(result.items[0].urls, ["https://example.com/login", "https://example.com/*"]);
+  assert.equal(result.items[0].customFields.length, 2);
+  assert.equal(result.items[0].customFields[1].concealed, true);
+  assert.deepEqual(result.items[0].tags, ["roboform-import"]);
 });
