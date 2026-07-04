@@ -170,7 +170,7 @@ Last updated: 2026-07-03
 - [x] Edit Login item.
 - [x] Delete/trash item.
 - [x] Search.
-- [ ] Type filters/categories.
+- [x] Type filters/categories.
 - [ ] Favorites.
 - [ ] Pull-to-refresh.
 - [x] Sync status.

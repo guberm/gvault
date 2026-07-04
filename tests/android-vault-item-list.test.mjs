@@ -56,6 +56,9 @@ public final class TestMobileVaultItem {
     if (!MobileVaultItem.matchesQuery(updatedJson, "edited.example")) throw new AssertionError("URL query should match");
     if (!MobileVaultItem.matchesQuery(updatedJson, "")) throw new AssertionError("empty query should match");
     if (MobileVaultItem.matchesQuery(updatedJson, "missing-value")) throw new AssertionError("unmatched query should not match");
+    if (!MobileVaultItem.matchesType(updatedJson, "all")) throw new AssertionError("all type should match");
+    if (!MobileVaultItem.matchesType(updatedJson, "login")) throw new AssertionError("login type should match login item");
+    if (MobileVaultItem.matchesType(updatedJson, "safenote")) throw new AssertionError("safenote type should not match login item");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 

@@ -106,6 +106,11 @@ public final class MobileVaultItem {
     return haystack.contains(normalized);
   }
 
+  public static boolean matchesType(String itemJson, String typeFilter) {
+    if (typeFilter == null || typeFilter.trim().isEmpty() || "all".equals(typeFilter)) return true;
+    return typeFilter.trim().equals(extractString(itemJson, "type"));
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");
