@@ -25,12 +25,17 @@ public final class TestMobileAuthState {
     assertEquals("Wrong email or account password.", MobileAuthState.authErrorMessage(401, "Invalid credentials"));
     assertEquals("Server unavailable. Check connection or server URL.", MobileAuthState.networkErrorMessage("Connection refused"));
     assertLongEquals(1500L, MobileAuthState.MIN_AUTH_LOADING_MS);
+    assertLongEquals(2500L, MobileAuthState.MIN_VAULT_LOADING_MS);
     assertLongEquals(1500L, MobileAuthState.remainingLoadingDelayMs(1000L, 1000L));
     assertLongEquals(550L, MobileAuthState.remainingLoadingDelayMs(1000L, 1950L));
     assertLongEquals(0L, MobileAuthState.remainingLoadingDelayMs(1000L, 2600L));
+    assertLongEquals(2500L, MobileAuthState.remainingVaultLoadingDelayMs(1000L, 1000L));
+    assertLongEquals(1850L, MobileAuthState.remainingVaultLoadingDelayMs(1000L, 1650L));
+    assertLongEquals(0L, MobileAuthState.remainingVaultLoadingDelayMs(1000L, 3600L));
     assertEquals("No vault items yet. Add a login on web or import, then sync again.", MobileAuthState.syncStatusMessage(0));
     assertEquals("Sync complete: 2 encrypted records pulled from server.", MobileAuthState.syncStatusMessage(2));
     assertEquals("Refreshing vault from server...", MobileAuthState.refreshLoadingMessage());
+    assertEquals("Loading vault\\nDecrypting server-backed encrypted records...", MobileAuthState.vaultLoadingMessage());
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 

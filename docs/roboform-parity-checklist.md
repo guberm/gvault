@@ -175,7 +175,7 @@ Last updated: 2026-07-03
 - [x] Pull-to-refresh.
 - [x] Sync status.
 - [x] Empty state.
-- [ ] Loading state.
+- [x] Loading state.
 - [ ] Copy username/password.
 - [ ] Reveal/hide password.
 - [ ] Password generator.

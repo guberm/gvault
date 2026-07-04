@@ -3,6 +3,7 @@ package com.gvault.app;
 public final class MobileAuthState {
   public static final String DEFAULT_SERVER_URL = "https://gvault.guber.dev";
   public static final long MIN_AUTH_LOADING_MS = 1500L;
+  public static final long MIN_VAULT_LOADING_MS = 2500L;
 
   private MobileAuthState() {}
 
@@ -49,6 +50,11 @@ public final class MobileAuthState {
     return elapsed >= MIN_AUTH_LOADING_MS ? 0L : MIN_AUTH_LOADING_MS - elapsed;
   }
 
+  public static long remainingVaultLoadingDelayMs(long startedAtMs, long nowMs) {
+    long elapsed = nowMs - startedAtMs;
+    return elapsed >= MIN_VAULT_LOADING_MS ? 0L : MIN_VAULT_LOADING_MS - elapsed;
+  }
+
   public static String syncStatusMessage(int encryptedRecordCount) {
     if (encryptedRecordCount == 0) {
       return "No vault items yet. Add a login on web or import, then sync again.";
@@ -58,6 +64,10 @@ public final class MobileAuthState {
 
   public static String refreshLoadingMessage() {
     return "Refreshing vault from server...";
+  }
+
+  public static String vaultLoadingMessage() {
+    return "Loading vault\nDecrypting server-backed encrypted records...";
   }
 
   public static String sessionStoragePolicyMessage() {

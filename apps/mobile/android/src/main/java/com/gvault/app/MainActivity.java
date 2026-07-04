@@ -51,6 +51,7 @@ public final class MainActivity extends Activity {
   private int[] allItemRevisions = new int[0];
   private String selectedTypeFilter = "all";
   private boolean favoritesOnly = false;
+  private boolean vaultLoading = false;
   private int selectedItemIndex = -1;
   private String token = "";
   private String email = "";
@@ -227,7 +228,7 @@ public final class MainActivity extends Activity {
     root.addView(itemList, fullWidth());
     itemDetail = card("Item detail", "Select a vault item to view details.");
     root.addView(itemDetail, spaced());
-    renderVaultList(new String[0], new String[0], new int[0], MobileAuthState.syncStatusMessage(0));
+    renderVaultLoading();
 
     TextView addLoginTitle = body("Add Login");
     addLoginTitle.setTypeface(null, 1);
@@ -379,7 +380,8 @@ public final class MainActivity extends Activity {
 
   private void syncPull() {
     if (token.isEmpty()) return;
-    setStatusOnMain("Syncing server-backed encrypted records...", false);
+    final long syncStartedAtMs = System.currentTimeMillis();
+    runOnMain(new Runnable() { @Override public void run() { renderVaultLoading(); } });
     new Thread(new Runnable() {
       @Override public void run() {
         try {
@@ -411,7 +413,10 @@ public final class MainActivity extends Activity {
           runOnMain(new Runnable() { @Override public void run() {
             allItemJsons = itemJsons;
             allItemRevisions = revisions;
-            renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
+            long delayMs = MobileAuthState.remainingVaultLoadingDelayMs(syncStartedAtMs, System.currentTimeMillis());
+            main.postDelayed(new Runnable() { @Override public void run() {
+              renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
+            } }, delayMs);
           } });
         } catch (Exception error) {
           setStatusOnMain(friendlyError(error), true);
@@ -421,6 +426,7 @@ public final class MainActivity extends Activity {
   }
 
   private void renderFilteredVaultList(String query) {
+    vaultLoading = false;
     int count = 0;
     for (int index = 0; index < allItemJsons.length; index++) {
       if (MobileVaultItem.matchesType(allItemJsons[index], selectedTypeFilter) && MobileVaultItem.matchesFavorite(allItemJsons[index], favoritesOnly) && MobileVaultItem.matchesQuery(allItemJsons[index], query)) count++;
@@ -442,6 +448,21 @@ public final class MainActivity extends Activity {
       ? MobileVaultItem.itemListStatus(allItemJsons.length)
       : (count == 0 ? "No matching vault items." : count + " matching item" + (count == 1 ? "" : "s"));
     renderVaultList(lines, itemJsons, revisions, summary);
+  }
+
+  private void renderVaultLoading() {
+    vaultLoading = true;
+    currentItemJsons = new String[0];
+    currentItemRevisions = new int[0];
+    selectedItemIndex = -1;
+    setStatus(MobileAuthState.vaultLoadingMessage(), false);
+    if (itemList == null) return;
+    itemList.removeAllViews();
+    TextView header = body("Items");
+    header.setTypeface(null, 1);
+    itemList.addView(header, fullWidth());
+    itemList.addView(card("Loading vault", "Decrypting server-backed encrypted records..."), spaced());
+    if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
   }
 
   private void renderVaultList(String[] lines, String[] itemJsons, int[] revisions, String summary) {
