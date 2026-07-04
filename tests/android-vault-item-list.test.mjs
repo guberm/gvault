@@ -49,6 +49,8 @@ public final class TestMobileVaultItem {
     assertEquals("EditedPass123", MobileVaultItem.stringFieldFromItemJson(updatedJson, "password"));
     assertEquals(2, MobileVaultItem.nextRevision(1, true));
     assertEquals(1, MobileVaultItem.nextRevision(0, false));
+    if (!MobileVaultItem.shouldRenderRecord(false)) throw new AssertionError("active records should render");
+    if (MobileVaultItem.shouldRenderRecord(true)) throw new AssertionError("deleted records should not render");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 

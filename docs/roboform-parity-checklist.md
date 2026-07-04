@@ -168,7 +168,7 @@ Last updated: 2026-07-03
 - [x] Item detail screen.
 - [x] Create Login item.
 - [x] Edit Login item.
-- [ ] Delete/trash item.
+- [x] Delete/trash item.
 - [ ] Search.
 - [ ] Type filters/categories.
 - [ ] Favorites.

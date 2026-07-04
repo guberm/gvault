@@ -37,6 +37,7 @@ public final class MainActivity extends Activity {
   private EditText editPassword;
   private EditText editNotes;
   private Button saveLoginButton;
+  private Button deleteLoginButton;
   private String[] currentItemJsons = new String[0];
   private int[] currentItemRevisions = new int[0];
   private int selectedItemIndex = -1;
@@ -188,6 +189,12 @@ public final class MainActivity extends Activity {
       @Override public void onClick(View view) { submitSaveLogin(); }
     });
     root.addView(saveLoginButton, spaced());
+    deleteLoginButton = secondaryButton("Delete Login");
+    deleteLoginButton.setEnabled(false);
+    deleteLoginButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { submitDeleteSelectedLogin(); }
+    });
+    root.addView(deleteLoginButton, spaced());
 
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
@@ -269,6 +276,46 @@ public final class MainActivity extends Activity {
     return format.format(new java.util.Date());
   }
 
+  private void submitDeleteSelectedLogin() {
+    if (token.isEmpty() || selectedItemIndex < 0 || selectedItemIndex >= currentItemJsons.length || currentItemJsons[selectedItemIndex].isEmpty()) return;
+    final int deleteIndex = selectedItemIndex;
+    setStatus("Deleting encrypted login from server...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          String id = MobileVaultItem.stringFieldFromItemJson(currentItemJsons[deleteIndex], "id");
+          String[] encrypted = MobileVaultItem.encryptItemJson(currentItemJsons[deleteIndex], masterPassword);
+          JSONObject record = new JSONObject();
+          record.put("id", id);
+          record.put("deviceId", "android-app");
+          record.put("collection", "vault-items");
+          record.put("ciphertext", encrypted[0]);
+          record.put("nonce", encrypted[1]);
+          record.put("salt", encrypted[2]);
+          record.put("schemaVersion", 1);
+          record.put("deleted", true);
+          record.put("updatedAt", isoNow());
+          record.put("revision", MobileVaultItem.nextRevision(deleteIndex < currentItemRevisions.length ? currentItemRevisions[deleteIndex] : 0, true));
+          JSONArray records = new JSONArray();
+          records.put(record);
+          JSONObject body = new JSONObject();
+          body.put("deviceId", "android-app");
+          body.put("records", records);
+          postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/push"), body, token);
+          runOnMain(new Runnable() { @Override public void run() {
+            selectedItemIndex = -1;
+            clearLoginForm();
+            if (itemDetail != null) itemDetail.setText("Item detail\nSelect a vault item to view details.");
+            setStatus("Login deleted. Syncing list...", false);
+            syncPull();
+          } });
+        } catch (Exception error) {
+          setStatusOnMain(friendlyError(error), true);
+        }
+      }
+    }).start();
+  }
+
   private void syncPull() {
     if (token.isEmpty()) return;
     setStatusOnMain("Syncing server-backed encrypted records...", false);
@@ -277,21 +324,28 @@ public final class MainActivity extends Activity {
         try {
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/pull"), new JSONObject(), token);
           JSONArray records = response.optJSONArray("records");
-          int count = records == null ? 0 : records.length();
+          int total = records == null ? 0 : records.length();
+          int count = 0;
+          for (int index = 0; index < total; index++) {
+            if (MobileVaultItem.shouldRenderRecord(records.getJSONObject(index).optBoolean("deleted", false))) count++;
+          }
           final String[] lines = new String[count];
           final String[] itemJsons = new String[count];
           final int[] revisions = new int[count];
-          for (int index = 0; index < count; index++) {
+          int visibleIndex = 0;
+          for (int index = 0; index < total; index++) {
             JSONObject record = records.getJSONObject(index);
-            revisions[index] = record.optInt("revision", 1);
+            if (!MobileVaultItem.shouldRenderRecord(record.optBoolean("deleted", false))) continue;
+            revisions[visibleIndex] = record.optInt("revision", 1);
             try {
               String itemJson = MobileVaultItem.decryptItemJson(record.optString("ciphertext"), record.optString("nonce"), record.optString("salt"), masterPassword);
-              itemJsons[index] = itemJson;
-              lines[index] = MobileVaultItem.listLineFromItemJson(itemJson);
+              itemJsons[visibleIndex] = itemJson;
+              lines[visibleIndex] = MobileVaultItem.listLineFromItemJson(itemJson);
             } catch (Exception decryptError) {
-              itemJsons[index] = "";
-              lines[index] = "Encrypted item could not be decrypted";
+              itemJsons[visibleIndex] = "";
+              lines[visibleIndex] = "Encrypted item could not be decrypted";
             }
+            visibleIndex++;
           }
           runOnMain(new Runnable() { @Override public void run() {
             renderVaultList(lines, itemJsons, revisions, MobileVaultItem.itemListStatus(lines.length));
@@ -341,6 +395,7 @@ public final class MainActivity extends Activity {
     if (editPassword != null) editPassword.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "password"));
     if (editNotes != null) editNotes.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "notes"));
     if (saveLoginButton != null) saveLoginButton.setText("Update Login");
+    if (deleteLoginButton != null) deleteLoginButton.setEnabled(true);
   }
 
   private void clearLoginForm() {
@@ -350,6 +405,7 @@ public final class MainActivity extends Activity {
     if (editPassword != null) editPassword.setText("");
     if (editNotes != null) editNotes.setText("");
     if (saveLoginButton != null) saveLoginButton.setText("Save Login");
+    if (deleteLoginButton != null) deleteLoginButton.setEnabled(false);
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {

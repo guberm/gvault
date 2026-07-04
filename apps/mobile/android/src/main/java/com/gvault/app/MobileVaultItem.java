@@ -92,6 +92,10 @@ public final class MobileVaultItem {
     return editing ? Math.max(1, currentRevision) + 1 : 1;
   }
 
+  public static boolean shouldRenderRecord(boolean deleted) {
+    return !deleted;
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");
