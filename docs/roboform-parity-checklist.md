@@ -152,8 +152,8 @@ Last updated: 2026-07-03
 - [x] Android reaches connected/server-backed vault state after login.
 - [x] Clean install defaults to `https://gvault.guber.dev` without manual correction.
 - [x] Registration through Android is verified.
-- [ ] Wrong-password error state.
-- [ ] Server-unavailable error state.
+- [x] Wrong-password error state.
+- [x] Server-unavailable error state.
 - [ ] Loading state during login/register.
 - [ ] Logout.
 - [ ] App restart behavior is defined and verified.
@@ -173,8 +173,8 @@ Last updated: 2026-07-03
 - [ ] Type filters/categories.
 - [ ] Favorites.
 - [ ] Pull-to-refresh.
-- [ ] Sync status.
-- [ ] Empty state.
+- [x] Sync status.
+- [x] Empty state.
 - [ ] Loading state.
 - [ ] Copy username/password.
 - [ ] Reveal/hide password.

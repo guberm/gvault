@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 365
+Total unchecked checklist task issues linked here: 361
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -117,8 +117,8 @@ Parent issue: #6 — https://github.com/guberm/gvault/issues/6
 
 - [x] #112 Clean install defaults to `https://gvault.guber.dev` without manual correction. — https://github.com/guberm/gvault/issues/112
 - [x] #113 Registration through Android is verified. — https://github.com/guberm/gvault/issues/113
-- [ ] #114 Wrong-password error state. — https://github.com/guberm/gvault/issues/114
-- [ ] #115 Server-unavailable error state. — https://github.com/guberm/gvault/issues/115
+- [x] #114 Wrong-password error state. — https://github.com/guberm/gvault/issues/114
+- [x] #115 Server-unavailable error state. — https://github.com/guberm/gvault/issues/115
 - [ ] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
 - [ ] #117 Logout. — https://github.com/guberm/gvault/issues/117
 - [ ] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118
@@ -139,8 +139,8 @@ Parent issue: #7 — https://github.com/guberm/gvault/issues/7
 - [ ] #128 Type filters/categories. — https://github.com/guberm/gvault/issues/128
 - [ ] #129 Favorites. — https://github.com/guberm/gvault/issues/129
 - [ ] #130 Pull-to-refresh. — https://github.com/guberm/gvault/issues/130
-- [ ] #131 Sync status. — https://github.com/guberm/gvault/issues/131
-- [ ] #132 Empty state. — https://github.com/guberm/gvault/issues/132
+- [x] #131 Sync status. — https://github.com/guberm/gvault/issues/131
+- [x] #132 Empty state. — https://github.com/guberm/gvault/issues/132
 - [ ] #133 Loading state. — https://github.com/guberm/gvault/issues/133
 - [ ] #134 Copy username/password. — https://github.com/guberm/gvault/issues/134
 - [ ] #135 Reveal/hide password. — https://github.com/guberm/gvault/issues/135

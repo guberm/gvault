@@ -63,17 +63,17 @@ public final class MainActivity extends Activity {
     final EditText masterPassword = field("Master password", true);
     final EditText confirmMaster = field("Confirm master password (create account)", true);
 
-    Button signIn = actionButton("Sign in");
+    final Button signIn = actionButton("Sign in");
+    final Button createAccount = secondaryButton("Create account");
     signIn.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
-        submitAuth(false, server, emailField, accountPassword, masterPassword, confirmMaster);
+        submitAuth(false, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
       }
     });
 
-    Button createAccount = secondaryButton("Create account");
     createAccount.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
-        submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster);
+        submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
       }
     });
 
@@ -93,7 +93,7 @@ public final class MainActivity extends Activity {
     setScrollable(root);
   }
 
-  private void submitAuth(boolean create, EditText server, EditText emailField, EditText accountPassword, EditText masterPassword, EditText confirmMaster) {
+  private void submitAuth(boolean create, EditText server, EditText emailField, EditText accountPassword, EditText masterPassword, EditText confirmMaster, final Button signIn, final Button createAccount) {
     final String nextServerUrl = server.getText().toString().trim();
     final String nextEmail = emailField.getText().toString().trim();
     final String accountSecret = accountPassword.getText().toString();
@@ -105,7 +105,8 @@ public final class MainActivity extends Activity {
       return;
     }
     serverUrl = nextServerUrl.isEmpty() ? MobileAuthState.DEFAULT_SERVER_URL : nextServerUrl;
-    setStatus(create ? "Creating account..." : "Signing in...", false);
+    setAuthControlsEnabled(false, signIn, createAccount);
+    setStatus(MobileAuthState.authLoadingMessage(create), false);
     new Thread(new Runnable() {
       @Override public void run() {
         try {
@@ -119,7 +120,8 @@ public final class MainActivity extends Activity {
           runOnMain(new Runnable() { @Override public void run() { showVaultScreen("Server session established."); } });
           syncPull();
         } catch (Exception error) {
-          setStatusOnMain(error.getMessage(), true);
+          runOnMain(new Runnable() { @Override public void run() { setAuthControlsEnabled(true, signIn, createAccount); } });
+          setStatusOnMain(friendlyError(error), true);
         }
       }
     }).start();
@@ -165,9 +167,9 @@ public final class MainActivity extends Activity {
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/pull"), new JSONObject(), token);
           JSONArray records = response.optJSONArray("records");
           int count = records == null ? 0 : records.length();
-          setStatusOnMain("Sync complete: " + count + " encrypted record" + (count == 1 ? "" : "s") + " pulled from server.", false);
+          setStatusOnMain(MobileAuthState.syncStatusMessage(count), false);
         } catch (Exception error) {
-          setStatusOnMain(error.getMessage(), true);
+          setStatusOnMain(friendlyError(error), true);
         }
       }
     }).start();
@@ -191,9 +193,17 @@ public final class MainActivity extends Activity {
     String raw = readAll(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
     JSONObject parsed = raw.isEmpty() ? new JSONObject() : new JSONObject(raw);
     if (code < 200 || code >= 300) {
-      throw new Exception(parsed.optString("error", "HTTP " + code));
+      throw new Exception(MobileAuthState.authErrorMessage(code, parsed.optString("error", "HTTP " + code)));
     }
     return parsed;
+  }
+
+  private static String friendlyError(Exception error) {
+    if (error instanceof java.io.IOException) {
+      return MobileAuthState.networkErrorMessage(error.getMessage());
+    }
+    String message = error.getMessage();
+    return message == null || message.trim().isEmpty() ? "Request failed. Try again." : message;
   }
 
   private static String readAll(InputStream stream) throws Exception {
@@ -210,6 +220,11 @@ public final class MainActivity extends Activity {
     if (status == null) return;
     status.setText(text);
     status.setTextColor(warning ? Color.rgb(185, 28, 28) : Color.rgb(16, 32, 39));
+  }
+
+  private static void setAuthControlsEnabled(boolean enabled, Button signIn, Button createAccount) {
+    signIn.setEnabled(enabled);
+    createAccount.setEnabled(enabled);
   }
 
   private void setStatusOnMain(final String text, final boolean warning) {

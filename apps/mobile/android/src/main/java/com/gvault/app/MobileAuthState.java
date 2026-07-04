@@ -27,6 +27,29 @@ public final class MobileAuthState {
     return "";
   }
 
+  public static String authLoadingMessage(boolean createAccount) {
+    return createAccount ? "Creating account..." : "Signing in...";
+  }
+
+  public static String authErrorMessage(int httpCode, String apiError) {
+    if (httpCode == 401 || httpCode == 403) return "Wrong email or account password.";
+    if (httpCode == 409) return "Account already exists.";
+    if (httpCode >= 500) return "Server unavailable. Try again later.";
+    if (!isBlank(apiError)) return apiError.trim();
+    return "Request failed. Try again.";
+  }
+
+  public static String networkErrorMessage(String detail) {
+    return "Server unavailable. Check connection or server URL.";
+  }
+
+  public static String syncStatusMessage(int encryptedRecordCount) {
+    if (encryptedRecordCount == 0) {
+      return "No vault items yet. Add a login on web or import, then sync again.";
+    }
+    return "Sync complete: " + encryptedRecordCount + " encrypted record" + (encryptedRecordCount == 1 ? "" : "s") + " pulled from server.";
+  }
+
   private static boolean isBlank(String value) {
     return value == null || value.trim().isEmpty();
   }
