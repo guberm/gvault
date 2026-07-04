@@ -30,6 +30,7 @@ public final class TestMobileAuthState {
     assertLongEquals(0L, MobileAuthState.remainingLoadingDelayMs(1000L, 2600L));
     assertEquals("No vault items yet. Add a login on web or import, then sync again.", MobileAuthState.syncStatusMessage(0));
     assertEquals("Sync complete: 2 encrypted records pulled from server.", MobileAuthState.syncStatusMessage(2));
+    assertEquals("Refreshing vault from server...", MobileAuthState.refreshLoadingMessage());
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 

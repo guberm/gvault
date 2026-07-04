@@ -172,7 +172,7 @@ Last updated: 2026-07-03
 - [x] Search.
 - [x] Type filters/categories.
 - [x] Favorites.
-- [ ] Pull-to-refresh.
+- [x] Pull-to-refresh.
 - [x] Sync status.
 - [x] Empty state.
 - [ ] Loading state.

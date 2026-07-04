@@ -56,6 +56,10 @@ public final class MobileAuthState {
     return "Sync complete: " + encryptedRecordCount + " encrypted record" + (encryptedRecordCount == 1 ? "" : "s") + " pulled from server.";
   }
 
+  public static String refreshLoadingMessage() {
+    return "Refreshing vault from server...";
+  }
+
   public static String sessionStoragePolicyMessage() {
     return "Session tokens are kept in memory only; sign in again after app restart.";
   }

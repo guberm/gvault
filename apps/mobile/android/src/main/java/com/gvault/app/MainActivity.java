@@ -10,6 +10,7 @@ import android.text.InputType;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -169,6 +170,15 @@ public final class MainActivity extends Activity {
 
     status = card("Vault", message + "\nSyncing server-backed encrypted records...");
     root.addView(status, fullWidth());
+
+    Button refreshVault = secondaryButton("Refresh vault");
+    refreshVault.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        setStatus(MobileAuthState.refreshLoadingMessage(), false);
+        syncPull();
+      }
+    });
+    root.addView(refreshVault, spaced());
 
     searchVault = field("Search vault", false);
     searchVault.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -551,7 +561,26 @@ public final class MainActivity extends Activity {
   }
 
   private void setScrollable(LinearLayout content) {
-    ScrollView scroll = new ScrollView(this);
+    final ScrollView scroll = new ScrollView(this);
+    final float[] pullStartY = new float[] { -1f };
+    scroll.setOnTouchListener(new View.OnTouchListener() {
+      @Override public boolean onTouch(View view, MotionEvent event) {
+        if (token == null || token.isEmpty()) return false;
+        if (event.getAction() == MotionEvent.ACTION_DOWN && scroll.getScrollY() == 0) {
+          pullStartY[0] = event.getRawY();
+        } else if (event.getAction() == MotionEvent.ACTION_UP && pullStartY[0] >= 0f) {
+          float pulled = event.getRawY() - pullStartY[0];
+          pullStartY[0] = -1f;
+          if (scroll.getScrollY() == 0 && pulled > 180f) {
+            setStatus(MobileAuthState.refreshLoadingMessage(), false);
+            syncPull();
+          }
+        } else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
+          pullStartY[0] = -1f;
+        }
+        return false;
+      }
+    });
     scroll.addView(content);
     setContentView(scroll);
   }
