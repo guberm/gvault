@@ -29,8 +29,10 @@ public final class MainActivity extends Activity {
   private SharedPreferences prefs;
   private LinearLayout root;
   private TextView status;
+  private LinearLayout itemList;
   private String token = "";
   private String email = "";
+  private String masterPassword = "";
   private String serverUrl = MobileAuthState.DEFAULT_SERVER_URL;
 
   @Override
@@ -117,6 +119,7 @@ public final class MainActivity extends Activity {
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, create ? "/api/auth/register" : "/api/auth/login"), body, "");
           token = response.getString("token");
           email = nextEmail;
+          MainActivity.this.masterPassword = masterSecret;
           prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
           finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
             showVaultScreen("Server session established.");
@@ -146,6 +149,12 @@ public final class MainActivity extends Activity {
     status = card("Vault", message + "\nSyncing server-backed encrypted records...");
     root.addView(status, fullWidth());
 
+    itemList = new LinearLayout(this);
+    itemList.setOrientation(LinearLayout.VERTICAL);
+    itemList.setPadding(0, 12, 0, 8);
+    root.addView(itemList, fullWidth());
+    renderVaultList(new String[0], MobileAuthState.syncStatusMessage(0));
+
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { syncPull(); }
@@ -157,6 +166,7 @@ public final class MainActivity extends Activity {
       @Override public void onClick(View view) {
         token = "";
         email = "";
+        masterPassword = "";
         showAccountScreen();
       }
     });
@@ -173,12 +183,40 @@ public final class MainActivity extends Activity {
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/pull"), new JSONObject(), token);
           JSONArray records = response.optJSONArray("records");
           int count = records == null ? 0 : records.length();
-          setStatusOnMain(MobileAuthState.syncStatusMessage(count), false);
+          final String[] lines = new String[count];
+          for (int index = 0; index < count; index++) {
+            JSONObject record = records.getJSONObject(index);
+            try {
+              String itemJson = MobileVaultItem.decryptItemJson(record.optString("ciphertext"), record.optString("nonce"), record.optString("salt"), masterPassword);
+              lines[index] = MobileVaultItem.listLineFromItemJson(itemJson);
+            } catch (Exception decryptError) {
+              lines[index] = "Encrypted item could not be decrypted";
+            }
+          }
+          runOnMain(new Runnable() { @Override public void run() {
+            renderVaultList(lines, MobileVaultItem.itemListStatus(lines.length));
+          } });
         } catch (Exception error) {
           setStatusOnMain(friendlyError(error), true);
         }
       }
     }).start();
+  }
+
+  private void renderVaultList(String[] lines, String summary) {
+    setStatus(summary, false);
+    if (itemList == null) return;
+    itemList.removeAllViews();
+    TextView header = body("Items");
+    header.setTypeface(null, 1);
+    itemList.addView(header, fullWidth());
+    if (lines.length == 0) {
+      itemList.addView(card("Empty vault", MobileAuthState.syncStatusMessage(0)), spaced());
+      return;
+    }
+    for (String line : lines) {
+      itemList.addView(card("Login", line), spaced());
+    }
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {

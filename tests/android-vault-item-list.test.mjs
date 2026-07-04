@@ -1,0 +1,69 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { webcrypto as crypto } from "node:crypto";
+
+const source = "apps/mobile/android/src/main/java/com/gvault/app/MobileVaultItem.java";
+const authSource = "apps/mobile/android/src/main/java/com/gvault/app/MobileAuthState.java";
+
+test("Android vault item list decrypts server-backed login records", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "gvault-android-vault-list-test-"));
+  const masterPassword = "MasterPass12345";
+  const login = {
+    id: "login_1",
+    type: "login",
+    title: "Example Login",
+    username: "michael@example.com",
+    url: "https://example.com/login"
+  };
+  const encrypted = await encryptJson(login, masterPassword);
+  const testSource = join(dir, "TestMobileVaultItem.java");
+  await writeFile(testSource, `
+import com.gvault.app.MobileVaultItem;
+
+public final class TestMobileVaultItem {
+  public static void main(String[] args) throws Exception {
+    String json = MobileVaultItem.decryptItemJson("${encrypted.ciphertext}", "${encrypted.nonce}", "${encrypted.salt}", "${masterPassword}");
+    assertContains(json, "Example Login");
+    assertContains(json, "michael@example.com");
+    assertEquals("Example Login — michael@example.com", MobileVaultItem.listLineFromItemJson(json));
+    assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
+  }
+
+  private static void assertContains(String actual, String expected) {
+    if (!actual.contains(expected)) throw new AssertionError("missing " + expected + " in " + actual);
+  }
+
+  private static void assertEquals(String expected, String actual) {
+    if (!expected.equals(actual)) throw new AssertionError("expected [" + expected + "] got [" + actual + "]");
+  }
+}
+`);
+
+  const compile = spawnSync("javac", ["-d", dir, authSource, source, testSource], { encoding: "utf8" });
+  assert.equal(compile.status, 0, compile.stderr || compile.stdout);
+  const run = spawnSync("java", ["-cp", dir, "TestMobileVaultItem"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+});
+
+async function encryptJson(value, masterPassword) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(masterPassword), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(JSON.stringify(value)));
+  return { ciphertext: toBase64(ciphertext), nonce: toBase64(iv), salt: toBase64(salt) };
+}
+
+function toBase64(bytes) {
+  return Buffer.from(bytes).toString("base64");
+}

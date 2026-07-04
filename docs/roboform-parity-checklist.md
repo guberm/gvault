@@ -164,7 +164,7 @@ Last updated: 2026-07-03
 ## 3.2 Android vault UI
 
 - [x] Android can show at least one server-backed item after login.
-- [ ] Full item list screen.
+- [x] Full item list screen.
 - [ ] Item detail screen.
 - [ ] Create Login item.
 - [ ] Edit Login item.
