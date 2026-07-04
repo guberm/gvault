@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 346
+Total unchecked checklist task issues linked here: 345
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -143,7 +143,7 @@ Parent issue: #7 — https://github.com/guberm/gvault/issues/7
 - [x] #132 Empty state. — https://github.com/guberm/gvault/issues/132
 - [x] #133 Loading state. — https://github.com/guberm/gvault/issues/133
 - [x] #134 Copy username/password. — https://github.com/guberm/gvault/issues/134
-- [ ] #135 Reveal/hide password. — https://github.com/guberm/gvault/issues/135
+- [x] #135 Reveal/hide password. — https://github.com/guberm/gvault/issues/135
 - [ ] #136 Password generator. — https://github.com/guberm/gvault/issues/136
 - [ ] #137 Settings screen. — https://github.com/guberm/gvault/issues/137
 - [x] #138 Account screen. — https://github.com/guberm/gvault/issues/138

@@ -38,6 +38,10 @@ public final class TestMobileAuthState {
     assertEquals("Loading vault\\nDecrypting server-backed encrypted records...", MobileAuthState.vaultLoadingMessage());
     assertEquals("Username copied to clipboard.", MobileAuthState.copyStatusMessage("username"));
     assertEquals("Password copied to clipboard.", MobileAuthState.copyStatusMessage("password"));
+    assertEquals("Reveal password", MobileAuthState.passwordRevealButtonLabel(false));
+    assertEquals("Hide password", MobileAuthState.passwordRevealButtonLabel(true));
+    assertEquals("Password revealed.", MobileAuthState.passwordRevealStatus(true));
+    assertEquals("Password hidden.", MobileAuthState.passwordRevealStatus(false));
     assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 

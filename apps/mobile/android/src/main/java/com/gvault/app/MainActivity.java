@@ -50,6 +50,7 @@ public final class MainActivity extends Activity {
   private Button deleteLoginButton;
   private Button copyUsernameButton;
   private Button copyPasswordButton;
+  private Button revealPasswordButton;
   private String[] currentItemJsons = new String[0];
   private int[] currentItemRevisions = new int[0];
   private String[] allItemJsons = new String[0];
@@ -57,6 +58,7 @@ public final class MainActivity extends Activity {
   private String selectedTypeFilter = "all";
   private boolean favoritesOnly = false;
   private boolean vaultLoading = false;
+  private boolean passwordRevealed = false;
   private int selectedItemIndex = -1;
   private String token = "";
   private String email = "";
@@ -260,11 +262,17 @@ public final class MainActivity extends Activity {
     editUsername = field("Username", false);
     editUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
     editPassword = field("Password", true);
+    revealPasswordButton = secondaryButton(MobileAuthState.passwordRevealButtonLabel(false));
+    revealPasswordButton.setEnabled(false);
+    revealPasswordButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { togglePasswordReveal(); }
+    });
     editNotes = field("Notes", false);
     root.addView(editTitle, spaced());
     root.addView(editUrl, spaced());
     root.addView(editUsername, spaced());
     root.addView(editPassword, spaced());
+    root.addView(revealPasswordButton, spaced());
     root.addView(editNotes, spaced());
     saveLoginButton = actionButton("Save Login");
     saveLoginButton.setOnClickListener(new View.OnClickListener() {
@@ -523,11 +531,29 @@ public final class MainActivity extends Activity {
     if (editUrl != null) editUrl.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "url"));
     if (editUsername != null) editUsername.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "username"));
     if (editPassword != null) editPassword.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "password"));
+    updatePasswordReveal(false, false);
     if (editNotes != null) editNotes.setText(MobileVaultItem.stringFieldFromItemJson(itemJson, "notes"));
     if (saveLoginButton != null) saveLoginButton.setText("Update Login");
     if (deleteLoginButton != null) deleteLoginButton.setEnabled(true);
     if (copyUsernameButton != null) copyUsernameButton.setEnabled(true);
     if (copyPasswordButton != null) copyPasswordButton.setEnabled(true);
+    if (revealPasswordButton != null) revealPasswordButton.setEnabled(true);
+  }
+
+  private void togglePasswordReveal() {
+    updatePasswordReveal(!passwordRevealed, true);
+  }
+
+  private void updatePasswordReveal(boolean revealed, boolean announce) {
+    passwordRevealed = revealed;
+    if (editPassword != null) {
+      int inputType = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+        (revealed ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_TEXT_VARIATION_PASSWORD);
+      editPassword.setInputType(inputType);
+      editPassword.setSelection(editPassword.getText().length());
+    }
+    if (revealPasswordButton != null) revealPasswordButton.setText(MobileAuthState.passwordRevealButtonLabel(revealed));
+    if (announce) setStatus(MobileAuthState.passwordRevealStatus(revealed), false);
   }
 
   private void copySelectedField(String field) {
@@ -554,6 +580,8 @@ public final class MainActivity extends Activity {
     if (deleteLoginButton != null) deleteLoginButton.setEnabled(false);
     if (copyUsernameButton != null) copyUsernameButton.setEnabled(false);
     if (copyPasswordButton != null) copyPasswordButton.setEnabled(false);
+    if (revealPasswordButton != null) revealPasswordButton.setEnabled(false);
+    updatePasswordReveal(false, false);
   }
 
   private JSONObject postJson(String target, JSONObject body, String bearerToken) throws Exception {

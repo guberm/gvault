@@ -177,7 +177,7 @@ Last updated: 2026-07-03
 - [x] Empty state.
 - [x] Loading state.
 - [x] Copy username/password.
-- [ ] Reveal/hide password.
+- [x] Reveal/hide password.
 - [ ] Password generator.
 - [ ] Settings screen.
 - [x] Account screen.

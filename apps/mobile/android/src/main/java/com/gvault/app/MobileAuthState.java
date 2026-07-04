@@ -77,6 +77,14 @@ public final class MobileAuthState {
     return "Copied to clipboard.";
   }
 
+  public static String passwordRevealButtonLabel(boolean revealed) {
+    return revealed ? "Hide password" : "Reveal password";
+  }
+
+  public static String passwordRevealStatus(boolean revealed) {
+    return revealed ? "Password revealed." : "Password hidden.";
+  }
+
   public static String sessionStoragePolicyMessage() {
     return "Session tokens are kept in memory only; sign in again after app restart.";
   }
