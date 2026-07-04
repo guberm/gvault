@@ -96,6 +96,16 @@ public final class MobileVaultItem {
     return !deleted;
   }
 
+  public static boolean matchesQuery(String itemJson, String query) {
+    if (query == null || query.trim().isEmpty()) return true;
+    String normalized = query.trim().toLowerCase(java.util.Locale.US);
+    String haystack = (firstNonEmpty(extractString(itemJson, "title"), "") + "\n"
+      + extractString(itemJson, "username") + "\n"
+      + extractString(itemJson, "url") + "\n"
+      + extractString(itemJson, "notes")).toLowerCase(java.util.Locale.US);
+    return haystack.contains(normalized);
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");

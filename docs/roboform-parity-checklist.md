@@ -169,7 +169,7 @@ Last updated: 2026-07-03
 - [x] Create Login item.
 - [x] Edit Login item.
 - [x] Delete/trash item.
-- [ ] Search.
+- [x] Search.
 - [ ] Type filters/categories.
 - [ ] Favorites.
 - [ ] Pull-to-refresh.

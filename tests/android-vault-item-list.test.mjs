@@ -51,6 +51,11 @@ public final class TestMobileVaultItem {
     assertEquals(1, MobileVaultItem.nextRevision(0, false));
     if (!MobileVaultItem.shouldRenderRecord(false)) throw new AssertionError("active records should render");
     if (MobileVaultItem.shouldRenderRecord(true)) throw new AssertionError("deleted records should not render");
+    if (!MobileVaultItem.matchesQuery(updatedJson, "edited")) throw new AssertionError("title query should match");
+    if (!MobileVaultItem.matchesQuery(updatedJson, "edited@example")) throw new AssertionError("username query should match");
+    if (!MobileVaultItem.matchesQuery(updatedJson, "edited.example")) throw new AssertionError("URL query should match");
+    if (!MobileVaultItem.matchesQuery(updatedJson, "")) throw new AssertionError("empty query should match");
+    if (MobileVaultItem.matchesQuery(updatedJson, "missing-value")) throw new AssertionError("unmatched query should not match");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 

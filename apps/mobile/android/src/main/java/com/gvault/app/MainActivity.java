@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -31,6 +33,7 @@ public final class MainActivity extends Activity {
   private TextView status;
   private LinearLayout itemList;
   private TextView itemDetail;
+  private EditText searchVault;
   private EditText editTitle;
   private EditText editUrl;
   private EditText editUsername;
@@ -40,6 +43,8 @@ public final class MainActivity extends Activity {
   private Button deleteLoginButton;
   private String[] currentItemJsons = new String[0];
   private int[] currentItemRevisions = new int[0];
+  private String[] allItemJsons = new String[0];
+  private int[] allItemRevisions = new int[0];
   private int selectedItemIndex = -1;
   private String token = "";
   private String email = "";
@@ -159,6 +164,17 @@ public final class MainActivity extends Activity {
 
     status = card("Vault", message + "\nSyncing server-backed encrypted records...");
     root.addView(status, fullWidth());
+
+    searchVault = field("Search vault", false);
+    searchVault.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    searchVault.addTextChangedListener(new TextWatcher() {
+      @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+      @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+        renderFilteredVaultList(s == null ? "" : s.toString());
+      }
+      @Override public void afterTextChanged(Editable s) {}
+    });
+    root.addView(searchVault, spaced());
 
     itemList = new LinearLayout(this);
     itemList.setOrientation(LinearLayout.VERTICAL);
@@ -348,13 +364,38 @@ public final class MainActivity extends Activity {
             visibleIndex++;
           }
           runOnMain(new Runnable() { @Override public void run() {
-            renderVaultList(lines, itemJsons, revisions, MobileVaultItem.itemListStatus(lines.length));
+            allItemJsons = itemJsons;
+            allItemRevisions = revisions;
+            renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
           } });
         } catch (Exception error) {
           setStatusOnMain(friendlyError(error), true);
         }
       }
     }).start();
+  }
+
+  private void renderFilteredVaultList(String query) {
+    int count = 0;
+    for (int index = 0; index < allItemJsons.length; index++) {
+      if (MobileVaultItem.matchesQuery(allItemJsons[index], query)) count++;
+    }
+    String[] lines = new String[count];
+    String[] itemJsons = new String[count];
+    int[] revisions = new int[count];
+    int visibleIndex = 0;
+    for (int index = 0; index < allItemJsons.length; index++) {
+      if (!MobileVaultItem.matchesQuery(allItemJsons[index], query)) continue;
+      itemJsons[visibleIndex] = allItemJsons[index];
+      revisions[visibleIndex] = index < allItemRevisions.length ? allItemRevisions[index] : 1;
+      lines[visibleIndex] = MobileVaultItem.listLineFromItemJson(allItemJsons[index]);
+      visibleIndex++;
+    }
+    String trimmed = query == null ? "" : query.trim();
+    String summary = trimmed.isEmpty()
+      ? MobileVaultItem.itemListStatus(allItemJsons.length)
+      : (count == 0 ? "No matching vault items." : count + " matching item" + (count == 1 ? "" : "s"));
+    renderVaultList(lines, itemJsons, revisions, summary);
   }
 
   private void renderVaultList(String[] lines, String[] itemJsons, int[] revisions, String summary) {
