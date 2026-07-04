@@ -16,7 +16,7 @@ export interface RoboFormImportResult {
 }
 
 export interface LoginCsvImportResult {
-  source: "roboform" | "generic-csv" | "bitwarden";
+  source: "roboform" | "generic-csv" | "bitwarden" | "1password";
   items: LoginItem[];
   skippedRows: number;
   warnings: string[];
@@ -156,6 +156,9 @@ export function parseLoginCsv(csvText: string, now = nowIso): LoginCsvImportResu
   if (["type", "name", "login_uri", "login_username", "login_password"].every((header) => lookup.has(header))) {
     return parseBitwardenCsv(csvText, now);
   }
+  if (["title", "website", "username", "password"].every((header) => lookup.has(header))) {
+    return parseOnePasswordCsv(csvText, now);
+  }
 
   const titleHeader = firstHeader(lookup, ["title", "name", "label"]);
   const urlHeader = firstHeader(lookup, ["url", "website", "site", "login_url", "loginurl"]);
@@ -255,6 +258,51 @@ export function parseBitwardenCsv(csvText: string, now = nowIso): LoginCsvImport
     });
   }
   return { source: "bitwarden", items, skippedRows, warnings: [] };
+}
+
+export function parseOnePasswordCsv(csvText: string, now = nowIso): LoginCsvImportResult {
+  const rows = parseCsvRows(csvText).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (rows.length === 0) return { source: "1password", items: [], skippedRows: 0, warnings: ["CSV is empty"] };
+  const headers = rows[0].map((header) => header.trim());
+  const lookup = new Map(headers.map((header, index) => [normalizeHeader(header), index]));
+  const required = ["title", "website", "username", "password"];
+  const missing = required.filter((header) => !lookup.has(header));
+  if (missing.length > 0) throw new Error(`Unsupported 1Password CSV: missing ${missing.join(", ")}`);
+  const value = (row: string[], header: string): string => row[lookup.get(header) ?? -1]?.trim() ?? "";
+  const items: LoginItem[] = [];
+  let skippedRows = 0;
+  for (const row of rows.slice(1)) {
+    const title = value(row, "title");
+    const url = value(row, "website");
+    const username = value(row, "username");
+    const password = value(row, "password");
+    const notes = value(row, "notes");
+    if (!title && !url && !username && !password && !notes) {
+      skippedRows += 1;
+      continue;
+    }
+    const timestamp = now();
+    const customFields: CustomField[] = [];
+    const totp = value(row, "one_time_password");
+    if (totp) customFields.push({ name: "totp", value: totp, concealed: true });
+    items.push({
+      id: uid("item"),
+      type: "login",
+      title: title || url || `1Password import ${items.length + 1}`,
+      folder: undefined,
+      tags: ["1password-import"],
+      favorite: false,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      customFields,
+      username,
+      password,
+      url,
+      urls: uniqueStrings([url]),
+      notes: notes || undefined
+    });
+  }
+  return { source: "1password", items, skippedRows, warnings: [] };
 }
 
 export function parseCsvRows(text: string): string[][] {

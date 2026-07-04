@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseBitwardenCsv, parseCsvRows, parseLoginCsv, parseRoboFormCsv } from "../packages/core/dist/index.js";
+import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseBitwardenCsv, parseCsvRows, parseLoginCsv, parseOnePasswordCsv, parseRoboFormCsv } from "../packages/core/dist/index.js";
 import { decryptJson, encryptJson } from "../packages/crypto/dist/index.js";
 
 test("password generator and strength indicator work", () => {
@@ -101,6 +101,26 @@ test("Bitwarden CSV import maps login rows and skips non-login rows", () => {
   assert.equal(result.items[0].notes, "main account");
   assert.deepEqual(result.items[0].urls, ["https://github.com/login"]);
   assert.deepEqual(result.items[0].tags, ["bitwarden-import"]);
+  assert.equal(result.items[0].customFields[0].name, "totp");
+  assert.equal(result.items[0].customFields[0].concealed, true);
+});
+
+test("1Password CSV import maps common login export columns", () => {
+  const csv = [
+    "Title,Website,Username,Password,Notes,One-time password",
+    'GitHub,https://github.com/login,octo@example.com,"secret,with,comma",main account,123456',
+    "Docs,https://docs.example.com,reader,reader-pass,,"
+  ].join("\n");
+
+  const result = parseOnePasswordCsv(csv, () => "2026-07-04T00:00:00.000Z");
+  assert.equal(result.source, "1password");
+  assert.equal(result.items.length, 2);
+  assert.equal(result.items[0].title, "GitHub");
+  assert.equal(result.items[0].username, "octo@example.com");
+  assert.equal(result.items[0].password, "secret,with,comma");
+  assert.equal(result.items[0].notes, "main account");
+  assert.deepEqual(result.items[0].urls, ["https://github.com/login"]);
+  assert.deepEqual(result.items[0].tags, ["1password-import"]);
   assert.equal(result.items[0].customFields[0].name, "totp");
   assert.equal(result.items[0].customFields[0].concealed, true);
 });
