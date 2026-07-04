@@ -111,6 +111,11 @@ public final class MobileVaultItem {
     return typeFilter.trim().equals(extractString(itemJson, "type"));
   }
 
+  public static boolean matchesFavorite(String itemJson, boolean favoritesOnly) {
+    if (!favoritesOnly) return true;
+    return extractBoolean(itemJson, "favorite");
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");
@@ -140,6 +145,12 @@ public final class MobileVaultItem {
     Matcher matcher = pattern.matcher(json);
     if (!matcher.find()) return "";
     return unescapeJsonString(matcher.group(1));
+  }
+
+  private static boolean extractBoolean(String json, String field) {
+    if (json == null) return false;
+    Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(field) + "\\\"\\s*:\\s*true");
+    return pattern.matcher(json).find();
   }
 
   private static String unescapeJsonString(String value) {

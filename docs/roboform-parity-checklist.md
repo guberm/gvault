@@ -171,7 +171,7 @@ Last updated: 2026-07-03
 - [x] Delete/trash item.
 - [x] Search.
 - [x] Type filters/categories.
-- [ ] Favorites.
+- [x] Favorites.
 - [ ] Pull-to-refresh.
 - [x] Sync status.
 - [x] Empty state.

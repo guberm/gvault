@@ -36,6 +36,7 @@ public final class MainActivity extends Activity {
   private EditText searchVault;
   private Button filterAllButton;
   private Button filterLoginsButton;
+  private Button filterFavoritesButton;
   private EditText editTitle;
   private EditText editUrl;
   private EditText editUsername;
@@ -48,6 +49,7 @@ public final class MainActivity extends Activity {
   private String[] allItemJsons = new String[0];
   private int[] allItemRevisions = new int[0];
   private String selectedTypeFilter = "all";
+  private boolean favoritesOnly = false;
   private int selectedItemIndex = -1;
   private String token = "";
   private String email = "";
@@ -182,20 +184,31 @@ public final class MainActivity extends Activity {
     typeFilters.setOrientation(LinearLayout.HORIZONTAL);
     filterAllButton = secondaryButton("All items");
     filterLoginsButton = secondaryButton("Logins");
+    filterFavoritesButton = secondaryButton("Favorites");
     filterAllButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
         selectedTypeFilter = "all";
+        favoritesOnly = false;
         renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
       }
     });
     filterLoginsButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
         selectedTypeFilter = "login";
+        favoritesOnly = false;
+        renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
+      }
+    });
+    filterFavoritesButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        selectedTypeFilter = "all";
+        favoritesOnly = true;
         renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
       }
     });
     typeFilters.addView(filterAllButton, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     typeFilters.addView(filterLoginsButton, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    typeFilters.addView(filterFavoritesButton, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     root.addView(typeFilters, spaced());
 
     itemList = new LinearLayout(this);
@@ -400,21 +413,21 @@ public final class MainActivity extends Activity {
   private void renderFilteredVaultList(String query) {
     int count = 0;
     for (int index = 0; index < allItemJsons.length; index++) {
-      if (MobileVaultItem.matchesType(allItemJsons[index], selectedTypeFilter) && MobileVaultItem.matchesQuery(allItemJsons[index], query)) count++;
+      if (MobileVaultItem.matchesType(allItemJsons[index], selectedTypeFilter) && MobileVaultItem.matchesFavorite(allItemJsons[index], favoritesOnly) && MobileVaultItem.matchesQuery(allItemJsons[index], query)) count++;
     }
     String[] lines = new String[count];
     String[] itemJsons = new String[count];
     int[] revisions = new int[count];
     int visibleIndex = 0;
     for (int index = 0; index < allItemJsons.length; index++) {
-      if (!MobileVaultItem.matchesType(allItemJsons[index], selectedTypeFilter) || !MobileVaultItem.matchesQuery(allItemJsons[index], query)) continue;
+      if (!MobileVaultItem.matchesType(allItemJsons[index], selectedTypeFilter) || !MobileVaultItem.matchesFavorite(allItemJsons[index], favoritesOnly) || !MobileVaultItem.matchesQuery(allItemJsons[index], query)) continue;
       itemJsons[visibleIndex] = allItemJsons[index];
       revisions[visibleIndex] = index < allItemRevisions.length ? allItemRevisions[index] : 1;
       lines[visibleIndex] = MobileVaultItem.listLineFromItemJson(allItemJsons[index]);
       visibleIndex++;
     }
     String trimmed = query == null ? "" : query.trim();
-    boolean typeFiltered = !"all".equals(selectedTypeFilter);
+    boolean typeFiltered = !"all".equals(selectedTypeFilter) || favoritesOnly;
     String summary = trimmed.isEmpty() && !typeFiltered
       ? MobileVaultItem.itemListStatus(allItemJsons.length)
       : (count == 0 ? "No matching vault items." : count + " matching item" + (count == 1 ? "" : "s"));

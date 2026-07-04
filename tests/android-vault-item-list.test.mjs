@@ -59,6 +59,10 @@ public final class TestMobileVaultItem {
     if (!MobileVaultItem.matchesType(updatedJson, "all")) throw new AssertionError("all type should match");
     if (!MobileVaultItem.matchesType(updatedJson, "login")) throw new AssertionError("login type should match login item");
     if (MobileVaultItem.matchesType(updatedJson, "safenote")) throw new AssertionError("safenote type should not match login item");
+    String favoriteJson = updatedJson.replace("\\\"favorite\\\":false", "\\\"favorite\\\":true");
+    if (!MobileVaultItem.matchesFavorite(favoriteJson, true)) throw new AssertionError("favorite item should match favorite-only filter");
+    if (MobileVaultItem.matchesFavorite(updatedJson, true)) throw new AssertionError("non-favorite should not match favorite-only filter");
+    if (!MobileVaultItem.matchesFavorite(updatedJson, false)) throw new AssertionError("non-favorite should match non-filtered list");
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 
