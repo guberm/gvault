@@ -63,6 +63,14 @@ public final class TestMobileVaultItem {
     if (!MobileVaultItem.matchesFavorite(favoriteJson, true)) throw new AssertionError("favorite item should match favorite-only filter");
     if (MobileVaultItem.matchesFavorite(updatedJson, true)) throw new AssertionError("non-favorite should not match favorite-only filter");
     if (!MobileVaultItem.matchesFavorite(updatedJson, false)) throw new AssertionError("non-favorite should match non-filtered list");
+    String generatedPassword = MobileVaultItem.generateStrongPassword(20);
+    assertEquals(20, generatedPassword.length());
+    if (!containsUppercase(generatedPassword)) throw new AssertionError("generated password needs uppercase");
+    if (!containsLowercase(generatedPassword)) throw new AssertionError("generated password needs lowercase");
+    if (!containsDigit(generatedPassword)) throw new AssertionError("generated password needs digit");
+    if (!containsSymbol(generatedPassword)) throw new AssertionError("generated password needs symbol");
+    assertEquals("Strong", MobileVaultItem.passwordStrengthLabel(generatedPassword));
+    assertEquals("Weak", MobileVaultItem.passwordStrengthLabel("short"));
     assertEquals("2 items in your vault", MobileVaultItem.itemListStatus(2));
   }
 
@@ -76,6 +84,29 @@ public final class TestMobileVaultItem {
 
   private static void assertEquals(int expected, int actual) {
     if (expected != actual) throw new AssertionError("expected [" + expected + "] got [" + actual + "]");
+  }
+
+  private static boolean containsUppercase(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isUpperCase(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsLowercase(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isLowerCase(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsDigit(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isDigit(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsSymbol(String value) {
+    for (int index = 0; index < value.length(); index++) {
+      char current = value.charAt(index);
+      if (!Character.isLetterOrDigit(current)) return true;
+    }
+    return false;
   }
 }
 `);

@@ -51,6 +51,7 @@ public final class MainActivity extends Activity {
   private Button copyUsernameButton;
   private Button copyPasswordButton;
   private Button revealPasswordButton;
+  private Button generatePasswordButton;
   private String[] currentItemJsons = new String[0];
   private int[] currentItemRevisions = new int[0];
   private String[] allItemJsons = new String[0];
@@ -267,12 +268,17 @@ public final class MainActivity extends Activity {
     revealPasswordButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { togglePasswordReveal(); }
     });
+    generatePasswordButton = secondaryButton("Generate password");
+    generatePasswordButton.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { generatePasswordForEditor(); }
+    });
     editNotes = field("Notes", false);
     root.addView(editTitle, spaced());
     root.addView(editUrl, spaced());
     root.addView(editUsername, spaced());
     root.addView(editPassword, spaced());
     root.addView(revealPasswordButton, spaced());
+    root.addView(generatePasswordButton, spaced());
     root.addView(editNotes, spaced());
     saveLoginButton = actionButton("Save Login");
     saveLoginButton.setOnClickListener(new View.OnClickListener() {
@@ -303,6 +309,14 @@ public final class MainActivity extends Activity {
     });
     root.addView(signOut, spaced());
     setScrollable(root);
+  }
+
+  private void generatePasswordForEditor() {
+    if (editPassword == null) return;
+    String generated = MobileVaultItem.generateStrongPassword(20);
+    editPassword.setText(generated);
+    updatePasswordReveal(true, false);
+    setStatus(MobileVaultItem.passwordStrengthLabel(generated) + " password generated.", false);
   }
 
   private void submitSaveLogin() {

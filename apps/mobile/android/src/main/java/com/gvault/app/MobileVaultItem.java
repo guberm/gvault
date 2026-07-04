@@ -17,6 +17,7 @@ public final class MobileVaultItem {
   private static final int PBKDF2_ITERATIONS = 150000;
   private static final int AES_KEY_BITS = 256;
   private static final int GCM_TAG_BITS = 128;
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   private MobileVaultItem() {}
 
@@ -116,6 +117,40 @@ public final class MobileVaultItem {
     return extractBoolean(itemJson, "favorite");
   }
 
+  public static String generateStrongPassword(int length) {
+    final String upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    final String lower = "abcdefghijkmnopqrstuvwxyz";
+    final String digits = "23456789";
+    final String symbols = "!@#$%^&*";
+    final String all = upper + lower + digits + symbols;
+    int targetLength = Math.max(4, length);
+    char[] value = new char[targetLength];
+    value[0] = randomChar(upper);
+    value[1] = randomChar(lower);
+    value[2] = randomChar(digits);
+    value[3] = randomChar(symbols);
+    for (int index = 4; index < targetLength; index++) value[index] = randomChar(all);
+    for (int index = value.length - 1; index > 0; index--) {
+      int swapIndex = RANDOM.nextInt(index + 1);
+      char temporary = value[index];
+      value[index] = value[swapIndex];
+      value[swapIndex] = temporary;
+    }
+    return new String(value);
+  }
+
+  public static String passwordStrengthLabel(String password) {
+    if (password == null) return "Weak";
+    int classes = 0;
+    if (containsUppercase(password)) classes++;
+    if (containsLowercase(password)) classes++;
+    if (containsDigit(password)) classes++;
+    if (containsSymbol(password)) classes++;
+    if (password.length() >= 16 && classes == 4) return "Strong";
+    if (password.length() >= 12 && classes >= 3) return "Medium";
+    return "Weak";
+  }
+
   public static String detailTextFromItemJson(String itemJson) {
     String title = firstNonEmpty(extractString(itemJson, "title"), "Untitled item");
     String type = firstNonEmpty(extractString(itemJson, "type"), "item");
@@ -151,6 +186,30 @@ public final class MobileVaultItem {
     if (json == null) return false;
     Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(field) + "\\\"\\s*:\\s*true");
     return pattern.matcher(json).find();
+  }
+
+  private static char randomChar(String characters) {
+    return characters.charAt(RANDOM.nextInt(characters.length()));
+  }
+
+  private static boolean containsUppercase(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isUpperCase(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsLowercase(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isLowerCase(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsDigit(String value) {
+    for (int index = 0; index < value.length(); index++) if (Character.isDigit(value.charAt(index))) return true;
+    return false;
+  }
+
+  private static boolean containsSymbol(String value) {
+    for (int index = 0; index < value.length(); index++) if (!Character.isLetterOrDigit(value.charAt(index))) return true;
+    return false;
   }
 
   private static String unescapeJsonString(String value) {

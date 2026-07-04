@@ -178,7 +178,7 @@ Last updated: 2026-07-03
 - [x] Loading state.
 - [x] Copy username/password.
 - [x] Reveal/hide password.
-- [ ] Password generator.
+- [x] Password generator.
 - [ ] Settings screen.
 - [x] Account screen.
 - [ ] Material-style polish.
