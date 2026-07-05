@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 341
+Total unchecked checklist task issues linked here: 340
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -154,7 +154,7 @@ Parent issue: #7 — https://github.com/guberm/gvault/issues/7
 Parent issue: #8 — https://github.com/guberm/gvault/issues/8
 
 - [x] #140 Autofill service uses server-backed Login records. — https://github.com/guberm/gvault/issues/140
-- [ ] #141 Credential picker shows matching records. — https://github.com/guberm/gvault/issues/141
+- [x] #141 Credential picker shows matching records. — https://github.com/guberm/gvault/issues/141
 - [ ] #142 Fill username/password into apps/browsers. — https://github.com/guberm/gvault/issues/142
 - [ ] #143 Identity autofill for address/contact forms. — https://github.com/guberm/gvault/issues/143
 - [ ] #144 Card autofill where appropriate. — https://github.com/guberm/gvault/issues/144

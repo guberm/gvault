@@ -342,6 +342,7 @@ public final class MainActivity extends Activity {
     email = "";
     masterPassword = "";
     MobileAutofillVault.clear();
+    MobileAutofillSessionStore.clear(this);
     showAccountScreen();
   }
 
@@ -490,6 +491,7 @@ public final class MainActivity extends Activity {
             allItemJsons = itemJsons;
             allItemRevisions = revisions;
             MobileAutofillVault.setServerBackedItems(itemJsons);
+            MobileAutofillSessionStore.save(MainActivity.this, itemJsons);
             long delayMs = MobileAuthState.remainingVaultLoadingDelayMs(syncStartedAtMs, System.currentTimeMillis());
             main.postDelayed(new Runnable() { @Override public void run() {
               renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());

@@ -186,7 +186,7 @@ Last updated: 2026-07-03
 ## 3.3 Android Autofill
 
 - [x] Autofill service uses server-backed Login records.
-- [ ] Credential picker shows matching records.
+- [x] Credential picker shows matching records.
 - [ ] Fill username/password into apps/browsers.
 - [ ] Identity autofill for address/contact forms.
 - [ ] Card autofill where appropriate.

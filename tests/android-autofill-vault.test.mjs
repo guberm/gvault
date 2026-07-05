@@ -28,8 +28,22 @@ public final class TestMobileAutofillVault {
     assertEquals("Secret123", entries[0].password());
     assertEquals("Example — user@example.com", entries[0].label());
 
-    MobileAutofillVault.setServerBackedItems(new String[] { login });
-    assertEquals(1, MobileAutofillVault.cachedLoginEntries().length);
+    String other = MobileVaultItem.loginItemJson("login-3", "Other", "https://other.example/login", "other@example.com", "Other123", "from server");
+    MobileAutofillVault.setServerBackedItems(new String[] { login, other });
+    assertEquals(2, MobileAutofillVault.cachedLoginEntries().length);
+    assertEquals(1, MobileAutofillVault.matchingLoginEntries("example.com").length);
+    assertEquals("Example", MobileAutofillVault.matchingLoginEntries("example.com")[0].title());
+    assertEquals(1, MobileAutofillVault.matchingLoginEntries("other.example").length);
+    assertEquals("Other", MobileAutofillVault.matchingLoginEntries("other.example")[0].title());
+    assertEquals(2, MobileAutofillVault.matchingLoginEntries("").length);
+    assertEquals(0, MobileAutofillVault.matchingLoginEntries("missing.example").length);
+    String serialized = MobileAutofillVault.serializeLoginEntries(MobileAutofillVault.cachedLoginEntries());
+    MobileAutofillVault.clear();
+    assertEquals(0, MobileAutofillVault.cachedLoginEntries().length);
+    MobileAutofillVault.setLoginEntries(MobileAutofillVault.deserializeLoginEntries(serialized));
+    assertEquals(2, MobileAutofillVault.cachedLoginEntries().length);
+    assertEquals("Example", MobileAutofillVault.matchingLoginEntries("example.com")[0].title());
+    assertEquals("Other123", MobileAutofillVault.matchingLoginEntries("other.example")[0].password());
     MobileAutofillVault.clear();
     assertEquals(0, MobileAutofillVault.cachedLoginEntries().length);
   }

@@ -11,6 +11,7 @@ import android.service.autofill.FillResponse;
 import android.service.autofill.SaveCallback;
 import android.service.autofill.SaveInfo;
 import android.service.autofill.SaveRequest;
+import android.util.Log;
 import android.view.View;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillValue;
@@ -21,12 +22,18 @@ public final class GVaultAutofillService extends AutofillService {
   @Override
   public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal, FillCallback callback) {
     FillFields fields = findFields(request.getFillContexts());
+    String webDomain = findWebDomain(request.getFillContexts());
+    MobileAutofillVault.LoginEntry[] loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
+    if (loginEntries.length == 0 && MobileAutofillVault.cachedLoginEntries().length == 0) {
+      MobileAutofillVault.setLoginEntries(MobileAutofillSessionStore.load(this));
+      loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
+    }
+    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " domain=" + webDomain + " entries=" + loginEntries.length);
     if (fields.usernameId == null && fields.passwordId == null) {
       callback.onSuccess(null);
       return;
     }
 
-    MobileAutofillVault.LoginEntry[] loginEntries = MobileAutofillVault.cachedLoginEntries();
     if (loginEntries.length == 0) {
       callback.onSuccess(null);
       return;
@@ -48,6 +55,7 @@ public final class GVaultAutofillService extends AutofillService {
     }
 
     response.setSaveInfo(new SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_PASSWORD, fields.requiredIds()).build());
+    response.setFillDialogTriggerIds(fields.requiredIds());
     callback.onSuccess(response.build());
   }
 
@@ -66,6 +74,29 @@ public final class GVaultAutofillService extends AutofillService {
       scanNode(structure.getWindowNodeAt(i).getRootViewNode(), fields);
     }
     return fields;
+  }
+
+  private static String findWebDomain(List<FillContext> contexts) {
+    if (contexts == null || contexts.isEmpty()) {
+      return "";
+    }
+    AssistStructure structure = contexts.get(contexts.size() - 1).getStructure();
+    for (int i = 0; i < structure.getWindowNodeCount(); i++) {
+      String domain = scanWebDomain(structure.getWindowNodeAt(i).getRootViewNode());
+      if (!domain.isEmpty()) return domain;
+    }
+    return "";
+  }
+
+  private static String scanWebDomain(AssistStructure.ViewNode node) {
+    if (node == null) return "";
+    String domain = lower(node.getWebDomain());
+    if (!domain.isEmpty()) return domain;
+    for (int i = 0; i < node.getChildCount(); i++) {
+      String childDomain = scanWebDomain(node.getChildAt(i));
+      if (!childDomain.isEmpty()) return childDomain;
+    }
+    return "";
   }
 
   private static void scanNode(AssistStructure.ViewNode node, FillFields fields) {
