@@ -24,3 +24,8 @@
 - Formal attachment encryption flow.
 - Security review of browser autofill edge cases.
 - Rate limiting and account lockout on the server.
+
+## Threat model
+
+See [threat-model.md](./threat-model.md) for assets, trust boundaries, actors,
+threats/mitigations, and residual risks for the current implementation.

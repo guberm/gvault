@@ -549,7 +549,7 @@ Last updated: 2026-07-03
 - [ ] Secure sharing crypto documented.
 - [ ] Backup/restore security documented.
 - [ ] Recovery limitations documented.
-- [ ] Threat model documented.
+- [x] Threat model documented.
 - [x] UI copy reviewed so it does not claim unimplemented security.
 - [x] Tests for crypto envelope.
 - [x] Tests for sync/auth boundaries.
