@@ -269,7 +269,7 @@ Last updated: 2026-07-03
 - [ ] Default server URL is `https://gvault.guber.dev`.
 - [ ] Remove preview-only GitHub message.
 - [ ] Build/package Linux client.
-- [ ] Linux smoke/login proof.
+- [x] Linux smoke/login proof.
 
 ---
 
@@ -563,7 +563,7 @@ Last updated: 2026-07-03
 - [ ] Chrome extension E2E.
 - [ ] Edge extension E2E.
 - [ ] Windows desktop login smoke.
-- [ ] Linux client login smoke.
+- [x] Linux client login smoke.
 - [x] Server integration tests.
 - [x] Import/export tests.
 - [x] Autofill tests where feasible.
