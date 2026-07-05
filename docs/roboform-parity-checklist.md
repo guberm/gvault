@@ -566,5 +566,5 @@ Last updated: 2026-07-03
 - [ ] Linux client login smoke.
 - [ ] Server integration tests.
 - [ ] Import/export tests.
-- [ ] Autofill tests where feasible.
+- [x] Autofill tests where feasible.
 - [ ] Final proof report separates passed/partial/blocked.
