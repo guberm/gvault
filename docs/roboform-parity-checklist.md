@@ -548,7 +548,7 @@ Last updated: 2026-07-03
 - [ ] Device/session token model documented.
 - [ ] Secure sharing crypto documented.
 - [ ] Backup/restore security documented.
-- [ ] Recovery limitations documented.
+- [x] Recovery limitations documented.
 - [x] Threat model documented.
 - [x] UI copy reviewed so it does not claim unimplemented security.
 - [x] Tests for crypto envelope.

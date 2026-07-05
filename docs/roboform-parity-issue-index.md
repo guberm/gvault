@@ -536,7 +536,7 @@ Parent issue: #34 — https://github.com/guberm/gvault/issues/34
 - [ ] #390 Device/session token model documented. — https://github.com/guberm/gvault/issues/390
 - [ ] #391 Secure sharing crypto documented. — https://github.com/guberm/gvault/issues/391
 - [ ] #392 Backup/restore security documented. — https://github.com/guberm/gvault/issues/392
-- [ ] #393 Recovery limitations documented. — https://github.com/guberm/gvault/issues/393
+- [x] #393 Recovery limitations documented. — https://github.com/guberm/gvault/issues/393
 - [x] #394 Threat model documented. — https://github.com/guberm/gvault/issues/394
 - [x] #395 UI copy reviewed so it does not claim unimplemented security. — https://github.com/guberm/gvault/issues/395
 - [x] #396 Tests for crypto envelope. — https://github.com/guberm/gvault/issues/396
