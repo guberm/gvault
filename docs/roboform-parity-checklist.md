@@ -565,6 +565,6 @@ Last updated: 2026-07-03
 - [ ] Windows desktop login smoke.
 - [ ] Linux client login smoke.
 - [ ] Server integration tests.
-- [ ] Import/export tests.
+- [x] Import/export tests.
 - [x] Autofill tests where feasible.
 - [ ] Final proof report separates passed/partial/blocked.
