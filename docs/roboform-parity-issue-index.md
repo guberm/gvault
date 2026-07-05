@@ -555,4 +555,4 @@ Parent issue: #35 — https://github.com/guberm/gvault/issues/35
 - [x] #404 Server integration tests. — https://github.com/guberm/gvault/issues/404
 - [x] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
 - [x] #406 Autofill tests where feasible. — https://github.com/guberm/gvault/issues/406
-- [ ] #407 Final proof report separates passed/partial/blocked. — https://github.com/guberm/gvault/issues/407
+- [x] #407 Final proof report separates passed/partial/blocked. — https://github.com/guberm/gvault/issues/407 — [`docs/roboform-parity-proof-report.md`](./roboform-parity-proof-report.md)
