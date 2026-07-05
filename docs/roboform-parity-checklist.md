@@ -189,7 +189,7 @@ Last updated: 2026-07-03
 - [x] Credential picker shows matching records.
 - [x] Fill username/password into apps/browsers.
 - [x] Identity autofill for address/contact forms.
-- [ ] Card autofill where appropriate.
+- [x] Card autofill where appropriate.
 - [ ] No blank placeholder dataset.
 - [ ] Autofill setup guidance.
 - [x] Real-device autofill proof.

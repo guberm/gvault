@@ -97,7 +97,7 @@ public final class MobileAutofillVault {
     if (itemJsons == null || itemJsons.length == 0) return new FillEntry[0];
     int count = 0;
     for (String itemJson : itemJsons) {
-      if (isFillableIdentity(itemJson) || isFillableAddress(itemJson)) count++;
+      if (isFillableIdentity(itemJson) || isFillableAddress(itemJson) || isFillablePaymentCard(itemJson)) count++;
     }
     FillEntry[] entries = new FillEntry[count];
     int index = 0;
@@ -106,6 +106,8 @@ public final class MobileAutofillVault {
         entries[index++] = FillEntry.fromIdentity(itemJson);
       } else if (isFillableAddress(itemJson)) {
         entries[index++] = FillEntry.fromAddress(itemJson);
+      } else if (isFillablePaymentCard(itemJson)) {
+        entries[index++] = FillEntry.fromPaymentCard(itemJson);
       }
     }
     return entries;
@@ -160,7 +162,13 @@ public final class MobileAutofillVault {
         .append(encode(entry.city())).append('\t')
         .append(encode(entry.region())).append('\t')
         .append(encode(entry.postalCode())).append('\t')
-        .append(encode(entry.country()));
+        .append(encode(entry.country())).append('\t')
+        .append(encode(entry.cardholderName())).append('\t')
+        .append(encode(entry.cardNumber())).append('\t')
+        .append(encode(entry.cardExpiryMonth())).append('\t')
+        .append(encode(entry.cardExpiryYear())).append('\t')
+        .append(encode(entry.cardExpiryDate())).append('\t')
+        .append(encode(entry.cardSecurityCode()));
     }
     return serialized.toString();
   }
@@ -172,12 +180,13 @@ public final class MobileAutofillVault {
     int count = 0;
     for (String line : lines) {
       String[] parts = line.split("\\t", -1);
-      if (parts.length != 17) continue;
+      if (parts.length != 23) continue;
       decoded[count++] = new FillEntry(
         decode(parts[0]), decode(parts[1]), decode(parts[2]), decode(parts[3]), decode(parts[4]),
         decode(parts[5]), decode(parts[6]), decode(parts[7]), decode(parts[8]), decode(parts[9]),
         decode(parts[10]), decode(parts[11]), decode(parts[12]), decode(parts[13]), decode(parts[14]),
-        decode(parts[15]), decode(parts[16])
+        decode(parts[15]), decode(parts[16]), decode(parts[17]), decode(parts[18]), decode(parts[19]),
+        decode(parts[20]), decode(parts[21]), decode(parts[22])
       );
     }
     FillEntry[] entries = new FillEntry[count];
@@ -217,6 +226,14 @@ public final class MobileAutofillVault {
     return !MobileVaultItem.stringFieldFromItemJson(itemJson, "line1").trim().isEmpty()
       || !MobileVaultItem.stringFieldFromItemJson(itemJson, "city").trim().isEmpty()
       || !MobileVaultItem.stringFieldFromItemJson(itemJson, "postalCode").trim().isEmpty();
+  }
+
+  private static boolean isFillablePaymentCard(String itemJson) {
+    if (itemJson == null || itemJson.trim().isEmpty()) return false;
+    if (!"payment-card".equals(MobileVaultItem.stringFieldFromItemJson(itemJson, "type"))) return false;
+    return !MobileVaultItem.stringFieldFromItemJson(itemJson, "number").trim().isEmpty()
+      || !MobileVaultItem.stringFieldFromItemJson(itemJson, "cardholderName").trim().isEmpty()
+      || !MobileVaultItem.stringFieldFromItemJson(itemJson, "securityCode").trim().isEmpty();
   }
 
   public static final class LoginEntry {
@@ -265,8 +282,14 @@ public final class MobileAutofillVault {
     private final String region;
     private final String postalCode;
     private final String country;
+    private final String cardholderName;
+    private final String cardNumber;
+    private final String cardExpiryMonth;
+    private final String cardExpiryYear;
+    private final String cardExpiryDate;
+    private final String cardSecurityCode;
 
-    private FillEntry(String kind, String title, String url, String username, String password, String fullName, String givenName, String familyName, String email, String phone, String organization, String line1, String line2, String city, String region, String postalCode, String country) {
+    private FillEntry(String kind, String title, String url, String username, String password, String fullName, String givenName, String familyName, String email, String phone, String organization, String line1, String line2, String city, String region, String postalCode, String country, String cardholderName, String cardNumber, String cardExpiryMonth, String cardExpiryYear, String cardExpiryDate, String cardSecurityCode) {
       this.kind = clean(kind, "item");
       this.title = clean(title, "Untitled item");
       this.url = clean(url, "");
@@ -284,10 +307,16 @@ public final class MobileAutofillVault {
       this.region = clean(region, "");
       this.postalCode = clean(postalCode, "");
       this.country = clean(country, "");
+      this.cardholderName = clean(cardholderName, "");
+      this.cardNumber = clean(cardNumber, "");
+      this.cardExpiryMonth = clean(cardExpiryMonth, "");
+      this.cardExpiryYear = clean(cardExpiryYear, "");
+      this.cardExpiryDate = clean(cardExpiryDate, joinExpiry(cardExpiryMonth, cardExpiryYear));
+      this.cardSecurityCode = clean(cardSecurityCode, "");
     }
 
     static FillEntry fromLogin(LoginEntry entry) {
-      return new FillEntry("login", entry.title(), entry.url(), entry.username(), entry.password(), "", "", "", "", "", "", "", "", "", "", "", "");
+      return new FillEntry("login", entry.title(), entry.url(), entry.username(), entry.password(), "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "");
     }
 
     static FillEntry fromIdentity(String itemJson) {
@@ -305,6 +334,12 @@ public final class MobileAutofillVault {
         MobileVaultItem.stringFieldFromItemJson(itemJson, "email"),
         MobileVaultItem.stringFieldFromItemJson(itemJson, "phone"),
         MobileVaultItem.stringFieldFromItemJson(itemJson, "organization"),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
         "",
         "",
         "",
@@ -332,7 +367,43 @@ public final class MobileAutofillVault {
         MobileVaultItem.stringFieldFromItemJson(itemJson, "city"),
         MobileVaultItem.stringFieldFromItemJson(itemJson, "region"),
         MobileVaultItem.stringFieldFromItemJson(itemJson, "postalCode"),
-        MobileVaultItem.stringFieldFromItemJson(itemJson, "country")
+        MobileVaultItem.stringFieldFromItemJson(itemJson, "country"),
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      );
+    }
+
+    static FillEntry fromPaymentCard(String itemJson) {
+      String month = MobileVaultItem.stringFieldFromItemJson(itemJson, "expiryMonth");
+      String year = MobileVaultItem.stringFieldFromItemJson(itemJson, "expiryYear");
+      return new FillEntry(
+        "payment-card",
+        MobileVaultItem.stringFieldFromItemJson(itemJson, "title"),
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        MobileVaultItem.stringFieldFromItemJson(itemJson, "cardholderName"),
+        MobileVaultItem.stringFieldFromItemJson(itemJson, "number"),
+        month,
+        year,
+        joinExpiry(month, year),
+        MobileVaultItem.stringFieldFromItemJson(itemJson, "securityCode")
       );
     }
 
@@ -353,11 +424,18 @@ public final class MobileAutofillVault {
     public String region() { return region; }
     public String postalCode() { return postalCode; }
     public String country() { return country; }
+    public String cardholderName() { return cardholderName; }
+    public String cardNumber() { return cardNumber; }
+    public String cardExpiryMonth() { return cardExpiryMonth; }
+    public String cardExpiryYear() { return cardExpiryYear; }
+    public String cardExpiryDate() { return cardExpiryDate; }
+    public String cardSecurityCode() { return cardSecurityCode; }
 
     public String label() {
       if ("login".equals(kind)) return username.isEmpty() ? title : title + " — " + username;
       if ("identity".equals(kind)) return email.isEmpty() ? title : title + " — " + email;
       if ("address".equals(kind)) return city.isEmpty() ? title : title + " — " + city;
+      if ("payment-card".equals(kind)) return title + (cardNumber.isEmpty() ? "" : " — **** " + last4(cardNumber));
       return title;
     }
   }
@@ -368,6 +446,20 @@ public final class MobileAutofillVault {
     int firstSpace = normalized.indexOf(' ');
     if (firstSpace < 0) return new String[] { normalized, "" };
     return new String[] { normalized.substring(0, firstSpace).trim(), normalized.substring(firstSpace + 1).trim() };
+  }
+
+  private static String joinExpiry(String month, String year) {
+    String cleanMonth = clean(month, "");
+    String cleanYear = clean(year, "");
+    if (cleanMonth.isEmpty()) return cleanYear;
+    if (cleanYear.isEmpty()) return cleanMonth;
+    return cleanMonth + "/" + cleanYear;
+  }
+
+  private static String last4(String value) {
+    String cleanValue = clean(value, "").replace(" ", "");
+    if (cleanValue.length() <= 4) return cleanValue;
+    return cleanValue.substring(cleanValue.length() - 4);
   }
 
   private static String normalizeDomain(String value) {

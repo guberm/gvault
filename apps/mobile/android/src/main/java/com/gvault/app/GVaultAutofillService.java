@@ -30,7 +30,7 @@ public final class GVaultAutofillService extends AutofillService {
       loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
       nonLoginEntries = MobileAutofillVault.nonLoginFillEntries();
     }
-    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
+    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " card=" + fields.hasCardFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
 
     if (!fields.hasAnyFields()) {
       callback.onSuccess(null);
@@ -138,6 +138,30 @@ public final class GVaultAutofillService extends AutofillService {
       dataset.setValue(fields.countryId, AutofillValue.forText(entry.country()));
       hasValue = true;
     }
+    if (fields.cardholderNameId != null && !entry.cardholderName().isEmpty()) {
+      dataset.setValue(fields.cardholderNameId, AutofillValue.forText(entry.cardholderName()));
+      hasValue = true;
+    }
+    if (fields.cardNumberId != null && !entry.cardNumber().isEmpty()) {
+      dataset.setValue(fields.cardNumberId, AutofillValue.forText(entry.cardNumber()));
+      hasValue = true;
+    }
+    if (fields.cardExpiryDateId != null && !entry.cardExpiryDate().isEmpty()) {
+      dataset.setValue(fields.cardExpiryDateId, AutofillValue.forText(entry.cardExpiryDate()));
+      hasValue = true;
+    }
+    if (fields.cardExpiryMonthId != null && !entry.cardExpiryMonth().isEmpty()) {
+      dataset.setValue(fields.cardExpiryMonthId, AutofillValue.forText(entry.cardExpiryMonth()));
+      hasValue = true;
+    }
+    if (fields.cardExpiryYearId != null && !entry.cardExpiryYear().isEmpty()) {
+      dataset.setValue(fields.cardExpiryYearId, AutofillValue.forText(entry.cardExpiryYear()));
+      hasValue = true;
+    }
+    if (fields.cardSecurityCodeId != null && !entry.cardSecurityCode().isEmpty()) {
+      dataset.setValue(fields.cardSecurityCodeId, AutofillValue.forText(entry.cardSecurityCode()));
+      hasValue = true;
+    }
     return hasValue ? dataset.build() : null;
   }
 
@@ -224,6 +248,12 @@ public final class GVaultAutofillService extends AutofillService {
     AutofillId regionId;
     AutofillId postalCodeId;
     AutofillId countryId;
+    AutofillId cardholderNameId;
+    AutofillId cardNumberId;
+    AutofillId cardExpiryDateId;
+    AutofillId cardExpiryMonthId;
+    AutofillId cardExpiryYearId;
+    AutofillId cardSecurityCodeId;
 
     void assign(String category, AutofillId id) {
       if (id == null || category == null || category.isEmpty()) return;
@@ -239,6 +269,12 @@ public final class GVaultAutofillService extends AutofillService {
       else if ("region".equals(category) && regionId == null) regionId = id;
       else if ("postalCode".equals(category) && postalCodeId == null) postalCodeId = id;
       else if ("country".equals(category) && countryId == null) countryId = id;
+      else if ("cardholderName".equals(category) && cardholderNameId == null) cardholderNameId = id;
+      else if ("cardNumber".equals(category) && cardNumberId == null) cardNumberId = id;
+      else if ("cardExpiryDate".equals(category) && cardExpiryDateId == null) cardExpiryDateId = id;
+      else if ("cardExpiryMonth".equals(category) && cardExpiryMonthId == null) cardExpiryMonthId = id;
+      else if ("cardExpiryYear".equals(category) && cardExpiryYearId == null) cardExpiryYearId = id;
+      else if ("cardSecurityCode".equals(category) && cardSecurityCodeId == null) cardSecurityCodeId = id;
     }
 
     boolean hasAnyFields() {
@@ -257,13 +293,18 @@ public final class GVaultAutofillService extends AutofillService {
       return streetId != null || cityId != null || regionId != null || postalCodeId != null || countryId != null;
     }
 
+    boolean hasCardFields() {
+      return cardholderNameId != null || cardNumberId != null || cardExpiryDateId != null || cardExpiryMonthId != null || cardExpiryYearId != null || cardSecurityCodeId != null;
+    }
+
     boolean hasNonLoginFields() {
-      return hasIdentityFields() || hasAddressFields();
+      return hasIdentityFields() || hasAddressFields() || hasCardFields();
     }
 
     int saveDataType() {
       int type = SaveInfo.SAVE_DATA_TYPE_GENERIC;
       if (hasAddressFields()) type |= SaveInfo.SAVE_DATA_TYPE_ADDRESS;
+      if (hasCardFields()) type |= SaveInfo.SAVE_DATA_TYPE_CREDIT_CARD;
       if (emailId != null) type |= SaveInfo.SAVE_DATA_TYPE_EMAIL_ADDRESS;
       if (usernameId != null) type |= SaveInfo.SAVE_DATA_TYPE_USERNAME;
       if (passwordId != null) type |= SaveInfo.SAVE_DATA_TYPE_PASSWORD;
@@ -271,7 +312,7 @@ public final class GVaultAutofillService extends AutofillService {
     }
 
     AutofillId[] requiredIds() {
-      AutofillId[] ids = new AutofillId[12];
+      AutofillId[] ids = new AutofillId[18];
       int count = 0;
       if (usernameId != null) ids[count++] = usernameId;
       if (passwordId != null) ids[count++] = passwordId;
@@ -285,6 +326,12 @@ public final class GVaultAutofillService extends AutofillService {
       if (regionId != null) ids[count++] = regionId;
       if (postalCodeId != null) ids[count++] = postalCodeId;
       if (countryId != null) ids[count++] = countryId;
+      if (cardholderNameId != null) ids[count++] = cardholderNameId;
+      if (cardNumberId != null) ids[count++] = cardNumberId;
+      if (cardExpiryDateId != null) ids[count++] = cardExpiryDateId;
+      if (cardExpiryMonthId != null) ids[count++] = cardExpiryMonthId;
+      if (cardExpiryYearId != null) ids[count++] = cardExpiryYearId;
+      if (cardSecurityCodeId != null) ids[count++] = cardSecurityCodeId;
       AutofillId[] compact = new AutofillId[count];
       System.arraycopy(ids, 0, compact, 0, count);
       return compact;

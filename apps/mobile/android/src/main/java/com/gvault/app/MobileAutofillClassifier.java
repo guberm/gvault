@@ -15,6 +15,12 @@ public final class MobileAutofillClassifier {
 
     if (containsAny(combined, "personfamilyname", "familyname", "lastname", "last_name", "surname")) return "familyName";
     if (containsAny(combined, "persongivenname", "givenname", "firstname", "first_name", "forename")) return "givenName";
+    if (containsAny(combined, "creditcardnumber", "cardnumber", "ccnumber", "card number", "card_number", "cc-number")) return "cardNumber";
+    if (containsAny(combined, "creditcardsecuritycode", "securitycode", "cvv", "cvc", "cvn", "cardverification", "cardcode")) return "cardSecurityCode";
+    if (containsAny(combined, "creditcardexpirationmonth", "expirymonth", "expmonth", "exp_month", "ccmonth")) return "cardExpiryMonth";
+    if (containsAny(combined, "creditcardexpirationyear", "expiryyear", "expyear", "exp_year", "ccyear")) return "cardExpiryYear";
+    if (containsAny(combined, "creditcardexpirationdate", "expirationdate", "expirydate", "cardexp", "exp date", "expdate", "expiry")) return "cardExpiryDate";
+    if (containsAny(combined, "name on card", "cardholder", "card holder", "cardholdername", "cc-name", "ccname")) return "cardholderName";
     if (containsAny(combined, "personname", "full name", "fullname", "full_name", "contact name", "name")) return "fullName";
     if (containsAny(combined, "emailaddress", "email")) return "email";
     if (containsAny(combined, "phonenumber", "telephone", "tel", "phone")) return "phone";
@@ -30,6 +36,11 @@ public final class MobileAutofillClassifier {
 
   private static String exactHintCategory(String autofillHint) {
     if (autofillHint.isEmpty()) return "";
+    if ("creditcardnumber".equals(autofillHint)) return "cardNumber";
+    if ("creditcardsecuritycode".equals(autofillHint)) return "cardSecurityCode";
+    if ("creditcardexpirationmonth".equals(autofillHint)) return "cardExpiryMonth";
+    if ("creditcardexpirationyear".equals(autofillHint)) return "cardExpiryYear";
+    if ("creditcardexpirationdate".equals(autofillHint)) return "cardExpiryDate";
     if ("username".equals(autofillHint) || "login".equals(autofillHint)) return "username";
     if ("password".equals(autofillHint) || "newpassword".equals(autofillHint) || "passwordauto".equals(autofillHint)) return "password";
     if ("emailaddress".equals(autofillHint) || "email".equals(autofillHint)) return "email";
