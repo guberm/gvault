@@ -4,7 +4,12 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+import android.view.autofill.AutofillManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -321,6 +326,23 @@ public final class MainActivity extends Activity {
     root.setBackgroundColor(MobileUiStyle.BACKGROUND);
     root.addView(title("GVault " + MobileAuthState.settingsTitle()), fullWidth());
     root.addView(card(MobileAuthState.settingsTitle(), MobileAuthState.settingsAccountLine(email) + "\n" + MobileAuthState.settingsServerLine(serverUrl) + "\n" + MobileAuthState.sessionStoragePolicyMessage()), fullWidth());
+
+    boolean autofillSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
+    boolean gvaultEnabled = false;
+    if (autofillSupported) {
+      AutofillManager autofill = getSystemService(AutofillManager.class);
+      gvaultEnabled = autofill != null && autofill.hasEnabledAutofillServices();
+    }
+    root.addView(card(MobileAutofillSetupGuidance.setupTitle(),
+        MobileAutofillSetupGuidance.setupStatusMessage(autofillSupported, gvaultEnabled)), fullWidth());
+    if (MobileAutofillSetupGuidance.shouldShowEnableButton(autofillSupported, gvaultEnabled)) {
+      Button enableAutofill = actionButton(MobileAutofillSetupGuidance.setupButtonLabel());
+      enableAutofill.setOnClickListener(new View.OnClickListener() {
+        @Override public void onClick(View view) { openAutofillSettings(); }
+      });
+      root.addView(enableAutofill, spaced());
+    }
+
     Button back = actionButton("Back to vault");
     back.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
@@ -335,6 +357,21 @@ public final class MainActivity extends Activity {
     });
     root.addView(signOut, spaced());
     setScrollable(root);
+  }
+
+  private void openAutofillSettings() {
+    // ponytail: two-step fallback covers OEMs that reject the targeted request intent.
+    try {
+      Intent intent = new Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE);
+      intent.setData(Uri.parse("package:" + getPackageName()));
+      startActivity(intent);
+    } catch (Exception error) {
+      try {
+        startActivity(new Intent(Settings.ACTION_SETTINGS));
+      } catch (Exception fallbackError) {
+        setStatus("Open Settings and set GVault as your Autofill service manually.", true);
+      }
+    }
   }
 
   private void signOutToAccountScreen() {
