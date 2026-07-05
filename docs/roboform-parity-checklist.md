@@ -190,7 +190,7 @@ Last updated: 2026-07-03
 - [x] Fill username/password into apps/browsers.
 - [x] Identity autofill for address/contact forms.
 - [x] Card autofill where appropriate.
-- [ ] No blank placeholder dataset.
+- [x] No blank placeholder dataset.
 - [ ] Autofill setup guidance.
 - [x] Real-device autofill proof.
 

@@ -32,33 +32,40 @@ public final class GVaultAutofillService extends AutofillService {
     }
     Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " card=" + fields.hasCardFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
 
-    if (!fields.hasAnyFields()) {
-      callback.onSuccess(null);
-      return;
-    }
-
-    if (fields.hasLoginFields() && loginEntries.length == 0 && !fields.hasNonLoginFields()) {
-      callback.onSuccess(null);
-      return;
-    }
-
-    if (fields.hasNonLoginFields() && nonLoginEntries.length == 0 && !fields.hasLoginFields()) {
+    if (!MobileAutofillDatasetPolicy.shouldAttemptFillResponse(
+      fields.hasLoginFields(),
+      loginEntries.length,
+      fields.hasNonLoginFields(),
+      nonLoginEntries.length
+    )) {
       callback.onSuccess(null);
       return;
     }
 
     FillResponse.Builder response = new FillResponse.Builder();
+    int datasetCount = 0;
     if (fields.hasLoginFields()) {
       for (MobileAutofillVault.LoginEntry entry : loginEntries) {
         Dataset dataset = loginDataset(entry, fields);
-        if (dataset != null) response.addDataset(dataset);
+        if (dataset != null) {
+          response.addDataset(dataset);
+          datasetCount++;
+        }
       }
     }
     if (fields.hasNonLoginFields()) {
       for (MobileAutofillVault.FillEntry entry : nonLoginEntries) {
         Dataset dataset = nonLoginDataset(entry, fields);
-        if (dataset != null) response.addDataset(dataset);
+        if (dataset != null) {
+          response.addDataset(dataset);
+          datasetCount++;
+        }
       }
+    }
+
+    if (!MobileAutofillDatasetPolicy.shouldReturnFillResponse(datasetCount)) {
+      callback.onSuccess(null);
+      return;
     }
 
     AutofillId[] requiredIds = fields.requiredIds();
