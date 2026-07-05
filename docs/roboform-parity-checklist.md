@@ -567,4 +567,4 @@ Last updated: 2026-07-03
 - [x] Server integration tests.
 - [x] Import/export tests.
 - [x] Autofill tests where feasible.
-- [ ] Final proof report separates passed/partial/blocked.
+- [x] Final proof report separates passed/partial/blocked: [`docs/roboform-parity-proof-report.md`](./roboform-parity-proof-report.md).
