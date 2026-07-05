@@ -538,7 +538,7 @@ Parent issue: #34 — https://github.com/guberm/gvault/issues/34
 - [ ] #392 Backup/restore security documented. — https://github.com/guberm/gvault/issues/392
 - [ ] #393 Recovery limitations documented. — https://github.com/guberm/gvault/issues/393
 - [ ] #394 Threat model documented. — https://github.com/guberm/gvault/issues/394
-- [ ] #395 UI copy reviewed so it does not claim unimplemented security. — https://github.com/guberm/gvault/issues/395
+- [x] #395 UI copy reviewed so it does not claim unimplemented security. — https://github.com/guberm/gvault/issues/395
 - [x] #396 Tests for crypto envelope. — https://github.com/guberm/gvault/issues/396
 - [x] #397 Tests for sync/auth boundaries. — https://github.com/guberm/gvault/issues/397
 
