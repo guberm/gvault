@@ -54,10 +54,10 @@
         <header class="server-bar">
           <label class="inline-field">
             <span>Server</span>
-            <strong class="connected">Connected</strong>
+            <strong class="connected">Self-hosted</strong>
             <input id="serverUrl" value="https://gvault.guber.dev" autocomplete="url" />
           </label>
-          <div class="account-pill">Account <strong id="emailLabel">admin</strong></div>
+          <div class="account-pill">Account <strong id="emailLabel">not signed in</strong></div>
           <button id="registerButton" class="plain-button" type="button">Register</button>
           <button id="loginButton" class="plain-button" type="button">Login</button>
           <button id="syncButton" class="plain-button" type="button">Sync</button>
@@ -189,9 +189,9 @@
         </section>
 
         <footer class="health-strip">
-          <div><strong>All good</strong><span>Your vault is healthy and up to date.</span></div>
-          <div><strong>Synced</strong><span>All changes are synced.</span></div>
-          <div><strong>Backed up</strong><span>Last backup: May 17, 2025 at 8:15 AM</span></div>
+          <div><strong>Status</strong><span>Use the health check or sign in before trusting server status.</span></div>
+          <div><strong>Sync</strong><span>Sync runs after sign-in and unlock; this screen does not imply pending changes are uploaded.</span></div>
+          <div><strong>Backup</strong><span>Use authenticated export/import proof before treating backup state as complete.</span></div>
         </footer>
       </section>
     </main>

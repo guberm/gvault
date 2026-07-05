@@ -550,7 +550,7 @@ Last updated: 2026-07-03
 - [ ] Backup/restore security documented.
 - [ ] Recovery limitations documented.
 - [ ] Threat model documented.
-- [ ] UI copy reviewed so it does not claim unimplemented security.
+- [x] UI copy reviewed so it does not claim unimplemented security.
 - [x] Tests for crypto envelope.
 - [x] Tests for sync/auth boundaries.
 
