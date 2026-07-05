@@ -559,7 +559,7 @@ Last updated: 2026-07-03
 # 15. Proof and E2E
 
 - [ ] Web E2E through `https://gvault.guber.dev`.
-- [ ] Android real-device E2E through `https://gvault.guber.dev`.
+- [x] Android real-device E2E through `https://gvault.guber.dev`.
 - [ ] Chrome extension E2E.
 - [ ] Edge extension E2E.
 - [ ] Windows desktop login smoke.
