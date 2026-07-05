@@ -552,7 +552,7 @@ Last updated: 2026-07-03
 - [ ] Threat model documented.
 - [ ] UI copy reviewed so it does not claim unimplemented security.
 - [ ] Tests for crypto envelope.
-- [ ] Tests for sync/auth boundaries.
+- [x] Tests for sync/auth boundaries.
 
 ---
 
