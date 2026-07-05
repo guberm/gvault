@@ -188,11 +188,11 @@ Last updated: 2026-07-03
 - [x] Autofill service uses server-backed Login records.
 - [x] Credential picker shows matching records.
 - [x] Fill username/password into apps/browsers.
-- [ ] Identity autofill for address/contact forms.
+- [x] Identity autofill for address/contact forms.
 - [ ] Card autofill where appropriate.
 - [ ] No blank placeholder dataset.
 - [ ] Autofill setup guidance.
-- [ ] Real-device autofill proof.
+- [x] Real-device autofill proof.
 
 ---
 

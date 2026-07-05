@@ -12,7 +12,6 @@ import android.service.autofill.SaveCallback;
 import android.service.autofill.SaveInfo;
 import android.service.autofill.SaveRequest;
 import android.util.Log;
-import android.view.View;
 import android.view.autofill.AutofillId;
 import android.view.autofill.AutofillValue;
 import android.widget.RemoteViews;
@@ -24,44 +23,132 @@ public final class GVaultAutofillService extends AutofillService {
     FillFields fields = findFields(request.getFillContexts());
     String webDomain = findWebDomain(request.getFillContexts());
     MobileAutofillVault.LoginEntry[] loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
-    if (loginEntries.length == 0 && MobileAutofillVault.cachedLoginEntries().length == 0) {
+    MobileAutofillVault.FillEntry[] nonLoginEntries = MobileAutofillVault.nonLoginFillEntries();
+    if (loginEntries.length == 0 && nonLoginEntries.length == 0 && MobileAutofillVault.cachedLoginEntries().length == 0) {
       MobileAutofillVault.setLoginEntries(MobileAutofillSessionStore.load(this));
+      MobileAutofillVault.setNonLoginEntries(MobileAutofillSessionStore.loadFillEntries(this));
       loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
+      nonLoginEntries = MobileAutofillVault.nonLoginFillEntries();
     }
-    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " domain=" + webDomain + " entries=" + loginEntries.length);
-    if (fields.usernameId == null && fields.passwordId == null) {
+    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
+
+    if (!fields.hasAnyFields()) {
       callback.onSuccess(null);
       return;
     }
 
-    if (loginEntries.length == 0) {
+    if (fields.hasLoginFields() && loginEntries.length == 0 && !fields.hasNonLoginFields()) {
+      callback.onSuccess(null);
+      return;
+    }
+
+    if (fields.hasNonLoginFields() && nonLoginEntries.length == 0 && !fields.hasLoginFields()) {
       callback.onSuccess(null);
       return;
     }
 
     FillResponse.Builder response = new FillResponse.Builder();
-    for (MobileAutofillVault.LoginEntry entry : loginEntries) {
-      RemoteViews presentation = new RemoteViews(getPackageName(), android.R.layout.simple_list_item_1);
-      presentation.setTextViewText(android.R.id.text1, entry.label());
-
-      Dataset.Builder dataset = new Dataset.Builder(presentation);
-      if (fields.usernameId != null && !entry.username().isEmpty()) {
-        dataset.setValue(fields.usernameId, AutofillValue.forText(entry.username()));
+    if (fields.hasLoginFields()) {
+      for (MobileAutofillVault.LoginEntry entry : loginEntries) {
+        Dataset dataset = loginDataset(entry, fields);
+        if (dataset != null) response.addDataset(dataset);
       }
-      if (fields.passwordId != null) {
-        dataset.setValue(fields.passwordId, AutofillValue.forText(entry.password()));
+    }
+    if (fields.hasNonLoginFields()) {
+      for (MobileAutofillVault.FillEntry entry : nonLoginEntries) {
+        Dataset dataset = nonLoginDataset(entry, fields);
+        if (dataset != null) response.addDataset(dataset);
       }
-      response.addDataset(dataset.build());
     }
 
-    response.setSaveInfo(new SaveInfo.Builder(SaveInfo.SAVE_DATA_TYPE_PASSWORD, fields.requiredIds()).build());
-    response.setFillDialogTriggerIds(fields.requiredIds());
+    AutofillId[] requiredIds = fields.requiredIds();
+    if (requiredIds.length > 0) {
+      response.setSaveInfo(new SaveInfo.Builder(fields.saveDataType(), requiredIds).build());
+      response.setFillDialogTriggerIds(requiredIds);
+    }
     callback.onSuccess(response.build());
   }
 
   @Override
   public void onSaveRequest(SaveRequest request, SaveCallback callback) {
     callback.onSuccess();
+  }
+
+  private static Dataset loginDataset(MobileAutofillVault.LoginEntry entry, FillFields fields) {
+    RemoteViews presentation = new RemoteViews("com.gvault.app", android.R.layout.simple_list_item_1);
+    presentation.setTextViewText(android.R.id.text1, entry.label());
+    Dataset.Builder dataset = new Dataset.Builder(presentation);
+    boolean hasValue = false;
+    if (fields.usernameId != null && !entry.username().isEmpty()) {
+      dataset.setValue(fields.usernameId, AutofillValue.forText(entry.username()));
+      hasValue = true;
+    }
+    if (fields.passwordId != null && !entry.password().isEmpty()) {
+      dataset.setValue(fields.passwordId, AutofillValue.forText(entry.password()));
+      hasValue = true;
+    }
+    return hasValue ? dataset.build() : null;
+  }
+
+  private static Dataset nonLoginDataset(MobileAutofillVault.FillEntry entry, FillFields fields) {
+    RemoteViews presentation = new RemoteViews("com.gvault.app", android.R.layout.simple_list_item_1);
+    presentation.setTextViewText(android.R.id.text1, entry.label());
+    Dataset.Builder dataset = new Dataset.Builder(presentation);
+    boolean hasValue = false;
+    if (fields.fullNameId != null && !entry.fullName().isEmpty()) {
+      dataset.setValue(fields.fullNameId, AutofillValue.forText(entry.fullName()));
+      hasValue = true;
+    }
+    if (fields.givenNameId != null && !entry.givenName().isEmpty()) {
+      dataset.setValue(fields.givenNameId, AutofillValue.forText(entry.givenName()));
+      hasValue = true;
+    }
+    if (fields.familyNameId != null && !entry.familyName().isEmpty()) {
+      dataset.setValue(fields.familyNameId, AutofillValue.forText(entry.familyName()));
+      hasValue = true;
+    }
+    if (fields.emailId != null && !entry.email().isEmpty()) {
+      dataset.setValue(fields.emailId, AutofillValue.forText(entry.email()));
+      hasValue = true;
+    }
+    if (fields.phoneId != null && !entry.phone().isEmpty()) {
+      dataset.setValue(fields.phoneId, AutofillValue.forText(entry.phone()));
+      hasValue = true;
+    }
+    if (fields.streetId != null) {
+      String street = joinStreet(entry.line1(), entry.line2());
+      if (!street.isEmpty()) {
+        dataset.setValue(fields.streetId, AutofillValue.forText(street));
+        hasValue = true;
+      }
+    }
+    if (fields.cityId != null && !entry.city().isEmpty()) {
+      dataset.setValue(fields.cityId, AutofillValue.forText(entry.city()));
+      hasValue = true;
+    }
+    if (fields.regionId != null && !entry.region().isEmpty()) {
+      dataset.setValue(fields.regionId, AutofillValue.forText(entry.region()));
+      hasValue = true;
+    }
+    if (fields.postalCodeId != null && !entry.postalCode().isEmpty()) {
+      dataset.setValue(fields.postalCodeId, AutofillValue.forText(entry.postalCode()));
+      hasValue = true;
+    }
+    if (fields.countryId != null && !entry.country().isEmpty()) {
+      dataset.setValue(fields.countryId, AutofillValue.forText(entry.country()));
+      hasValue = true;
+    }
+    return hasValue ? dataset.build() : null;
+  }
+
+  private static String joinStreet(String line1, String line2) {
+    if (line1 == null) line1 = "";
+    if (line2 == null) line2 = "";
+    String first = line1.trim();
+    String second = line2.trim();
+    if (first.isEmpty()) return second;
+    if (second.isEmpty()) return first;
+    return first + ", " + second;
   }
 
   private static FillFields findFields(List<FillContext> contexts) {
@@ -100,23 +187,14 @@ public final class GVaultAutofillService extends AutofillService {
   }
 
   private static void scanNode(AssistStructure.ViewNode node, FillFields fields) {
-    if (node == null) {
-      return;
-    }
+    if (node == null) return;
     String hint = lower(node.getHint());
     String id = lower(node.getIdEntry());
-    String autofillHint = "";
-    String[] hints = node.getAutofillHints();
-    if (hints != null && hints.length > 0) {
-      autofillHint = lower(hints[0]);
-    }
+    String autofillHint = firstAutofillHint(node.getAutofillHints());
+    String category = MobileAutofillClassifier.classifyField(hint, id, autofillHint);
 
     if (node.getAutofillId() != null) {
-      if (fields.passwordId == null && containsAny(hint, id, autofillHint, "password", "pass")) {
-        fields.passwordId = node.getAutofillId();
-      } else if (fields.usernameId == null && containsAny(hint, id, autofillHint, "username", "email", "login", "user")) {
-        fields.usernameId = node.getAutofillId();
-      }
+      fields.assign(category, node.getAutofillId());
     }
 
     for (int i = 0; i < node.getChildCount(); i++) {
@@ -124,32 +202,92 @@ public final class GVaultAutofillService extends AutofillService {
     }
   }
 
-  private static boolean containsAny(String hint, String id, String autofillHint, String... needles) {
-    String combined = hint + " " + id + " " + autofillHint;
-    for (String needle : needles) {
-      if (combined.contains(needle)) {
-        return true;
-      }
-    }
-    return false;
+  private static String firstAutofillHint(String[] hints) {
+    if (hints == null || hints.length == 0) return "";
+    return lower(hints[0]);
   }
 
   private static String lower(String value) {
-    return value == null ? "" : value.toLowerCase();
+    return value == null ? "" : value.toLowerCase(java.util.Locale.US);
   }
 
-  private static final class FillFields {
+  static final class FillFields {
     AutofillId usernameId;
     AutofillId passwordId;
+    AutofillId fullNameId;
+    AutofillId givenNameId;
+    AutofillId familyNameId;
+    AutofillId emailId;
+    AutofillId phoneId;
+    AutofillId streetId;
+    AutofillId cityId;
+    AutofillId regionId;
+    AutofillId postalCodeId;
+    AutofillId countryId;
+
+    void assign(String category, AutofillId id) {
+      if (id == null || category == null || category.isEmpty()) return;
+      if ("password".equals(category) && passwordId == null) passwordId = id;
+      else if ("username".equals(category) && usernameId == null) usernameId = id;
+      else if ("fullName".equals(category) && fullNameId == null) fullNameId = id;
+      else if ("givenName".equals(category) && givenNameId == null) givenNameId = id;
+      else if ("familyName".equals(category) && familyNameId == null) familyNameId = id;
+      else if ("email".equals(category) && emailId == null) emailId = id;
+      else if ("phone".equals(category) && phoneId == null) phoneId = id;
+      else if ("street".equals(category) && streetId == null) streetId = id;
+      else if ("city".equals(category) && cityId == null) cityId = id;
+      else if ("region".equals(category) && regionId == null) regionId = id;
+      else if ("postalCode".equals(category) && postalCodeId == null) postalCodeId = id;
+      else if ("country".equals(category) && countryId == null) countryId = id;
+    }
+
+    boolean hasAnyFields() {
+      return requiredIds().length > 0;
+    }
+
+    boolean hasLoginFields() {
+      return usernameId != null || passwordId != null;
+    }
+
+    boolean hasIdentityFields() {
+      return fullNameId != null || givenNameId != null || familyNameId != null || emailId != null || phoneId != null;
+    }
+
+    boolean hasAddressFields() {
+      return streetId != null || cityId != null || regionId != null || postalCodeId != null || countryId != null;
+    }
+
+    boolean hasNonLoginFields() {
+      return hasIdentityFields() || hasAddressFields();
+    }
+
+    int saveDataType() {
+      int type = SaveInfo.SAVE_DATA_TYPE_GENERIC;
+      if (hasAddressFields()) type |= SaveInfo.SAVE_DATA_TYPE_ADDRESS;
+      if (emailId != null) type |= SaveInfo.SAVE_DATA_TYPE_EMAIL_ADDRESS;
+      if (usernameId != null) type |= SaveInfo.SAVE_DATA_TYPE_USERNAME;
+      if (passwordId != null) type |= SaveInfo.SAVE_DATA_TYPE_PASSWORD;
+      return type;
+    }
 
     AutofillId[] requiredIds() {
-      if (usernameId != null && passwordId != null) {
-        return new AutofillId[] { usernameId, passwordId };
-      }
-      if (passwordId != null) {
-        return new AutofillId[] { passwordId };
-      }
-      return new AutofillId[] { usernameId };
+      AutofillId[] ids = new AutofillId[12];
+      int count = 0;
+      if (usernameId != null) ids[count++] = usernameId;
+      if (passwordId != null) ids[count++] = passwordId;
+      if (fullNameId != null) ids[count++] = fullNameId;
+      if (givenNameId != null) ids[count++] = givenNameId;
+      if (familyNameId != null) ids[count++] = familyNameId;
+      if (emailId != null) ids[count++] = emailId;
+      if (phoneId != null) ids[count++] = phoneId;
+      if (streetId != null) ids[count++] = streetId;
+      if (cityId != null) ids[count++] = cityId;
+      if (regionId != null) ids[count++] = regionId;
+      if (postalCodeId != null) ids[count++] = postalCodeId;
+      if (countryId != null) ids[count++] = countryId;
+      AutofillId[] compact = new AutofillId[count];
+      System.arraycopy(ids, 0, compact, 0, count);
+      return compact;
     }
   }
 }
