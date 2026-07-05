@@ -562,7 +562,7 @@ Last updated: 2026-07-03
 - [x] Android real-device E2E through `https://gvault.guber.dev`.
 - [ ] Chrome extension E2E.
 - [ ] Edge extension E2E.
-- [ ] Windows desktop login smoke.
+- [x] Windows desktop login smoke.
 - [x] Linux client login smoke.
 - [x] Server integration tests.
 - [x] Import/export tests.
