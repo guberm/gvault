@@ -9,7 +9,6 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import android.view.autofill.AutofillManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -71,6 +70,7 @@ public final class MainActivity extends Activity {
   private String email = "";
   private String masterPassword = "";
   private String serverUrl = MobileAuthState.DEFAULT_SERVER_URL;
+  private boolean settingsVisible = false;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -81,7 +81,16 @@ public final class MainActivity extends Activity {
     showAccountScreen();
   }
 
+  @Override
+  protected void onResume() {
+    super.onResume();
+    if (settingsVisible) {
+      showSettingsScreen();
+    }
+  }
+
   private void showAccountScreen() {
+    settingsVisible = false;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
@@ -175,6 +184,7 @@ public final class MainActivity extends Activity {
   }
 
   private void showVaultScreen(String message) {
+    settingsVisible = false;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
@@ -320,6 +330,7 @@ public final class MainActivity extends Activity {
   }
 
   private void showSettingsScreen() {
+    settingsVisible = true;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setPadding(40, 48, 40, 40);
@@ -330,8 +341,8 @@ public final class MainActivity extends Activity {
     boolean autofillSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O;
     boolean gvaultEnabled = false;
     if (autofillSupported) {
-      AutofillManager autofill = getSystemService(AutofillManager.class);
-      gvaultEnabled = autofill != null && autofill.hasEnabledAutofillServices();
+      String activeComponent = Settings.Secure.getString(getContentResolver(), "autofill_service");
+      gvaultEnabled = MobileAutofillSetupGuidance.isActiveAutofillService(activeComponent, getPackageName());
     }
     root.addView(card(MobileAutofillSetupGuidance.setupTitle(),
         MobileAutofillSetupGuidance.setupStatusMessage(autofillSupported, gvaultEnabled)), fullWidth());
