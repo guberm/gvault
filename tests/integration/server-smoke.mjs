@@ -37,6 +37,15 @@ test("server health, auth, sync, and backup smoke", async () => {
     assert.equal(push.records.length, 1);
     const backup = await post(base, "/api/backup/export", {}, register.token);
     assert.equal(backup.records[0].ciphertext, "encrypted-only");
+    assert.ok(backup.path, "export returns a backup file path");
+
+    const importer = await post(base, "/api/auth/register", { email: "importer@example.local", password: "change-me-strong-password" });
+    const restore = await post(base, "/api/backup/import", { path: backup.path }, importer.token);
+    assert.equal(restore.importedRecords, 1);
+    const afterImport = await post(base, "/api/sync/pull", {}, importer.token);
+    assert.equal(afterImport.records.length, 1);
+    assert.equal(afterImport.records[0].ownerId, importer.userId);
+    assert.equal(afterImport.records[0].ciphertext, "encrypted-only", "imported record is retrievable for the importing user");
   } finally {
     child.kill();
   }

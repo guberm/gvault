@@ -553,6 +553,6 @@ Parent issue: #35 — https://github.com/guberm/gvault/issues/35
 - [ ] #402 Windows desktop login smoke. — https://github.com/guberm/gvault/issues/402
 - [ ] #403 Linux client login smoke. — https://github.com/guberm/gvault/issues/403
 - [ ] #404 Server integration tests. — https://github.com/guberm/gvault/issues/404
-- [ ] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
+- [x] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
 - [x] #406 Autofill tests where feasible. — https://github.com/guberm/gvault/issues/406
 - [ ] #407 Final proof report separates passed/partial/blocked. — https://github.com/guberm/gvault/issues/407
