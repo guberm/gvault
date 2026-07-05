@@ -1,7 +1,30 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Windows.Forms;
+
+if (args.Contains("--login-smoke"))
+{
+    try
+    {
+        await RunLoginSmokeAsync(args.ToList());
+    }
+    catch (Exception error)
+    {
+        Console.Error.WriteLine(error.Message);
+        var evidencePath = ReadOption(args.ToList(), "--evidence");
+        if (!string.IsNullOrWhiteSpace(evidencePath))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(evidencePath))!);
+            await File.WriteAllTextAsync(evidencePath, error.Message + Environment.NewLine, Encoding.UTF8);
+        }
+        Environment.ExitCode = 1;
+    }
+    return;
+}
 
 ApplicationConfiguration.Initialize();
 var themePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GVault", "theme.txt");
@@ -146,4 +169,62 @@ void ApplyTheme(bool dark)
     themeButton.Text = dark ? "Light mode" : "Dark mode";
     themeButton.BackColor = surface;
     themeButton.ForeColor = ink;
+}
+
+static async Task RunLoginSmokeAsync(List<string> args)
+{
+    var server = ReadOption(args, "--server") ?? Environment.GetEnvironmentVariable("GVAULT_SERVER_URL");
+    var email = ReadOption(args, "--email") ?? Environment.GetEnvironmentVariable("GVAULT_EMAIL");
+    var password = ReadOption(args, "--password") ?? Environment.GetEnvironmentVariable("GVAULT_PASSWORD");
+    var evidencePath = ReadOption(args, "--evidence");
+
+    if (string.IsNullOrWhiteSpace(server)) throw new InvalidOperationException("Missing --server or GVAULT_SERVER_URL.");
+    if (string.IsNullOrWhiteSpace(email)) throw new InvalidOperationException("Missing --email or GVAULT_EMAIL.");
+    if (string.IsNullOrWhiteSpace(password)) throw new InvalidOperationException("Missing --password or GVAULT_PASSWORD.");
+
+    var endpoint = new Uri(NormalizeServerUrl(server), "api/auth/login");
+    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    var payload = JsonSerializer.Serialize(new { email, password });
+    using var response = await client.PostAsync(endpoint, new StringContent(payload, Encoding.UTF8, "application/json"));
+    var body = await response.Content.ReadAsStringAsync();
+
+    if (!response.IsSuccessStatusCode)
+    {
+        throw new InvalidOperationException($"Login failed with HTTP {(int)response.StatusCode}: {body}");
+    }
+
+    using var document = JsonDocument.Parse(body);
+    var root = document.RootElement;
+    var hasToken = root.TryGetProperty("token", out var token) && !string.IsNullOrWhiteSpace(token.GetString());
+    var hasUserId = root.TryGetProperty("userId", out var userId) && !string.IsNullOrWhiteSpace(userId.GetString());
+    if (!hasToken || !hasUserId)
+    {
+        throw new InvalidOperationException("Login response did not include token and userId.");
+    }
+
+    var message = $"GVault Windows login smoke ok for {email} at {endpoint.GetLeftPart(UriPartial.Authority)}";
+    Console.WriteLine(message);
+    if (!string.IsNullOrWhiteSpace(evidencePath))
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(evidencePath))!);
+        await File.WriteAllTextAsync(evidencePath, message + Environment.NewLine, Encoding.UTF8);
+    }
+}
+
+static Uri NormalizeServerUrl(string server)
+{
+    var value = server.Trim();
+    if (!value.EndsWith('/')) value += "/";
+    if (!Uri.TryCreate(value, UriKind.Absolute, out var uri))
+    {
+        throw new InvalidOperationException($"Invalid server URL: {server}");
+    }
+    return uri;
+}
+
+static string? ReadOption(List<string> args, string name)
+{
+    var index = args.IndexOf(name);
+    if (index < 0 || index + 1 >= args.Count) return null;
+    return args[index + 1];
 }

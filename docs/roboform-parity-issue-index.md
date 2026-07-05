@@ -550,7 +550,7 @@ Parent issue: #35 — https://github.com/guberm/gvault/issues/35
 - [x] #399 Android real-device E2E through `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/399
 - [ ] #400 Chrome extension E2E. — https://github.com/guberm/gvault/issues/400
 - [ ] #401 Edge extension E2E. — https://github.com/guberm/gvault/issues/401
-- [ ] #402 Windows desktop login smoke. — https://github.com/guberm/gvault/issues/402
+- [x] #402 Windows desktop login smoke. — https://github.com/guberm/gvault/issues/402
 - [x] #403 Linux client login smoke. — https://github.com/guberm/gvault/issues/403
 - [x] #404 Server integration tests. — https://github.com/guberm/gvault/issues/404
 - [x] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
