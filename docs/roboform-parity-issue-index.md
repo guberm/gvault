@@ -159,7 +159,7 @@ Parent issue: #8 — https://github.com/guberm/gvault/issues/8
 - [x] #143 Identity autofill for address/contact forms. — https://github.com/guberm/gvault/issues/143
 - [x] #144 Card autofill where appropriate. — https://github.com/guberm/gvault/issues/144
 - [x] #145 No blank placeholder dataset. — https://github.com/guberm/gvault/issues/145
-- [ ] #146 Autofill setup guidance. — https://github.com/guberm/gvault/issues/146
+- [x] #146 Autofill setup guidance. — https://github.com/guberm/gvault/issues/146
 - [x] #147 Real-device autofill proof. — https://github.com/guberm/gvault/issues/147
 
 ## 4. Browser extension — 4.1 Extension auth
