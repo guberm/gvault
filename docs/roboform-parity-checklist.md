@@ -191,7 +191,7 @@ Last updated: 2026-07-03
 - [x] Identity autofill for address/contact forms.
 - [x] Card autofill where appropriate.
 - [x] No blank placeholder dataset.
-- [ ] Autofill setup guidance.
+- [x] Autofill setup guidance.
 - [x] Real-device autofill proof.
 
 ---
