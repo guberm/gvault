@@ -13,6 +13,19 @@ public final class MobileAutofillSetupGuidance {
     return autofillSupported && !gvaultEnabled;
   }
 
+  /**
+   * True when the active system Autofill service belongs to this app. activeComponent is the
+   * raw Settings.Secure "autofill_service" value (e.g. "com.gvault.app/com.gvault.app.GVaultAutofillService");
+   * we compare only its package half so any GVault service component counts. This is the
+   * authoritative signal — AutofillManager.hasEnabledAutofillServices() can lag the secure setting.
+   */
+  public static boolean isActiveAutofillService(String activeComponent, String packageName) {
+    if (activeComponent == null || packageName == null || packageName.isEmpty()) return false;
+    int slash = activeComponent.indexOf('/');
+    String pkg = slash >= 0 ? activeComponent.substring(0, slash) : activeComponent;
+    return pkg.equals(packageName);
+  }
+
   public static String setupTitle() {
     return "Autofill setup";
   }

@@ -30,6 +30,16 @@ public final class TestMobileAutofillSetupGuidance {
       MobileAutofillSetupGuidance.setupStatusMessage(true, true));
     assertEquals("GVault is not your Autofill service yet. Tap Enable Autofill, pick GVault, then return here.",
       MobileAutofillSetupGuidance.setupStatusMessage(true, false));
+
+    // Active-service detection reads the raw Settings.Secure "autofill_service" component.
+    assertTrue(MobileAutofillSetupGuidance.isActiveAutofillService(
+      "com.gvault.app/com.gvault.app.GVaultAutofillService", "com.gvault.app"));
+    assertTrue(MobileAutofillSetupGuidance.isActiveAutofillService("com.gvault.app", "com.gvault.app"));
+    assertFalse(MobileAutofillSetupGuidance.isActiveAutofillService(
+      "com.other.app/com.other.app.AutofillService", "com.gvault.app"));
+    assertFalse(MobileAutofillSetupGuidance.isActiveAutofillService(null, "com.gvault.app"));
+    assertFalse(MobileAutofillSetupGuidance.isActiveAutofillService(
+      "com.gvault.app/svc", null));
   }
 
   private static void assertEquals(String expected, String actual) {
