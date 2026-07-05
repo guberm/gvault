@@ -564,7 +564,7 @@ Last updated: 2026-07-03
 - [ ] Edge extension E2E.
 - [ ] Windows desktop login smoke.
 - [ ] Linux client login smoke.
-- [ ] Server integration tests.
+- [x] Server integration tests.
 - [x] Import/export tests.
 - [x] Autofill tests where feasible.
 - [ ] Final proof report separates passed/partial/blocked.

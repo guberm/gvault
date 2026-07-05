@@ -46,6 +46,19 @@ test("server health, auth, sync, and backup smoke", async () => {
     assert.equal(afterImport.records.length, 1);
     assert.equal(afterImport.records[0].ownerId, importer.userId);
     assert.equal(afterImport.records[0].ciphertext, "encrypted-only", "imported record is retrievable for the importing user");
+
+    const login = await post(base, "/api/auth/login", { email: "smoke@example.local", password: "change-me-strong-password" });
+    assert.equal(login.userId, register.userId, "login returns the registered user's id");
+    assert.ok(login.token, "login returns a session token");
+
+    const badLogin = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "smoke@example.local", password: "wrong" }) });
+    assert.equal(badLogin.status, 401, "wrong password is rejected");
+
+    const noAuth = await fetch(`${base}/api/sync/pull`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+    assert.equal(noAuth.status, 401, "protected endpoint requires a session token");
+
+    const unknown = await fetch(`${base}/api/does-not-exist`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${register.token}` }, body: "{}" });
+    assert.equal(unknown.status, 404, "unknown route returns 404");
   } finally {
     child.kill();
   }
