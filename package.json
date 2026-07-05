@@ -20,6 +20,7 @@
     "lint": "node scripts/dev/lint.mjs",
     "test": "node --test tests/**/*.test.mjs",
     "smoke:server": "node tests/integration/server-smoke.mjs",
+    "smoke:linux-client": "npm run build && node tests/integration/linux-client-login-smoke.mjs",
     "release:notes": "node scripts/release/print-release-notes.mjs",
     "build:linux": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-linux-desktop.ps1"
   },

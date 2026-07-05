@@ -237,7 +237,7 @@ Parent issue: #12 — https://github.com/guberm/gvault/issues/12
 - [ ] #201 Default server URL is `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/201
 - [ ] #202 Remove preview-only GitHub message. — https://github.com/guberm/gvault/issues/202
 - [ ] #203 Build/package Linux client. — https://github.com/guberm/gvault/issues/203
-- [ ] #204 Linux smoke/login proof. — https://github.com/guberm/gvault/issues/204
+- [x] #204 Linux smoke/login proof. — https://github.com/guberm/gvault/issues/204
 
 ## 7. Data types and editors — 7.1 Login
 
@@ -551,7 +551,7 @@ Parent issue: #35 — https://github.com/guberm/gvault/issues/35
 - [ ] #400 Chrome extension E2E. — https://github.com/guberm/gvault/issues/400
 - [ ] #401 Edge extension E2E. — https://github.com/guberm/gvault/issues/401
 - [ ] #402 Windows desktop login smoke. — https://github.com/guberm/gvault/issues/402
-- [ ] #403 Linux client login smoke. — https://github.com/guberm/gvault/issues/403
+- [x] #403 Linux client login smoke. — https://github.com/guberm/gvault/issues/403
 - [x] #404 Server integration tests. — https://github.com/guberm/gvault/issues/404
 - [x] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
 - [x] #406 Autofill tests where feasible. — https://github.com/guberm/gvault/issues/406
