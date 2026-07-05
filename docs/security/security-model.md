@@ -29,3 +29,10 @@
 
 See [threat-model.md](./threat-model.md) for assets, trust boundaries, actors,
 threats/mitigations, and residual risks for the current implementation.
+
+## Recovery limitations
+
+A lost master password cannot be recovered or reset; encrypted vault records
+become permanently undecryptable. See
+[recovery-limitations.md](./recovery-limitations.md) for what can and cannot be
+recovered.
