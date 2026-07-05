@@ -23,6 +23,7 @@
     "smoke:windows-client": "npm run build && node tests/integration/windows-client-login-smoke.mjs",
     "smoke:linux-client": "npm run build && node tests/integration/linux-client-login-smoke.mjs",
     "smoke:edge-extension": "npm run build && node --test tests/integration/edge-extension-e2e.mjs",
+    "smoke:chrome-extension": "npm run build && node --test tests/integration/chrome-extension-e2e.mjs",
     "release:notes": "node scripts/release/print-release-notes.mjs",
     "build:linux": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build/build-linux-desktop.ps1"
   },
