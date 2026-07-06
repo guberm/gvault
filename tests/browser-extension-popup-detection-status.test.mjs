@@ -29,6 +29,17 @@ test("browser extension popup reports payment-card detection from content script
   assert.equal(statusText, "1 payment-card form detected on this page.");
 });
 
+test("browser extension popup reports clear no-form status after a zero-count scan", async () => {
+  const statusText = await renderPopupStatus({
+    count: 0,
+    identityAddressCount: 0,
+    paymentCardCount: 0,
+    url: "https://example.test/search",
+    host: "example.test"
+  }, "No login");
+  assert.equal(statusText, "No login, identity/address, or payment-card form detected yet. You can still fill manually.");
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch();
   const page = await browser.newPage();

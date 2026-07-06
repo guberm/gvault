@@ -9,6 +9,8 @@ function setStatus(message) {
   status.textContent = message;
 }
 
+const NO_FORMS_STATUS = "No login, identity/address, or payment-card form detected yet. You can still fill manually.";
+
 async function applyTheme(theme) {
   document.body.dataset.theme = theme;
   themeButton.textContent = theme === "dark" ? "Light mode" : "Dark mode";
@@ -48,7 +50,7 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme
 
 chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {
   if (!lastDetectedForms) {
-    setStatus("No login, identity/address, or payment-card form detected yet. You can still fill manually.");
+    setStatus(NO_FORMS_STATUS);
     return;
   }
   const count = lastDetectedForms.count || 0;
@@ -66,5 +68,9 @@ chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => 
   if (count > 0) parts.push(`${count} login form${count === 1 ? "" : "s"}`);
   if (identityAddressCount > 0) parts.push(`${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"}`);
   if (paymentCardCount > 0) parts.push(`${paymentCardCount} payment-card form${paymentCardCount === 1 ? "" : "s"}`);
+  if (parts.length === 0) {
+    setStatus(NO_FORMS_STATUS);
+    return;
+  }
   setStatus(`${parts.join(" and ")} detected on this page.`);
 });
