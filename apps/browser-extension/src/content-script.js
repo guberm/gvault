@@ -42,13 +42,17 @@ function findLoginIdentifier(root, passwordInput) {
     || null;
 }
 
+function hasSinglePasswordField(root) {
+  return [...root.querySelectorAll("input[type=password]")].filter(isUsableInput).length === 1;
+}
+
 function detectLoginForms() {
   const seenForms = new Set();
   return [...document.querySelectorAll("input[type=password]")]
     .filter(isCurrentPasswordInput)
     .flatMap((passwordInput) => {
       const form = passwordInput.closest("form") || document;
-      if (seenForms.has(form)) return [];
+      if (seenForms.has(form) || !hasSinglePasswordField(form)) return [];
       const usernameInput = findLoginIdentifier(form, passwordInput);
       if (!usernameInput) return [];
       seenForms.add(form);

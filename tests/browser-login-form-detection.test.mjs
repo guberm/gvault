@@ -20,6 +20,15 @@ test("browser extension detects and fills semantic login forms only", async () =
         <label>New password <input id="new-password" name="new-password" type="password" autocomplete="new-password"></label>
         <label>Confirm password <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password"></label>
       </form>
+      <form id="signup-confirm-only">
+        <label>Email <input id="signup-email" name="email" type="email"></label>
+        <label>Password <input id="signup-password" name="password" type="password"></label>
+        <label>Confirm password <input id="signup-password-confirmation" name="password_confirmation" type="password"></label>
+      </form>
+      <form id="signup-tokenized-autocomplete">
+        <label>Email <input id="token-email" name="email" type="email"></label>
+        <label>Password <input id="token-password" name="password" type="password" autocomplete="section-register new-password"></label>
+      </form>
       <form id="disabled">
         <label>User <input id="disabled-user" name="username" disabled></label>
         <label>Pass <input id="disabled-pass" name="password" type="password" disabled></label>
