@@ -142,6 +142,26 @@ function fillLogin(username, password) {
   return detectLoginForms().length;
 }
 
+function installSaveLoginPromptListeners() {
+  for (const loginForm of detectLoginForms()) {
+    const form = loginForm.passwordInput.closest("form");
+    if (!form || form.dataset.gvSavePromptBound === "true") continue;
+    form.dataset.gvSavePromptBound = "true";
+    form.addEventListener("submit", () => {
+      const username = loginForm.usernameInput.value || "";
+      const password = loginForm.passwordInput.value || "";
+      if (!username || !password) return;
+      chrome.runtime.sendMessage({
+        type: "GV_LOGIN_SUBMITTED",
+        username,
+        password,
+        url: location.href,
+        host: location.hostname
+      });
+    }, true);
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "GV_FILL_LOGIN") {
     sendResponse({ filled: fillLogin(message.username, message.password) });
@@ -165,6 +185,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 {
+  installSaveLoginPromptListeners();
   const identityAddressForms = detectIdentityAddressForms();
   const paymentCardForms = detectPaymentCardForms();
   chrome.runtime.sendMessage({

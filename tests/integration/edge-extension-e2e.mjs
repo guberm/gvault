@@ -86,10 +86,20 @@ test("Edge extension loads and fills a login form in Microsoft Edge", { skip: !e
     assert.equal(await page.locator("#password").inputValue(), "edge-extension-pass");
     assert.equal(await page.locator("#search").inputValue(), "", "Edge extension does not fill non-credential search fields");
 
+    await page.locator("#email").fill("captured-edge@example.test");
+    await page.locator("#password").fill("captured-edge-pass");
+    await page.locator("form").evaluate((form) => form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
     await expectText(popup, "body", "Self-hosted autofill");
     await expectText(popup, "#status", "login form");
+    await expectText(popup, "#savePrompt", "Save login for 127.0.0.1");
+    await expectText(popup, "#savePrompt", "captured-edge@example.test");
+    assert.equal(await popup.locator("#username").inputValue(), "captured-edge@example.test");
+    assert.equal(await popup.locator("#password").inputValue(), "captured-edge-pass");
+    await popup.locator("#dismissSaveLogin").click();
+    await waitUntil(async () => !(await popup.locator("#savePrompt").isVisible()), "Edge save-new-login prompt dismissed");
     await popup.locator("#serverUrl").fill("https://gvault.guber.dev");
     await popup.locator("#saveServer").click();
     await expectText(popup, "#status", "Server URL saved");

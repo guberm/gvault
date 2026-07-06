@@ -145,6 +145,10 @@
         width: auto;
         min-height: auto;
       }
+
+      [hidden] {
+        display: none !important;
+      }
     </style>
   </head>
   <body>
@@ -158,6 +162,13 @@
       </section>
 
       <p class="status" id="status">Checking page forms...</p>
+
+      <section id="savePrompt" class="card" aria-label="Save new login prompt" hidden>
+        <h2>Save new login?</h2>
+        <p id="savePromptText" class="muted"></p>
+        <button id="openWebVault" type="button">Open web vault to save</button>
+        <button id="dismissSaveLogin" class="link-button" type="button">Not now</button>
+      </section>
 
       <section class="card" aria-label="Manual fill">
         <label>

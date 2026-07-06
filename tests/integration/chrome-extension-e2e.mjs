@@ -92,6 +92,16 @@ test("Chrome extension loads and fills a login form in Google Chrome", { skip: s
     assert.equal(await page.locator("#password").inputValue(), "chrome-extension-pass");
     assert.equal(await page.locator("#search").inputValue(), "", "Chrome extension does not fill non-credential search fields");
 
+    await page.locator("#email").fill("captured-chrome@example.test");
+    await page.locator("#password").fill("captured-chrome-pass");
+    await page.locator("form").evaluate((form) => form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    await expectText(popup, "#savePrompt", "Save login for 127.0.0.1");
+    await expectText(popup, "#savePrompt", "captured-chrome@example.test");
+    assert.equal(await popup.locator("#username").inputValue(), "captured-chrome@example.test");
+    assert.equal(await popup.locator("#password").inputValue(), "captured-chrome-pass");
+    await popup.locator("#dismissSaveLogin").click();
+    await waitUntil(async () => !(await popup.locator("#savePrompt").isVisible()), "Chrome save-new-login prompt dismissed");
+
     await popup.locator("#serverUrl").fill("https://gvault.guber.dev");
     await popup.locator("#saveServer").click();
     await expectText(popup, "#status", "Server URL saved");
