@@ -68,10 +68,10 @@ public final class TestMobileAutofillCard {
 
   const compile = spawnSync("javac", [
     "-d", dir,
-    join("/tmp/gvault-push", authStateSource),
-    join("/tmp/gvault-push", itemSource),
-    join("/tmp/gvault-push", vaultSource),
-    join("/tmp/gvault-push", classifierSource),
+    join(process.cwd(), authStateSource),
+    join(process.cwd(), itemSource),
+    join(process.cwd(), vaultSource),
+    join(process.cwd(), classifierSource),
     testSource,
   ], { encoding: "utf8" });
   assert.equal(compile.status, 0, compile.stderr || compile.stdout);
