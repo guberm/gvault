@@ -64,8 +64,9 @@ test("Chrome extension loads and fills a login form in Google Chrome", { skip: s
     }, { tabId });
     assert.equal(fillResult.filled, 1, "Chrome extension reports one filled login form");
 
-    await waitUntil(async () => (await page.locator("#username").inputValue()) === "chrome-extension-user", "Chrome extension filled username");
+    await waitUntil(async () => (await page.locator("#email").inputValue()) === "chrome-extension-user", "Chrome extension filled email login identifier");
     assert.equal(await page.locator("#password").inputValue(), "chrome-extension-pass");
+    assert.equal(await page.locator("#search").inputValue(), "", "Chrome extension does not fill non-credential search fields");
 
     await popup.locator("#serverUrl").fill("https://gvault.guber.dev");
     await popup.locator("#saveServer").click();
@@ -125,7 +126,8 @@ async function serveLoginPage(port) {
       res.end(`<!doctype html>
         <html><body>
           <form>
-            <label>Username <input id="username" name="username" autocomplete="username"></label>
+            <label>Search <input id="search" name="q"></label>
+            <label>Email <input id="email" name="email" type="email" autocomplete="email"></label>
             <label>Password <input id="password" name="password" type="password" autocomplete="current-password"></label>
             <button>Login</button>
           </form>

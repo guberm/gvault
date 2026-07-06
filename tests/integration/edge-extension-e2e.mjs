@@ -58,8 +58,9 @@ test("Edge extension loads and fills a login form in Microsoft Edge", { skip: !e
       });
     }, { tabId });
 
-    await waitUntil(async () => (await page.locator("#username").inputValue()) === "edge-extension-user", "Edge extension filled username");
+    await waitUntil(async () => (await page.locator("#email").inputValue()) === "edge-extension-user", "Edge extension filled email login identifier");
     assert.equal(await page.locator("#password").inputValue(), "edge-extension-pass");
+    assert.equal(await page.locator("#search").inputValue(), "", "Edge extension does not fill non-credential search fields");
 
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -110,7 +111,8 @@ async function serveLoginPage(port) {
       res.end(`<!doctype html>
         <html><body>
           <form>
-            <label>Username <input id="username" name="username" autocomplete="username"></label>
+            <label>Search <input id="search" name="q"></label>
+            <label>Email <input id="email" name="email" type="email" autocomplete="email"></label>
             <label>Password <input id="password" name="password" type="password" autocomplete="current-password"></label>
             <button>Login</button>
           </form>
