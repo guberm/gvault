@@ -17,6 +17,9 @@
 - random 128-bit salt;
 - random 96-bit nonce.
 
+See [encryption-model.md](./encryption-model.md) for the full envelope, key
+derivation, and what is and is not encrypted.
+
 ## Not yet production complete
 
 - Native secure storage and biometric unlock.
