@@ -528,7 +528,7 @@ Parent issue: #33 — https://github.com/guberm/gvault/issues/33
 
 Parent issue: #34 — https://github.com/guberm/gvault/issues/34
 
-- [ ] #385 Encryption model documented. — https://github.com/guberm/gvault/issues/385
+- [x] #385 Encryption model documented. — https://github.com/guberm/gvault/issues/385
 - [ ] #386 Authentication model documented. — https://github.com/guberm/gvault/issues/386
 - [ ] #387 Zero-knowledge boundary documented. — https://github.com/guberm/gvault/issues/387
 - [ ] #388 Master password handling documented. — https://github.com/guberm/gvault/issues/388
