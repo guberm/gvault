@@ -70,7 +70,7 @@ Parent issue: #4 — https://github.com/guberm/gvault/issues/4
 
 - [ ] #75 List all server-backed items. — https://github.com/guberm/gvault/issues/75
 - [ ] #76 Item detail pane. — https://github.com/guberm/gvault/issues/76
-- [ ] #77 Create Login item. — https://github.com/guberm/gvault/issues/77
+- [x] #77 Create Login item. — https://github.com/guberm/gvault/issues/77
 - [ ] #78 Edit Login item. — https://github.com/guberm/gvault/issues/78
 - [ ] #79 Delete/trash Login item. — https://github.com/guberm/gvault/issues/79
 - [ ] #80 Restore item from trash. — https://github.com/guberm/gvault/issues/80

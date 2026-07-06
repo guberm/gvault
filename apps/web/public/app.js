@@ -274,6 +274,14 @@ function fillForm(item) {
   $("itemForm").elements.namedItem("tags").value = (item.tags || []).join(", ");
 }
 
+function startLoginCreate() {
+  state.selectedId = "";
+  fillForm();
+  render();
+  setStatus("Creating a new Login item. Fill the fields and save changes.", "neutral");
+  $("itemForm").elements.namedItem("title").focus();
+}
+
 function parseCsvRows(text) {
   const rows = [];
   let row = [];
@@ -723,9 +731,10 @@ $("clearFormButton").addEventListener("click", () => {
 });
 
 $("newItemButton").addEventListener("click", () => {
-  fillForm();
-  $("itemForm").elements.namedItem("title").focus();
+  startLoginCreate();
 });
+
+$("createLoginButton").addEventListener("click", startLoginCreate);
 
 $("favoriteButton").addEventListener("click", () => {
   const item = state.items.find((candidate) => candidate.id === state.selectedId);
