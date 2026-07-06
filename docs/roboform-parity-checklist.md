@@ -541,7 +541,7 @@ Last updated: 2026-07-03
 # 14. Security architecture and documentation
 
 - [x] Encryption model documented. — [`docs/security/encryption-model.md`](./security/encryption-model.md)
-- [ ] Authentication model documented.
+- [x] Authentication model documented. — [`docs/security/authentication-model.md`](./security/authentication-model.md)
 - [ ] Zero-knowledge boundary documented.
 - [ ] Master password handling documented.
 - [ ] Key derivation documented.
