@@ -18,7 +18,7 @@
     "e2e:all": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/all-platform-e2e.ps1",
     "e2e:android-device": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev/android-device-e2e.ps1",
     "lint": "node scripts/dev/lint.mjs",
-    "test": "node --test tests/**/*.test.mjs",
+    "test": "node --test tests/*.test.mjs tests/integration/*.test.mjs",
     "smoke:server": "node tests/integration/server-smoke.mjs",
     "smoke:web": "npm run build && node --test tests/integration/web-e2e.mjs",
     "smoke:windows-client": "npm run build && node tests/integration/windows-client-login-smoke.mjs",

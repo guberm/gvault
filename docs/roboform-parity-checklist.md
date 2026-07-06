@@ -386,7 +386,7 @@ Last updated: 2026-07-03
 - [ ] Browser identity/address form detection.
 - [ ] Browser card/payment form detection.
 - [x] Android login form detection via Autofill.
-- [ ] Android identity/card fill via Autofill.
+- [x] Android identity/card fill via Autofill.
 - [ ] Save-new-login prompt.
 - [ ] Update-password prompt.
 - [ ] Autosave enable/disable setting.

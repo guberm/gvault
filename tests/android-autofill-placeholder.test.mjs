@@ -37,7 +37,7 @@ public final class TestMobileAutofillDatasetPolicy {
 `);
   const compile = spawnSync("javac", [
     "-d", dir,
-    join("/tmp/gvault-push", policySource),
+    join(process.cwd(), policySource),
     testSource,
   ], { encoding: "utf8" });
   assert.equal(compile.status, 0, compile.stderr || compile.stdout);

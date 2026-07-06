@@ -368,7 +368,7 @@ Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 - [ ] #277 Browser identity/address form detection. — https://github.com/guberm/gvault/issues/277
 - [ ] #278 Browser card/payment form detection. — https://github.com/guberm/gvault/issues/278
 - [x] #279 Android login form detection via Autofill. — https://github.com/guberm/gvault/issues/279
-- [ ] #280 Android identity/card fill via Autofill. — https://github.com/guberm/gvault/issues/280
+- [x] #280 Android identity/card fill via Autofill. — https://github.com/guberm/gvault/issues/280
 - [ ] #281 Save-new-login prompt. — https://github.com/guberm/gvault/issues/281
 - [ ] #282 Update-password prompt. — https://github.com/guberm/gvault/issues/282
 - [ ] #283 Autosave enable/disable setting. — https://github.com/guberm/gvault/issues/283
