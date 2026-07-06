@@ -48,18 +48,23 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme
 
 chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {
   if (!lastDetectedForms) {
-    setStatus("No login or identity/address form detected yet. You can still fill manually.");
+    setStatus("No login, identity/address, or payment-card form detected yet. You can still fill manually.");
     return;
   }
   const count = lastDetectedForms.count || 0;
   const identityAddressCount = lastDetectedForms.identityAddressCount || 0;
-  if (identityAddressCount > 0 && count === 0) {
+  const paymentCardCount = lastDetectedForms.paymentCardCount || 0;
+  if (paymentCardCount > 0 && count === 0 && identityAddressCount === 0) {
+    setStatus(`${paymentCardCount} payment-card form${paymentCardCount === 1 ? "" : "s"} detected on this page.`);
+    return;
+  }
+  if (identityAddressCount > 0 && count === 0 && paymentCardCount === 0) {
     setStatus(`${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"} detected on this page.`);
     return;
   }
-  if (identityAddressCount > 0) {
-    setStatus(`${count} login form${count === 1 ? "" : "s"} and ${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"} detected on this page.`);
-    return;
-  }
-  setStatus(`${count} login form${count === 1 ? "" : "s"} detected on this page.`);
+  const parts = [];
+  if (count > 0) parts.push(`${count} login form${count === 1 ? "" : "s"}`);
+  if (identityAddressCount > 0) parts.push(`${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"}`);
+  if (paymentCardCount > 0) parts.push(`${paymentCardCount} payment-card form${paymentCardCount === 1 ? "" : "s"}`);
+  setStatus(`${parts.join(" and ")} detected on this page.`);
 });

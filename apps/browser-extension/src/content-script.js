@@ -75,6 +75,17 @@ function addressFieldKind(input) {
   return "";
 }
 
+function paymentCardFieldKind(input) {
+  if (!isUsableInput(input)) return "";
+  if (descriptorIncludes(input, ["cc-name", "cardholder", "card holder", "name on card"])) return "cardholderName";
+  if (descriptorIncludes(input, ["cc-number", "cardnumber", "card number", "credit card number"])) return "cardNumber";
+  if (descriptorIncludes(input, ["cc-exp-month", "expmonth", "exp month", "expiration month"])) return "cardExpiryMonth";
+  if (descriptorIncludes(input, ["cc-exp-year", "expyear", "exp year", "expiration year"])) return "cardExpiryYear";
+  if (descriptorIncludes(input, ["cc-exp", "expiry", "expiration"])) return "cardExpiry";
+  if (descriptorIncludes(input, ["cc-csc", "cc-cvv", "cvv", "cvc", "security code"])) return "cardSecurityCode";
+  return "";
+}
+
 function detectIdentityAddressForms() {
   return [...document.querySelectorAll("form")].flatMap((form) => {
     if (hasPasswordField(form)) return [];
@@ -85,6 +96,18 @@ function detectIdentityAddressForms() {
     if (identityKinds.size >= 2 && (identityKinds.has("fullName") || identityKinds.has("givenName") || identityKinds.has("familyName"))) {
       return [{ form, type: "identity", fields: [...identityKinds] }];
     }
+    return [];
+  });
+}
+
+function detectPaymentCardForms() {
+  return [...document.querySelectorAll("form")].flatMap((form) => {
+    if (hasPasswordField(form)) return [];
+    const cardKinds = new Set([...form.querySelectorAll("input")].map(paymentCardFieldKind).filter(Boolean));
+    if (!cardKinds.has("cardNumber")) return [];
+    const hasExpiry = cardKinds.has("cardExpiry") || cardKinds.has("cardExpiryMonth") || cardKinds.has("cardExpiryYear");
+    const hasSupportingCardField = cardKinds.has("cardholderName") || cardKinds.has("cardSecurityCode");
+    if (hasExpiry && hasSupportingCardField) return [{ form, type: "paymentCard", fields: [...cardKinds] }];
     return [];
   });
 }
@@ -126,10 +149,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message?.type === "GV_FORM_CONTEXT") {
     const identityAddressForms = detectIdentityAddressForms();
+    const paymentCardForms = detectPaymentCardForms();
     sendResponse({
       count: detectLoginForms().length,
       identityAddressCount: identityAddressForms.length,
       identityAddressTypes: identityAddressForms.map((form) => form.type),
+      paymentCardCount: paymentCardForms.length,
+      paymentCardTypes: paymentCardForms.map((form) => form.type),
       url: location.href,
       host: location.hostname
     });
@@ -140,11 +166,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 {
   const identityAddressForms = detectIdentityAddressForms();
+  const paymentCardForms = detectPaymentCardForms();
   chrome.runtime.sendMessage({
     type: "GV_FORMS_DETECTED",
     count: detectLoginForms().length,
     identityAddressCount: identityAddressForms.length,
     identityAddressTypes: identityAddressForms.map((form) => form.type),
+    paymentCardCount: paymentCardForms.length,
+    paymentCardTypes: paymentCardForms.map((form) => form.type),
     url: location.href,
     host: location.hostname
   });

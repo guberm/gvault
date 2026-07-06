@@ -384,7 +384,7 @@ Last updated: 2026-07-03
 
 - [x] Browser login form detection.
 - [x] Browser identity/address form detection.
-- [ ] Browser card/payment form detection.
+- [x] Browser card/payment form detection.
 - [x] Android login form detection via Autofill.
 - [x] Android identity/card fill via Autofill.
 - [ ] Save-new-login prompt.
