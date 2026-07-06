@@ -20,6 +20,12 @@
 See [encryption-model.md](./encryption-model.md) for the full envelope, key
 derivation, and what is and is not encrypted.
 
+## Authentication model
+
+Server account authentication is separate from the vault master password. See
+[authentication-model.md](./authentication-model.md) for account-password hashing,
+bearer sessions, authenticated route boundaries, and current limitations.
+
 ## Not yet production complete
 
 - Native secure storage and biometric unlock.
