@@ -39,6 +39,18 @@ test("Chrome extension loads and fills a login form in Google Chrome", { skip: s
     assert.equal(loadedExtension?.name, "GVault", "loaded unpacked extension is the Chrome build");
     assert.equal(loadedExtension?.enabled, true, "loaded Chrome extension is enabled");
 
+    const identityPage = await context.newPage();
+    const identityUrl = `http://127.0.0.1:${webPort}/identity-address-test.html`;
+    await identityPage.goto(identityUrl);
+    await identityPage.waitForSelector("input[autocomplete='street-address']");
+
+    const identityPopup = await context.newPage();
+    await identityPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expectText(identityPopup, "body", "Self-hosted autofill");
+    await expectText(identityPopup, "#status", "identity/address form");
+    await identityPopup.close();
+    await identityPage.close();
+
     const page = await context.newPage();
     const loginUrl = `http://127.0.0.1:${webPort}/login-test.html`;
     await page.goto(loginUrl);
@@ -130,6 +142,25 @@ async function serveLoginPage(port) {
             <label>Email <input id="email" name="email" type="email" autocomplete="email"></label>
             <label>Password <input id="password" name="password" type="password" autocomplete="current-password"></label>
             <button>Login</button>
+          </form>
+        </body></html>`);
+      return;
+    }
+    if (req.url === "/identity-address-test.html") {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(`<!doctype html>
+        <html><body>
+          <form id="contact">
+            <label>Full name <input id="full-name" name="fullName" autocomplete="name"></label>
+            <label>Email <input id="contact-email" name="email" type="email" autocomplete="email"></label>
+            <label>Phone <input id="phone" name="phone" autocomplete="tel"></label>
+          </form>
+          <form id="shipping">
+            <label>Street <input id="street" name="address1" autocomplete="street-address"></label>
+            <label>City <input id="city" name="city" autocomplete="address-level2"></label>
+            <label>State <input id="state" name="state" autocomplete="address-level1"></label>
+            <label>Postal code <input id="postal" name="postalCode" autocomplete="postal-code"></label>
+            <label>Country <input id="country" name="country" autocomplete="country-name"></label>
           </form>
         </body></html>`);
       return;

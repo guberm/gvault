@@ -383,7 +383,7 @@ Last updated: 2026-07-03
 # 9. Form filling and autosave
 
 - [x] Browser login form detection.
-- [ ] Browser identity/address form detection.
+- [x] Browser identity/address form detection.
 - [ ] Browser card/payment form detection.
 - [x] Android login form detection via Autofill.
 - [x] Android identity/card fill via Autofill.
