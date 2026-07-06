@@ -48,9 +48,18 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme
 
 chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {
   if (!lastDetectedForms) {
-    setStatus("No login form detected yet. You can still fill manually.");
+    setStatus("No login or identity/address form detected yet. You can still fill manually.");
     return;
   }
   const count = lastDetectedForms.count || 0;
+  const identityAddressCount = lastDetectedForms.identityAddressCount || 0;
+  if (identityAddressCount > 0 && count === 0) {
+    setStatus(`${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"} detected on this page.`);
+    return;
+  }
+  if (identityAddressCount > 0) {
+    setStatus(`${count} login form${count === 1 ? "" : "s"} and ${identityAddressCount} identity/address form${identityAddressCount === 1 ? "" : "s"} detected on this page.`);
+    return;
+  }
   setStatus(`${count} login form${count === 1 ? "" : "s"} detected on this page.`);
 });

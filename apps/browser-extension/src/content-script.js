@@ -46,6 +46,49 @@ function hasSinglePasswordField(root) {
   return [...root.querySelectorAll("input[type=password]")].filter(isUsableInput).length === 1;
 }
 
+function hasPasswordField(root) {
+  return [...root.querySelectorAll("input[type=password]")].some(isUsableInput);
+}
+
+function descriptorIncludes(input, terms) {
+  const descriptor = inputDescriptor(input);
+  return terms.some((term) => descriptor.includes(term));
+}
+
+function identityFieldKind(input) {
+  if (!isUsableInput(input)) return "";
+  if (descriptorIncludes(input, ["given-name", "firstname", "first name", "first_name", "givenname"])) return "givenName";
+  if (descriptorIncludes(input, ["family-name", "lastname", "last name", "last_name", "familyname", "surname"])) return "familyName";
+  if (descriptorIncludes(input, ["name", "full name", "fullname", "full_name"])) return "fullName";
+  if (descriptorIncludes(input, ["email"]) || input.type === "email") return "email";
+  if (descriptorIncludes(input, ["tel", "phone", "mobile"]) || input.type === "tel") return "phone";
+  return "";
+}
+
+function addressFieldKind(input) {
+  if (!isUsableInput(input)) return "";
+  if (descriptorIncludes(input, ["street-address", "address-line", "address1", "address 1", "street"])) return "street";
+  if (descriptorIncludes(input, ["address-level2", "city", "locality"])) return "city";
+  if (descriptorIncludes(input, ["address-level1", "state", "province", "region"])) return "region";
+  if (descriptorIncludes(input, ["postal-code", "postcode", "postal", "zip"])) return "postalCode";
+  if (descriptorIncludes(input, ["country-name", "country"])) return "country";
+  return "";
+}
+
+function detectIdentityAddressForms() {
+  return [...document.querySelectorAll("form")].flatMap((form) => {
+    if (hasPasswordField(form)) return [];
+    const inputs = [...form.querySelectorAll("input")];
+    const identityKinds = new Set(inputs.map(identityFieldKind).filter(Boolean));
+    const addressKinds = new Set(inputs.map(addressFieldKind).filter(Boolean));
+    if (addressKinds.size >= 3) return [{ form, type: "address", fields: [...addressKinds] }];
+    if (identityKinds.size >= 2 && (identityKinds.has("fullName") || identityKinds.has("givenName") || identityKinds.has("familyName"))) {
+      return [{ form, type: "identity", fields: [...identityKinds] }];
+    }
+    return [];
+  });
+}
+
 function detectLoginForms() {
   const seenForms = new Set();
   return [...document.querySelectorAll("input[type=password]")]
@@ -82,10 +125,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === "GV_FORM_CONTEXT") {
-    sendResponse({ count: detectLoginForms().length, url: location.href, host: location.hostname });
+    const identityAddressForms = detectIdentityAddressForms();
+    sendResponse({
+      count: detectLoginForms().length,
+      identityAddressCount: identityAddressForms.length,
+      identityAddressTypes: identityAddressForms.map((form) => form.type),
+      url: location.href,
+      host: location.hostname
+    });
     return true;
   }
   return false;
 });
 
-chrome.runtime.sendMessage({ type: "GV_FORMS_DETECTED", count: detectLoginForms().length, url: location.href, host: location.hostname });
+{
+  const identityAddressForms = detectIdentityAddressForms();
+  chrome.runtime.sendMessage({
+    type: "GV_FORMS_DETECTED",
+    count: detectLoginForms().length,
+    identityAddressCount: identityAddressForms.length,
+    identityAddressTypes: identityAddressForms.map((form) => form.type),
+    url: location.href,
+    host: location.hostname
+  });
+}

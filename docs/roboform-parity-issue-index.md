@@ -365,7 +365,7 @@ Parent issue: #22 — https://github.com/guberm/gvault/issues/22
 Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 
 - [x] #276 Browser login form detection. — https://github.com/guberm/gvault/issues/276
-- [ ] #277 Browser identity/address form detection. — https://github.com/guberm/gvault/issues/277
+- [x] #277 Browser identity/address form detection. — https://github.com/guberm/gvault/issues/277
 - [ ] #278 Browser card/payment form detection. — https://github.com/guberm/gvault/issues/278
 - [x] #279 Android login form detection via Autofill. — https://github.com/guberm/gvault/issues/279
 - [x] #280 Android identity/card fill via Autofill. — https://github.com/guberm/gvault/issues/280
