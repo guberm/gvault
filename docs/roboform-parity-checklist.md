@@ -100,7 +100,7 @@ Last updated: 2026-07-03
 - [x] Server-backed item creation was verified at least once.
 - [ ] List all server-backed items.
 - [ ] Item detail pane.
-- [ ] Create Login item.
+- [x] Create Login item.
 - [ ] Edit Login item.
 - [ ] Delete/trash Login item.
 - [ ] Restore item from trash.
