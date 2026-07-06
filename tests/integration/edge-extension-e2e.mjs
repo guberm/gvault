@@ -51,6 +51,18 @@ test("Edge extension loads and fills a login form in Microsoft Edge", { skip: !e
     await identityPopup.close();
     await identityPage.close();
 
+    const paymentPage = await context.newPage();
+    const paymentUrl = `http://127.0.0.1:${webPort}/payment-card-test.html`;
+    await paymentPage.goto(paymentUrl);
+    await paymentPage.waitForSelector("input[autocomplete='cc-number']");
+
+    const paymentPopup = await context.newPage();
+    await paymentPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expectText(paymentPopup, "body", "Self-hosted autofill");
+    await expectText(paymentPopup, "#status", "payment-card form");
+    await paymentPopup.close();
+    await paymentPage.close();
+
     const page = await context.newPage();
     const loginUrl = `http://127.0.0.1:${webPort}/login-test.html`;
     await page.goto(loginUrl);
@@ -146,6 +158,20 @@ async function serveLoginPage(port) {
             <label>State <input id="state" name="state" autocomplete="address-level1"></label>
             <label>Postal code <input id="postal" name="postalCode" autocomplete="postal-code"></label>
             <label>Country <input id="country" name="country" autocomplete="country-name"></label>
+          </form>
+        </body></html>`);
+      return;
+    }
+    if (req.url === "/payment-card-test.html") {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(`<!doctype html>
+        <html><body>
+          <form id="payment">
+            <label>Name on card <input id="cc-name" name="ccName" autocomplete="cc-name"></label>
+            <label>Card number <input id="cc-number" name="cardNumber" inputmode="numeric" autocomplete="cc-number"></label>
+            <label>Expiration month <input id="cc-month" name="expMonth" autocomplete="cc-exp-month"></label>
+            <label>Expiration year <input id="cc-year" name="expYear" autocomplete="cc-exp-year"></label>
+            <label>Security code <input id="cc-csc" name="cvv" autocomplete="cc-csc"></label>
           </form>
         </body></html>`);
       return;
