@@ -30,7 +30,7 @@ public final class GVaultAutofillService extends AutofillService {
       loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);
       nonLoginEntries = MobileAutofillVault.nonLoginFillEntries();
     }
-    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " password=" + (fields.passwordId != null) + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " card=" + fields.hasCardFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
+    Log.i("GVaultAutofill", "fillRequest username=" + (fields.usernameId != null) + " email=" + (fields.emailId != null) + " password=" + (fields.passwordId != null) + " login=" + fields.hasLoginFields() + " address=" + fields.hasAddressFields() + " identity=" + fields.hasIdentityFields() + " card=" + fields.hasCardFields() + " domain=" + webDomain + " entries=" + loginEntries.length + " nonLogin=" + nonLoginEntries.length);
 
     if (!MobileAutofillDatasetPolicy.shouldAttemptFillResponse(
       fields.hasLoginFields(),
@@ -86,8 +86,9 @@ public final class GVaultAutofillService extends AutofillService {
     presentation.setTextViewText(android.R.id.text1, entry.label());
     Dataset.Builder dataset = new Dataset.Builder(presentation);
     boolean hasValue = false;
-    if (fields.usernameId != null && !entry.username().isEmpty()) {
-      dataset.setValue(fields.usernameId, AutofillValue.forText(entry.username()));
+    AutofillId loginIdentifierId = fields.loginIdentifierId();
+    if (loginIdentifierId != null && !entry.username().isEmpty()) {
+      dataset.setValue(loginIdentifierId, AutofillValue.forText(entry.username()));
       hasValue = true;
     }
     if (fields.passwordId != null && !entry.password().isEmpty()) {
@@ -289,7 +290,11 @@ public final class GVaultAutofillService extends AutofillService {
     }
 
     boolean hasLoginFields() {
-      return usernameId != null || passwordId != null;
+      return MobileAutofillLoginDetection.isLoginForm(usernameId != null, emailId != null, passwordId != null);
+    }
+
+    AutofillId loginIdentifierId() {
+      return usernameId != null ? usernameId : emailId;
     }
 
     boolean hasIdentityFields() {
