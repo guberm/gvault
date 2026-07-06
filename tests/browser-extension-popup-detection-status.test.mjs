@@ -40,6 +40,95 @@ test("browser extension popup reports clear no-form status after a zero-count sc
   assert.equal(statusText, "No login, identity/address, or payment-card form detected yet. You can still fill manually.");
 });
 
+test("browser extension popup shows a save-new-login prompt from captured credentials", async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const sentMessages = [];
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__sentMessages = [];
+      globalThis.__createdTabs = [];
+      globalThis.__storageListeners = [];
+      globalThis.chrome = {
+        runtime: {
+          sendMessage: async (message) => {
+            globalThis.__sentMessages.push(message);
+            return { ok: true };
+          },
+          openOptionsPage() {}
+        },
+        tabs: {
+          create: async (payload) => {
+            globalThis.__createdTabs.push(payload);
+            return { id: 9, ...payload };
+          }
+        },
+        storage: {
+          onChanged: {
+            addListener(listener) {
+              globalThis.__storageListeners.push(listener);
+            }
+          },
+          sync: {
+            get: async () => ({ gvServerUrl: "https://gvault.guber.dev" }),
+            set: async () => undefined
+          },
+          session: {
+            get: async (key) => {
+              if (key === "pendingSaveLogin") {
+                return {
+                  pendingSaveLogin: {
+                    username: "new-login@example.test",
+                    password: "captured-password",
+                    url: "https://example.test/login",
+                    host: "example.test"
+                  }
+                };
+              }
+              return { lastDetectedForms: { count: 1, url: "https://example.test/login", host: "example.test" } };
+            },
+            set: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#savePrompt");
+    assert.match(await page.locator("#savePrompt").textContent(), /Save login for example\.test/);
+    assert.match(await page.locator("#savePrompt").textContent(), /new-login@example\.test/);
+
+    await page.evaluate(() => {
+      globalThis.__storageListeners[0]({
+        pendingSaveLogin: {
+          newValue: {
+            username: "late-capture@example.test",
+            password: "late-password",
+            url: "https://late.example.test/login",
+            host: "late.example.test"
+          }
+        }
+      }, "session");
+    });
+    assert.match(await page.locator("#savePrompt").textContent(), /Save login for late\.example\.test/);
+    assert.match(await page.locator("#savePrompt").textContent(), /late-capture@example\.test/);
+    assert.equal(await page.locator("#username").inputValue(), "late-capture@example.test");
+    assert.equal(await page.locator("#password").inputValue(), "late-password");
+
+    await page.locator("#openWebVault").click();
+    const createdTabs = await page.evaluate(() => globalThis.__createdTabs);
+    assert.equal(createdTabs.at(-1).url, "https://gvault.guber.dev", "open-vault action uses configured server URL");
+    assert.equal(createdTabs.at(-1).url.includes("captured-password"), false, "open-vault action must not leak captured password in URL");
+
+    await page.locator("#dismissSaveLogin").click();
+    sentMessages.push(...await page.evaluate(() => globalThis.__sentMessages));
+    assert.deepEqual(sentMessages.at(-1), { type: "GV_DISMISS_SAVE_LOGIN" });
+    assert.equal(await page.locator("#savePrompt").isVisible(), false);
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch();
   const page = await browser.newPage();

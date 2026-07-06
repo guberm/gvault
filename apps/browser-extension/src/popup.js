@@ -4,12 +4,43 @@ const username = document.getElementById("username");
 const password = document.getElementById("password");
 const sessionAutofill = document.getElementById("sessionAutofill");
 const themeButton = document.getElementById("themeButton");
+const savePrompt = document.getElementById("savePrompt");
+const savePromptText = document.getElementById("savePromptText");
+const dismissSaveLogin = document.getElementById("dismissSaveLogin");
+const openWebVault = document.getElementById("openWebVault");
 
 function setStatus(message) {
   status.textContent = message;
 }
 
 const NO_FORMS_STATUS = "No login, identity/address, or payment-card form detected yet. You can still fill manually.";
+
+function showSavePrompt(pendingSaveLogin) {
+  if (!pendingSaveLogin?.username || !pendingSaveLogin?.password) {
+    savePrompt.hidden = true;
+    return;
+  }
+  savePrompt.hidden = false;
+  savePromptText.textContent = `Save login for ${pendingSaveLogin.host || "this site"}: ${pendingSaveLogin.username}`;
+  username.value = pendingSaveLogin.username;
+  password.value = pendingSaveLogin.password;
+}
+
+async function dismissPendingSaveLogin() {
+  await chrome.runtime.sendMessage({ type: "GV_DISMISS_SAVE_LOGIN" });
+  savePrompt.hidden = true;
+  setStatus("Save prompt dismissed.");
+}
+
+async function openConfiguredWebVault() {
+  await chrome.tabs.create({ url: serverUrl.value || "https://gvault.guber.dev" });
+  setStatus("Opened web vault. Captured credentials remain only in this popup session.");
+}
+
+async function loadPendingSavePrompt() {
+  const { pendingSaveLogin } = await chrome.storage.session.get("pendingSaveLogin");
+  showSavePrompt(pendingSaveLogin);
+}
 
 async function applyTheme(theme) {
   document.body.dataset.theme = theme;
@@ -41,11 +72,22 @@ document.getElementById("openOptions").onclick = () => {
   chrome.runtime.openOptionsPage();
 };
 
+dismissSaveLogin.onclick = dismissPendingSaveLogin;
+openWebVault.onclick = openConfiguredWebVault;
+
 themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
 
 chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
   applyTheme(gvTheme || "light");
+});
+
+loadPendingSavePrompt();
+
+chrome.storage.onChanged?.addListener?.((changes, areaName) => {
+  if (areaName === "session" && changes.pendingSaveLogin) {
+    showSavePrompt(changes.pendingSaveLogin.newValue);
+  }
 });
 
 chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {

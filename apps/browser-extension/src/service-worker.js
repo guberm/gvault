@@ -44,6 +44,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
+    if (message?.type === "GV_LOGIN_SUBMITTED") {
+      const host = message.host || hostFromUrl(message.url);
+      await chrome.storage.session.set({
+        pendingSaveLogin: {
+          host,
+          url: message.url || "",
+          username: message.username || "",
+          password: message.password || "",
+          tabId: sender.tab?.id,
+          at: new Date().toISOString(),
+        },
+      });
+      sendResponse({ ok: true });
+      return;
+    }
+
+    if (message?.type === "GV_DISMISS_SAVE_LOGIN") {
+      await chrome.storage.session.remove("pendingSaveLogin");
+      sendResponse({ ok: true });
+      return;
+    }
+
     if (message?.type === "GV_FILL_ACTIVE_TAB") {
       const tab = await activeTab();
       if (!tab?.id) {
