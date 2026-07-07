@@ -46,6 +46,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message?.type === "GV_LOGIN_SUBMITTED") {
       const host = message.host || hostFromUrl(message.url);
+      const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
+      if (sessionAutofill?.host === host && sessionAutofill.username === message.username) {
+        if (sessionAutofill.password && sessionAutofill.password !== message.password) {
+          await chrome.storage.session.set({
+            pendingUpdateLogin: {
+              host,
+              url: message.url || "",
+              username: message.username || "",
+              oldPassword: sessionAutofill.password,
+              password: message.password || "",
+              tabId: sender.tab?.id,
+              at: new Date().toISOString(),
+            },
+          });
+          await chrome.storage.session.remove("pendingSaveLogin");
+          sendResponse({ ok: true });
+          return;
+        }
+        await chrome.storage.session.remove("pendingSaveLogin");
+        await chrome.storage.session.remove("pendingUpdateLogin");
+        sendResponse({ ok: true });
+        return;
+      }
       await chrome.storage.session.set({
         pendingSaveLogin: {
           host,
@@ -56,6 +79,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           at: new Date().toISOString(),
         },
       });
+      await chrome.storage.session.remove("pendingUpdateLogin");
+      sendResponse({ ok: true });
+      return;
+    }
+
+    if (message?.type === "GV_DISMISS_UPDATE_LOGIN") {
+      await chrome.storage.session.remove("pendingUpdateLogin");
       sendResponse({ ok: true });
       return;
     }

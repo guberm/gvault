@@ -5,9 +5,11 @@ const password = document.getElementById("password");
 const sessionAutofill = document.getElementById("sessionAutofill");
 const themeButton = document.getElementById("themeButton");
 const savePrompt = document.getElementById("savePrompt");
+const savePromptTitle = document.getElementById("savePromptTitle");
 const savePromptText = document.getElementById("savePromptText");
 const dismissSaveLogin = document.getElementById("dismissSaveLogin");
 const openWebVault = document.getElementById("openWebVault");
+let savePromptKind = "save";
 
 function setStatus(message) {
   status.textContent = message;
@@ -20,16 +22,33 @@ function showSavePrompt(pendingSaveLogin) {
     savePrompt.hidden = true;
     return;
   }
+  savePromptKind = "save";
   savePrompt.hidden = false;
+  savePromptTitle.textContent = "Save new login?";
+  openWebVault.textContent = "Open web vault to save";
   savePromptText.textContent = `Save login for ${pendingSaveLogin.host || "this site"}: ${pendingSaveLogin.username}`;
   username.value = pendingSaveLogin.username;
   password.value = pendingSaveLogin.password;
 }
 
+function showUpdatePrompt(pendingUpdateLogin) {
+  if (!pendingUpdateLogin?.username || !pendingUpdateLogin?.password) {
+    savePrompt.hidden = true;
+    return;
+  }
+  savePromptKind = "update";
+  savePrompt.hidden = false;
+  savePromptTitle.textContent = "Update password?";
+  openWebVault.textContent = "Open web vault to update";
+  savePromptText.textContent = `Update password for ${pendingUpdateLogin.host || "this site"}: ${pendingUpdateLogin.username}`;
+  username.value = pendingUpdateLogin.username;
+  password.value = pendingUpdateLogin.password;
+}
+
 async function dismissPendingSaveLogin() {
-  await chrome.runtime.sendMessage({ type: "GV_DISMISS_SAVE_LOGIN" });
+  await chrome.runtime.sendMessage({ type: savePromptKind === "update" ? "GV_DISMISS_UPDATE_LOGIN" : "GV_DISMISS_SAVE_LOGIN" });
   savePrompt.hidden = true;
-  setStatus("Save prompt dismissed.");
+  setStatus(savePromptKind === "update" ? "Update prompt dismissed." : "Save prompt dismissed.");
 }
 
 async function openConfiguredWebVault() {
@@ -38,6 +57,11 @@ async function openConfiguredWebVault() {
 }
 
 async function loadPendingSavePrompt() {
+  const { pendingUpdateLogin } = await chrome.storage.session.get("pendingUpdateLogin");
+  if (pendingUpdateLogin) {
+    showUpdatePrompt(pendingUpdateLogin);
+    return;
+  }
   const { pendingSaveLogin } = await chrome.storage.session.get("pendingSaveLogin");
   showSavePrompt(pendingSaveLogin);
 }
@@ -85,6 +109,10 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme
 loadPendingSavePrompt();
 
 chrome.storage.onChanged?.addListener?.((changes, areaName) => {
+  if (areaName === "session" && changes.pendingUpdateLogin) {
+    showUpdatePrompt(changes.pendingUpdateLogin.newValue);
+    return;
+  }
   if (areaName === "session" && changes.pendingSaveLogin) {
     showSavePrompt(changes.pendingSaveLogin.newValue);
   }

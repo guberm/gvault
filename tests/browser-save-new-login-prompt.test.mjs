@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const contentScript = await readFile("apps/browser-extension/src/content-script.js", "utf8");
 
 test("browser extension captures a submitted login for a save-new-login prompt", async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
   try {
     await page.setContent(`<!doctype html>
@@ -51,3 +52,14 @@ test("browser extension captures a submitted login for a save-new-login prompt",
     await browser.close();
   }
 });
+
+function chromeLaunchOptions() {
+  const executablePath = chromeExecutable();
+  return executablePath ? { executablePath } : {};
+}
+
+function chromeExecutable() {
+  if (process.env.GV_CHROME_EXECUTABLE) return process.env.GV_CHROME_EXECUTABLE;
+  const candidates = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
+  return candidates.find((candidate) => existsSync(candidate));
+}

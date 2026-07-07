@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { chromium } from "playwright";
@@ -15,11 +16,12 @@ const contentTypes = new Map([
 
 test("web create-card starts a fresh Login item editor and saves the Login record locally", async () => {
   const server = await startStaticServer();
-  const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  let browser;
 
   try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
     await page.goto(baseUrl);
     await page.getByLabel("Master password").fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
@@ -52,10 +54,21 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await expectText(page, "#items", "Existing login");
     assert.equal(await page.locator(".item-row").count(), 2, "new Login item is added without overwriting the existing item");
   } finally {
-    await browser.close();
+    await browser?.close();
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+function chromeLaunchOptions() {
+  const executablePath = chromeExecutable();
+  return executablePath ? { executablePath } : {};
+}
+
+function chromeExecutable() {
+  if (process.env.GV_CHROME_EXECUTABLE) return process.env.GV_CHROME_EXECUTABLE;
+  const candidates = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
+  return candidates.find((candidate) => existsSync(candidate));
+}
 
 async function startStaticServer() {
   const server = createServer(async (request, response) => {
