@@ -9,6 +9,7 @@ const savePromptTitle = document.getElementById("savePromptTitle");
 const savePromptText = document.getElementById("savePromptText");
 const dismissSaveLogin = document.getElementById("dismissSaveLogin");
 const openWebVault = document.getElementById("openWebVault");
+const autofillEnabled = document.getElementById("autofillEnabled");
 const autosaveEnabled = document.getElementById("autosaveEnabled");
 let savePromptKind = "save";
 
@@ -73,6 +74,12 @@ async function applyTheme(theme) {
   await chrome.storage.sync.set({ gvTheme: theme });
 }
 
+async function applyAutofillSetting(enabled) {
+  autofillEnabled.checked = enabled !== false;
+  await chrome.storage.sync.set({ gvAutofillEnabled: autofillEnabled.checked });
+  setStatus(autofillEnabled.checked ? "Autofill enabled." : "Autofill disabled.");
+}
+
 async function applyAutosaveSetting(enabled) {
   autosaveEnabled.checked = enabled !== false;
   await chrome.storage.sync.set({ gvAutosaveEnabled: autosaveEnabled.checked });
@@ -112,10 +119,12 @@ openWebVault.onclick = openConfiguredWebVault;
 
 themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
 
+autofillEnabled.onchange = () => applyAutofillSetting(autofillEnabled.checked);
 autosaveEnabled.onchange = () => applyAutosaveSetting(autosaveEnabled.checked);
 
-chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutosaveEnabled }) => {
+chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvAutosaveEnabled }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
+  autofillEnabled.checked = gvAutofillEnabled !== false;
   autosaveEnabled.checked = gvAutosaveEnabled !== false;
   applyTheme(gvTheme || "light");
 });
