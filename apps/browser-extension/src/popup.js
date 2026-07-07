@@ -76,6 +76,10 @@ async function applyTheme(theme) {
 async function applyAutosaveSetting(enabled) {
   autosaveEnabled.checked = enabled !== false;
   await chrome.storage.sync.set({ gvAutosaveEnabled: autosaveEnabled.checked });
+  if (!autosaveEnabled.checked) {
+    await chrome.storage.session.remove(["pendingSaveLogin", "pendingUpdateLogin"]);
+    savePrompt.hidden = true;
+  }
   setStatus(autosaveEnabled.checked ? "Autosave prompts enabled." : "Autosave prompts disabled.");
 }
 

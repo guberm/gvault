@@ -304,6 +304,64 @@ test("browser extension popup exposes and persists the autosave setting", async 
   }
 });
 
+test("browser extension popup clears visible save/update prompts when autosave is disabled", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = { gvServerUrl: "https://gvault.guber.dev", gvAutosaveEnabled: true };
+      globalThis.__sessionStore = {
+        pendingSaveLogin: {
+          username: "new-login@example.test",
+          password: "captured-password",
+          url: "https://example.test/login",
+          host: "example.test"
+        }
+      };
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          },
+          session: {
+            get: async (key) => {
+              if (typeof key === "string") return { [key]: globalThis.__sessionStore[key] };
+              return { ...globalThis.__sessionStore, lastDetectedForms: { count: 1 } };
+            },
+            set: async (value) => { Object.assign(globalThis.__sessionStore, value); },
+            remove: async (key) => {
+              const keys = Array.isArray(key) ? key : [key];
+              for (const item of keys) delete globalThis.__sessionStore[item];
+            }
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#savePrompt:not([hidden])");
+    assert.match(await page.locator("#savePrompt").textContent(), /Save login for example\.test/);
+
+    await page.locator("#autosaveEnabled").uncheck();
+
+    assert.equal(await page.locator("#savePrompt").isVisible(), false, "disabling autosave should hide the current prompt immediately");
+    const stores = await page.evaluate(() => ({ sync: globalThis.__syncStore, session: globalThis.__sessionStore }));
+    assert.equal(stores.sync.gvAutosaveEnabled, false, "disabled autosave setting should persist");
+    assert.equal(stores.session.pendingSaveLogin, undefined, "disabling autosave should clear pending save prompts");
+    assert.equal(stores.session.pendingUpdateLogin, undefined, "disabling autosave should clear pending update prompts");
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
