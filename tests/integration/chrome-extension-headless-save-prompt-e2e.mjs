@@ -11,22 +11,7 @@ const root = resolve(".");
 const extensionPath = join(root, "apps/browser-extension/dist/chrome");
 
 test("headless Chrome CDP loads extension and shows save-new-login prompt", { skip: !chromeExecutable() && "Google Chrome executable not found" }, async () => {
-  assert.ok(existsSync(extensionPath), "Chrome extension build exists");
-  const port = 26080 + Math.floor(Math.random() * 1000);
-  const web = await serveLoginPage(port);
-  const userDataDir = await mkdtemp(join(tmpdir(), "gvault-chrome-headless-extension-"));
-  const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: true,
-    executablePath: chromeExecutable(),
-    ignoreDefaultArgs: ["--disable-extensions"],
-    args: ["--no-first-run", "--no-default-browser-check"]
-  });
-
-  try {
-    const browserSession = await context.browser().newBrowserCDPSession();
-    const { id: extensionId } = await browserSession.send("Extensions.loadUnpacked", { path: extensionPath });
-    assert.ok(extensionId, "Chrome extension id returned by CDP Extensions.loadUnpacked");
-
+  await withLoadedExtension(async ({ context, extensionId, port }) => {
     const page = await context.newPage();
     const loginUrl = `http://127.0.0.1:${port}/login-test.html`;
     await page.goto(loginUrl);
@@ -42,11 +27,63 @@ test("headless Chrome CDP loads extension and shows save-new-login prompt", { sk
     await expectText(popup, "#savePrompt", "headless-capture@example.test");
     assert.equal(await popup.locator("#username").inputValue(), "headless-capture@example.test");
     assert.equal(await popup.locator("#password").inputValue(), "headless-capture-pass");
+  });
+});
+
+test("headless Chrome CDP shows update-password prompt for changed known login", { skip: !chromeExecutable() && "Google Chrome executable not found" }, async () => {
+  await withLoadedExtension(async ({ context, extensionId, port }) => {
+    const setupPopup = await context.newPage();
+    await setupPopup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await setupPopup.evaluate(async () => {
+      await chrome.storage.session.set({
+        sessionAutofill: {
+          host: "127.0.0.1",
+          username: "known-login@example.test",
+          password: "old-known-password",
+          at: new Date().toISOString()
+        }
+      });
+    });
+    await setupPopup.close();
+
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${port}/login-test.html`);
+    await page.waitForSelector("input[type=password]");
+    await page.locator("#email").fill("known-login@example.test");
+    await page.locator("#password").fill("new-known-password");
+    await page.locator("form").evaluate((form) => form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+
+    const popup = await context.newPage();
+    await popup.goto(`chrome-extension://${extensionId}/popup.html`);
+    await expectText(popup, "#savePrompt", "Update password for 127.0.0.1");
+    await expectText(popup, "#savePrompt", "known-login@example.test");
+    assert.equal(await popup.locator("#username").inputValue(), "known-login@example.test");
+    assert.equal(await popup.locator("#password").inputValue(), "new-known-password");
+  });
+});
+
+async function withLoadedExtension(callback) {
+  assert.ok(existsSync(extensionPath), "Chrome extension build exists");
+  const port = 26080 + Math.floor(Math.random() * 1000);
+  const web = await serveLoginPage(port);
+  const userDataDir = await mkdtemp(join(tmpdir(), "gvault-chrome-headless-extension-"));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    headless: true,
+    executablePath: chromeExecutable(),
+    ignoreDefaultArgs: ["--disable-extensions"],
+    args: ["--no-first-run", "--no-default-browser-check"]
+  });
+
+  try {
+    const browserSession = await context.browser().newBrowserCDPSession();
+    const { id: extensionId } = await browserSession.send("Extensions.loadUnpacked", { path: extensionPath });
+    assert.ok(extensionId, "Chrome extension id returned by CDP Extensions.loadUnpacked");
+    await callback({ context, extensionId, port });
   } finally {
     await context.close();
     await closeServer(web);
   }
-});
+}
 
 function chromeExecutable() {
   if (process.env.GV_CHROME_EXECUTABLE) return process.env.GV_CHROME_EXECUTABLE;

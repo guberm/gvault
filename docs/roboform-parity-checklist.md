@@ -388,7 +388,7 @@ Last updated: 2026-07-03
 - [x] Android login form detection via Autofill.
 - [x] Android identity/card fill via Autofill.
 - [x] Save-new-login prompt.
-- [ ] Update-password prompt.
+- [x] Update-password prompt.
 - [ ] Autosave enable/disable setting.
 - [ ] Autofill enable/disable setting.
 - [ ] Per-domain disabled list.

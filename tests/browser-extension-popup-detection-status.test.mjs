@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
@@ -41,7 +42,7 @@ test("browser extension popup reports clear no-form status after a zero-count sc
 });
 
 test("browser extension popup shows a save-new-login prompt from captured credentials", async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
   const sentMessages = [];
   try {
@@ -86,6 +87,7 @@ test("browser extension popup shows a save-new-login prompt from captured creden
                   }
                 };
               }
+              if (key === "pendingUpdateLogin") return { pendingUpdateLogin: undefined };
               return { lastDetectedForms: { count: 1, url: "https://example.test/login", host: "example.test" } };
             },
             set: async () => undefined
@@ -129,8 +131,69 @@ test("browser extension popup shows a save-new-login prompt from captured creden
   }
 });
 
+test("browser extension popup shows an update-password prompt from changed captured credentials", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        runtime: {
+          sendMessage: async (message) => {
+            globalThis.__sentMessages.push(message);
+            return { ok: true };
+          },
+          openOptionsPage() {}
+        },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async () => ({ gvServerUrl: "https://gvault.guber.dev" }),
+            set: async () => undefined
+          },
+          session: {
+            get: async (key) => {
+              if (key === "pendingSaveLogin") return { pendingSaveLogin: undefined };
+              if (key === "pendingUpdateLogin") {
+                return {
+                  pendingUpdateLogin: {
+                    username: "person@example.test",
+                    oldPassword: "old-password",
+                    password: "changed-password",
+                    url: "https://example.test/login",
+                    host: "example.test"
+                  }
+                };
+              }
+              return { lastDetectedForms: { count: 1, url: "https://example.test/login", host: "example.test" } };
+            },
+            set: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#savePrompt");
+    assert.equal(await page.locator("#savePrompt h2").textContent(), "Update password?");
+    assert.equal(await page.locator("#openWebVault").textContent(), "Open web vault to update");
+    assert.match(await page.locator("#savePrompt").textContent(), /Update password for example\.test/);
+    assert.match(await page.locator("#savePrompt").textContent(), /person@example\.test/);
+    assert.equal(await page.locator("#username").inputValue(), "person@example.test");
+    assert.equal(await page.locator("#password").inputValue(), "changed-password");
+
+    await page.locator("#dismissSaveLogin").click();
+    const sentMessages = await page.evaluate(() => globalThis.__sentMessages);
+    assert.deepEqual(sentMessages.at(-1), { type: "GV_DISMISS_UPDATE_LOGIN" });
+    assert.equal(await page.locator("#savePrompt").isVisible(), false);
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
   try {
     await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
@@ -158,4 +221,15 @@ async function renderPopupStatus(lastDetectedForms, expectedText) {
   } finally {
     await browser.close();
   }
+}
+
+function chromeLaunchOptions() {
+  const executablePath = chromeExecutable();
+  return executablePath ? { executablePath } : {};
+}
+
+function chromeExecutable() {
+  if (process.env.GV_CHROME_EXECUTABLE) return process.env.GV_CHROME_EXECUTABLE;
+  const candidates = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
+  return candidates.find((candidate) => existsSync(candidate));
 }
