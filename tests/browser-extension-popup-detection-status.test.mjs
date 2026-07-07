@@ -192,6 +192,80 @@ test("browser extension popup shows an update-password prompt from changed captu
   }
 });
 
+test("browser extension popup keeps the fresh prompt visible when stale counterpart storage is removed", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__storageListeners = [];
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener(listener) { globalThis.__storageListeners.push(listener); } },
+          sync: { get: async () => ({ gvServerUrl: "https://gvault.guber.dev" }), set: async () => undefined },
+          session: {
+            get: async (key) => {
+              if (key === "pendingUpdateLogin") return { pendingUpdateLogin: undefined };
+              if (key === "pendingSaveLogin") return { pendingSaveLogin: undefined };
+              return { lastDetectedForms: { count: 0, url: "https://example.test/search", host: "example.test" } };
+            },
+            set: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForFunction(() => globalThis.__storageListeners?.length === 1);
+
+    await page.evaluate(() => {
+      globalThis.__storageListeners[0]({
+        pendingSaveLogin: {
+          newValue: {
+            username: "new@example.test",
+            password: "new-password",
+            url: "https://example.test/login",
+            host: "example.test"
+          }
+        }
+      }, "session");
+    });
+    assert.match(await page.locator("#savePrompt").textContent(), /Save login for example\.test/);
+    assert.equal(await page.locator("#savePrompt").isVisible(), true);
+
+    await page.evaluate(() => {
+      globalThis.__storageListeners[0]({ pendingUpdateLogin: { oldValue: { username: "stale@example.test" } } }, "session");
+    });
+    assert.equal(await page.locator("#savePrompt").isVisible(), true, "removing a stale update prompt must not hide a fresh save prompt");
+    assert.match(await page.locator("#savePrompt").textContent(), /Save login for example\.test/);
+
+    await page.evaluate(() => {
+      globalThis.__storageListeners[0]({
+        pendingUpdateLogin: {
+          newValue: {
+            username: "person@example.test",
+            oldPassword: "old-password",
+            password: "changed-password",
+            url: "https://example.test/login",
+            host: "example.test"
+          }
+        }
+      }, "session");
+    });
+    assert.match(await page.locator("#savePrompt").textContent(), /Update password for example\.test/);
+    assert.equal(await page.locator("#savePrompt").isVisible(), true);
+
+    await page.evaluate(() => {
+      globalThis.__storageListeners[0]({ pendingSaveLogin: { oldValue: { username: "new@example.test" } } }, "session");
+    });
+    assert.equal(await page.locator("#savePrompt").isVisible(), true, "removing a stale save prompt must not hide a fresh update prompt");
+    assert.match(await page.locator("#savePrompt").textContent(), /Update password for example\.test/);
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();

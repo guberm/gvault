@@ -109,12 +109,22 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme
 loadPendingSavePrompt();
 
 chrome.storage.onChanged?.addListener?.((changes, areaName) => {
-  if (areaName === "session" && changes.pendingUpdateLogin) {
-    showUpdatePrompt(changes.pendingUpdateLogin.newValue);
-    return;
+  if (areaName !== "session") return;
+
+  if (changes.pendingUpdateLogin) {
+    if (changes.pendingUpdateLogin.newValue) {
+      showUpdatePrompt(changes.pendingUpdateLogin.newValue);
+      return;
+    }
+    if (savePromptKind === "update") savePrompt.hidden = true;
   }
-  if (areaName === "session" && changes.pendingSaveLogin) {
-    showSavePrompt(changes.pendingSaveLogin.newValue);
+
+  if (changes.pendingSaveLogin) {
+    if (changes.pendingSaveLogin.newValue) {
+      showSavePrompt(changes.pendingSaveLogin.newValue);
+      return;
+    }
+    if (savePromptKind === "save") savePrompt.hidden = true;
   }
 });
 
