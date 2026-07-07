@@ -266,6 +266,44 @@ test("browser extension popup keeps the fresh prompt visible when stale counterp
   }
 });
 
+test("browser extension popup exposes and persists the autosave setting", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = { gvServerUrl: "https://gvault.guber.dev", gvAutosaveEnabled: false };
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          },
+          session: { get: async () => ({ lastDetectedForms: { count: 0 } }), set: async () => undefined }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#autosaveEnabled");
+
+    assert.equal(await page.locator("#autosaveEnabled").isChecked(), false, "stored disabled setting should render unchecked");
+    assert.match(await page.locator("body").textContent(), /Prompt to save or update submitted logins/);
+
+    await page.locator("#autosaveEnabled").check();
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.equal(syncStore.gvAutosaveEnabled, true, "popup should persist autosave setting changes");
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();

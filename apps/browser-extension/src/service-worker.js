@@ -15,6 +15,11 @@ async function fillTab(tabId, username, password) {
   return chrome.tabs.sendMessage(tabId, { type: "GV_FILL_LOGIN", username, password });
 }
 
+async function autosaveEnabled() {
+  const { gvAutosaveEnabled } = await chrome.storage.sync.get({ gvAutosaveEnabled: true });
+  return gvAutosaveEnabled !== false;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
@@ -45,6 +50,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message?.type === "GV_LOGIN_SUBMITTED") {
+      if (!await autosaveEnabled()) {
+        await chrome.storage.session.remove("pendingSaveLogin");
+        await chrome.storage.session.remove("pendingUpdateLogin");
+        sendResponse({ ok: true });
+        return;
+      }
+
       const host = hostFromUrl(message.url) || hostFromUrl(`https://${message.host || ""}`);
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       if (sessionAutofill?.host === host && sessionAutofill.username === message.username) {

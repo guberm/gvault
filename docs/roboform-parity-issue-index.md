@@ -371,7 +371,7 @@ Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 - [x] #280 Android identity/card fill via Autofill. — https://github.com/guberm/gvault/issues/280
 - [x] #281 Save-new-login prompt. — https://github.com/guberm/gvault/issues/281
 - [x] #282 Update-password prompt. — https://github.com/guberm/gvault/issues/282
-- [ ] #283 Autosave enable/disable setting. — https://github.com/guberm/gvault/issues/283
+- [x] #283 Autosave enable/disable setting. — https://github.com/guberm/gvault/issues/283
 - [ ] #284 Autofill enable/disable setting. — https://github.com/guberm/gvault/issues/284
 - [ ] #285 Per-domain disabled list. — https://github.com/guberm/gvault/issues/285
 - [ ] #286 Fill prompt behavior setting. — https://github.com/guberm/gvault/issues/286

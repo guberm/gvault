@@ -9,6 +9,7 @@ const savePromptTitle = document.getElementById("savePromptTitle");
 const savePromptText = document.getElementById("savePromptText");
 const dismissSaveLogin = document.getElementById("dismissSaveLogin");
 const openWebVault = document.getElementById("openWebVault");
+const autosaveEnabled = document.getElementById("autosaveEnabled");
 let savePromptKind = "save";
 
 function setStatus(message) {
@@ -72,6 +73,12 @@ async function applyTheme(theme) {
   await chrome.storage.sync.set({ gvTheme: theme });
 }
 
+async function applyAutosaveSetting(enabled) {
+  autosaveEnabled.checked = enabled !== false;
+  await chrome.storage.sync.set({ gvAutosaveEnabled: autosaveEnabled.checked });
+  setStatus(autosaveEnabled.checked ? "Autosave prompts enabled." : "Autosave prompts disabled.");
+}
+
 document.getElementById("fill").onclick = async () => {
   const payload = { username: username.value, password: password.value };
   const filled = await chrome.runtime.sendMessage({ type: "GV_FILL_ACTIVE_TAB", ...payload });
@@ -101,8 +108,11 @@ openWebVault.onclick = openConfiguredWebVault;
 
 themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
 
-chrome.storage.sync.get(["gvServerUrl", "gvTheme"]).then(({ gvServerUrl, gvTheme }) => {
+autosaveEnabled.onchange = () => applyAutosaveSetting(autosaveEnabled.checked);
+
+chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutosaveEnabled }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
+  autosaveEnabled.checked = gvAutosaveEnabled !== false;
   applyTheme(gvTheme || "light");
 });
 
