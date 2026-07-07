@@ -45,7 +45,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message?.type === "GV_LOGIN_SUBMITTED") {
-      const host = message.host || hostFromUrl(message.url);
+      const host = hostFromUrl(message.url) || hostFromUrl(`https://${message.host || ""}`);
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       if (sessionAutofill?.host === host && sessionAutofill.username === message.username) {
         if (sessionAutofill.password && sessionAutofill.password !== message.password) {

@@ -125,6 +125,49 @@ test("service worker stores an update-password prompt for a changed known sessio
   assert.equal(sessionStore.pendingUpdateLogin.tabId, 11);
 });
 
+test("service worker normalizes submitted www hosts before choosing save or update prompt", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "old-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const messages = [];
+  const context = {
+    URL,
+    Date,
+    console,
+    chrome: {
+      tabs: { query: async () => [], sendMessage: async () => ({ filled: 0 }) },
+      storage: {
+        session: {
+          get: async (key) => (typeof key === "string" ? { [key]: sessionStore[key] } : sessionStore),
+          set: async (value) => Object.assign(sessionStore, value),
+          remove: async (key) => { delete sessionStore[key]; }
+        }
+      },
+      runtime: { onMessage: { addListener(listener) { messages.push(listener); } } }
+    }
+  };
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_LOGIN_SUBMITTED",
+    username: "person@example.test",
+    password: "new-password",
+    url: "https://www.example.test/login",
+    host: "www.example.test"
+  }, { tab: { id: 13 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.pendingSaveLogin, undefined, "www host variants for known logins must not create new-login prompts");
+  assert.equal(sessionStore.pendingUpdateLogin.username, "person@example.test");
+  assert.equal(sessionStore.pendingUpdateLogin.host, "example.test");
+  assert.equal(sessionStore.pendingUpdateLogin.password, "new-password");
+});
+
 test("service worker ignores unchanged known session login submissions", async () => {
   const sessionStore = {
     sessionAutofill: {
