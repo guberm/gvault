@@ -151,6 +151,83 @@ test("service worker suppresses update-password prompts when autosave setting is
   assert.equal(sessionStore.pendingUpdateLogin, undefined, "disabled autosave must not create update-password prompts");
 });
 
+test("service worker autofills a matching session login when autofill is enabled by default", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 21 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 21);
+  assert.equal(tabMessages[0].message.type, "GV_FILL_LOGIN");
+  assert.equal(tabMessages[0].message.username, "person@example.test");
+  assert.equal(tabMessages[0].message.password, "session-password");
+});
+
+test("service worker suppresses matching session autofill when autofill setting is disabled", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvAutofillEnabled: false };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 22 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "disabled autofill must not send credentials to the content script");
+  assert.equal(sessionStore.lastDetectedForms.host, "example.test", "form detection status should still be recorded");
+});
+
+test("service worker still allows manual active-tab fill when autofill setting is disabled", async () => {
+  const syncStore = { gvAutofillEnabled: false };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FILL_ACTIVE_TAB",
+    username: "manual@example.test",
+    password: "manual-password"
+  }, {});
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 7);
+  assert.equal(tabMessages[0].message.type, "GV_FILL_LOGIN");
+  assert.equal(tabMessages[0].message.username, "manual@example.test");
+  assert.equal(tabMessages[0].message.password, "manual-password");
+});
+
 test("service worker ignores unchanged known session login submissions", async () => {
   const sessionStore = {
     sessionAutofill: {
@@ -196,7 +273,7 @@ async function sendMessage(listener, message, sender) {
   });
 }
 
-function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = [] } = {}) {
+function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = [], tabMessages = [] } = {}) {
   return {
     URL,
     Date,
@@ -204,7 +281,10 @@ function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = []
     chrome: {
       tabs: {
         query: async () => [{ id: 7, url: "https://example.test/login" }],
-        sendMessage: async () => ({ filled: 1 })
+        sendMessage: async (tabId, message) => {
+          tabMessages.push({ tabId, message });
+          return { filled: 1 };
+        }
       },
       storage: {
         session: storageArea(sessionStore),

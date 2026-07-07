@@ -20,6 +20,11 @@ async function autosaveEnabled() {
   return gvAutosaveEnabled !== false;
 }
 
+async function autofillEnabled() {
+  const { gvAutofillEnabled } = await chrome.storage.sync.get({ gvAutofillEnabled: true });
+  return gvAutofillEnabled !== false;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
@@ -28,7 +33,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       const host = hostFromUrl(message.url);
-      if (sender.tab?.id && sessionAutofill?.host === host && sessionAutofill.username && sessionAutofill.password) {
+      if (await autofillEnabled() && sender.tab?.id && sessionAutofill?.host === host && sessionAutofill.username && sessionAutofill.password) {
         await fillTab(sender.tab.id, sessionAutofill.username, sessionAutofill.password);
       }
       sendResponse({ ok: true });

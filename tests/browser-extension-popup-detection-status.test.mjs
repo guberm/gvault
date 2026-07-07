@@ -6,6 +6,8 @@ import { chromium } from "playwright";
 
 const popupHtml = await readFile("apps/browser-extension/src/popup.html", "utf8");
 const popupScript = await readFile("apps/browser-extension/src/popup.js", "utf8");
+const optionsHtml = await readFile("apps/browser-extension/src/options.html", "utf8");
+const optionsScript = await readFile("apps/browser-extension/src/options.js", "utf8");
 
 test("browser extension popup reports identity/address detection from content script", async () => {
   const statusText = await renderPopupStatus({
@@ -266,6 +268,44 @@ test("browser extension popup keeps the fresh prompt visible when stale counterp
   }
 });
 
+test("browser extension popup exposes and persists the autofill setting", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = { gvServerUrl: "https://gvault.guber.dev", gvAutofillEnabled: false };
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          },
+          session: { get: async () => ({ lastDetectedForms: { count: 0 } }), set: async () => undefined }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#autofillEnabled");
+
+    assert.equal(await page.locator("#autofillEnabled").isChecked(), false, "stored disabled autofill setting should render unchecked");
+    assert.match(await page.locator("body").textContent(), /Automatically fill matching session logins/);
+
+    await page.locator("#autofillEnabled").check();
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.equal(syncStore.gvAutofillEnabled, true, "popup should persist autofill setting changes");
+  } finally {
+    await browser.close();
+  }
+});
+
 test("browser extension popup exposes and persists the autosave setting", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
@@ -357,6 +397,49 @@ test("browser extension popup clears visible save/update prompts when autosave i
     assert.equal(stores.sync.gvAutosaveEnabled, false, "disabled autosave setting should persist");
     assert.equal(stores.session.pendingSaveLogin, undefined, "disabling autosave should clear pending save prompts");
     assert.equal(stores.session.pendingUpdateLogin, undefined, "disabling autosave should clear pending update prompts");
+  } finally {
+    await browser.close();
+  }
+});
+
+test("browser extension options expose and persist autofill/autosave settings", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(optionsHtml.replace('<script src="options.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = {
+        gvServerUrl: "https://gvault.guber.dev",
+        gvAutofillEnabled: false,
+        gvAutosaveEnabled: true
+      };
+      globalThis.chrome = {
+        storage: {
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: optionsScript });
+    await page.waitForSelector("#autofillEnabled");
+
+    assert.equal(await page.locator("#autofillEnabled").isChecked(), false, "stored disabled autofill should render unchecked in options");
+    assert.equal(await page.locator("#autosaveEnabled").isChecked(), true);
+    assert.match(await page.locator("body").textContent(), /Automatically fill matching session logins/);
+
+    await page.locator("#autofillEnabled").check();
+    await page.locator("#autosaveEnabled").uncheck();
+    await page.locator("#save").click();
+
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.equal(syncStore.gvAutofillEnabled, true, "options should persist autofill setting changes");
+    assert.equal(syncStore.gvAutosaveEnabled, false, "options should continue persisting autosave setting changes");
   } finally {
     await browser.close();
   }
