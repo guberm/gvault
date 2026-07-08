@@ -1,9 +1,27 @@
 function hostFromUrl(url) {
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
   } catch {
     return "";
   }
+}
+
+function normalizeDomainEntry(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  return hostFromUrl(text.includes("://") ? text : `https://${text}`);
+}
+
+async function domainDisabled(host) {
+  const { gvDisabledDomains } = await chrome.storage.sync.get({ gvDisabledDomains: [] });
+  const normalizedHost = normalizeDomainEntry(host);
+  const disabledDomains = Array.isArray(gvDisabledDomains) ? gvDisabledDomains.map(normalizeDomainEntry).filter(Boolean) : [];
+  return Boolean(normalizedHost && disabledDomains.includes(normalizedHost));
+}
+
+async function clearPendingPrompts() {
+  await chrome.storage.session.remove("pendingSaveLogin");
+  await chrome.storage.session.remove("pendingUpdateLogin");
 }
 
 async function activeTab() {
@@ -33,7 +51,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       const host = hostFromUrl(message.url);
-      if (await autofillEnabled() && sender.tab?.id && sessionAutofill?.host === host && sessionAutofill.username && sessionAutofill.password) {
+      if (!await domainDisabled(host) && await autofillEnabled() && sender.tab?.id && sessionAutofill?.host === host && sessionAutofill.username && sessionAutofill.password) {
         await fillTab(sender.tab.id, sessionAutofill.username, sessionAutofill.password);
       }
       sendResponse({ ok: true });
@@ -55,14 +73,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message?.type === "GV_LOGIN_SUBMITTED") {
-      if (!await autosaveEnabled()) {
-        await chrome.storage.session.remove("pendingSaveLogin");
-        await chrome.storage.session.remove("pendingUpdateLogin");
+      const host = hostFromUrl(message.url) || hostFromUrl(`https://${message.host || ""}`);
+      if (!await autosaveEnabled() || await domainDisabled(host)) {
+        await clearPendingPrompts();
         sendResponse({ ok: true });
         return;
       }
 
-      const host = hostFromUrl(message.url) || hostFromUrl(`https://${message.host || ""}`);
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       if (sessionAutofill?.host === host && sessionAutofill.username === message.username) {
         if (sessionAutofill.password && sessionAutofill.password !== message.password) {

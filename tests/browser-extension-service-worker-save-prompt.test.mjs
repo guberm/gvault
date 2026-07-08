@@ -207,6 +207,83 @@ test("service worker suppresses matching session autofill when autofill setting 
   assert.equal(sessionStore.lastDetectedForms.host, "example.test", "form detection status should still be recorded");
 });
 
+test("service worker suppresses matching session autofill for domains in the disabled list", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvDisabledDomains: ["example.test"] };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://www.example.test/login",
+    host: "www.example.test"
+  }, { tab: { id: 23 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "domain-disabled autofill must not send credentials to the content script");
+  assert.equal(sessionStore.lastDetectedForms.host, "www.example.test", "form detection status should still be recorded");
+});
+
+test("service worker suppresses save-new-login prompts for domains in the disabled list", async () => {
+  const sessionStore = {
+    pendingSaveLogin: { username: "stale-save@example.test", password: "stale" },
+    pendingUpdateLogin: { username: "stale-update@example.test", password: "stale" }
+  };
+  const syncStore = { gvDisabledDomains: ["example.test"] };
+  const messages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_LOGIN_SUBMITTED",
+    username: "new-login@example.test",
+    password: "captured-password",
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 24 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.pendingSaveLogin, undefined, "domain-disabled autosave must not leave a save-new-login prompt");
+  assert.equal(sessionStore.pendingUpdateLogin, undefined, "domain-disabled autosave must clear stale update prompts too");
+});
+
+test("service worker suppresses update-password prompts for domains in the disabled list", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "old-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvDisabledDomains: ["example.test"] };
+  const messages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_LOGIN_SUBMITTED",
+    username: "person@example.test",
+    password: "new-password",
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 25 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.pendingSaveLogin, undefined);
+  assert.equal(sessionStore.pendingUpdateLogin, undefined, "domain-disabled autosave must not create update-password prompts");
+});
+
 test("service worker still allows manual active-tab fill when autofill setting is disabled", async () => {
   const syncStore = { gvAutofillEnabled: false };
   const messages = [];

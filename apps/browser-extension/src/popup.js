@@ -11,6 +11,9 @@ const dismissSaveLogin = document.getElementById("dismissSaveLogin");
 const openWebVault = document.getElementById("openWebVault");
 const autofillEnabled = document.getElementById("autofillEnabled");
 const autosaveEnabled = document.getElementById("autosaveEnabled");
+const domainDisabled = document.getElementById("domainDisabled");
+const domainDisabledLabel = document.getElementById("domainDisabledLabel");
+let currentDomain = "";
 let savePromptKind = "save";
 
 function setStatus(message) {
@@ -18,6 +21,62 @@ function setStatus(message) {
 }
 
 const NO_FORMS_STATUS = "No login, identity/address, or payment-card form detected yet. You can still fill manually.";
+
+function hostFromUrl(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function normalizeDomainEntry(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "";
+  return hostFromUrl(text.includes("://") ? text : `https://${text}`);
+}
+
+function uniqueDomains(domains) {
+  return [...new Set((Array.isArray(domains) ? domains : []).map(normalizeDomainEntry).filter(Boolean))];
+}
+
+async function loadActiveTabDomain() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return normalizeDomainEntry(tab?.url);
+  } catch {
+    return "";
+  }
+}
+
+function setCurrentDomain(domain) {
+  currentDomain = normalizeDomainEntry(domain);
+  domainDisabledLabel.textContent = currentDomain ? `Disable automatic fill and save prompts on ${currentDomain}` : "Disable automatic fill and save prompts on this site";
+}
+
+async function loadDomainDisabledSetting() {
+  const { gvDisabledDomains } = await chrome.storage.sync.get({ gvDisabledDomains: [] });
+  const domains = uniqueDomains(gvDisabledDomains);
+  domainDisabled.checked = Boolean(currentDomain && domains.includes(currentDomain));
+}
+
+async function applyDomainDisabledSetting(enabled) {
+  if (!currentDomain) {
+    domainDisabled.checked = false;
+    setStatus("No current site detected to disable.");
+    return;
+  }
+  const { gvDisabledDomains } = await chrome.storage.sync.get({ gvDisabledDomains: [] });
+  const domains = uniqueDomains(gvDisabledDomains).filter((domain) => domain !== currentDomain);
+  if (enabled) domains.push(currentDomain);
+  await chrome.storage.sync.set({ gvDisabledDomains: domains });
+  domainDisabled.checked = enabled;
+  if (enabled) {
+    await chrome.storage.session.remove(["pendingSaveLogin", "pendingUpdateLogin"]);
+    savePrompt.hidden = true;
+  }
+  setStatus(enabled ? `Disabled automatic fill and save prompts on ${currentDomain}.` : `Enabled automatic fill and save prompts on ${currentDomain}.`);
+}
 
 function showSavePrompt(pendingSaveLogin) {
   if (!pendingSaveLogin?.username || !pendingSaveLogin?.password) {
@@ -121,6 +180,7 @@ themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? 
 
 autofillEnabled.onchange = () => applyAutofillSetting(autofillEnabled.checked);
 autosaveEnabled.onchange = () => applyAutosaveSetting(autosaveEnabled.checked);
+domainDisabled.onchange = () => applyDomainDisabledSetting(domainDisabled.checked);
 
 chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvAutosaveEnabled }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
@@ -151,7 +211,9 @@ chrome.storage.onChanged?.addListener?.((changes, areaName) => {
   }
 });
 
-chrome.storage.session.get("lastDetectedForms").then(({ lastDetectedForms }) => {
+chrome.storage.session.get("lastDetectedForms").then(async ({ lastDetectedForms }) => {
+  setCurrentDomain(await loadActiveTabDomain());
+  loadDomainDisabledSetting();
   if (!lastDetectedForms) {
     setStatus(NO_FORMS_STATUS);
     return;

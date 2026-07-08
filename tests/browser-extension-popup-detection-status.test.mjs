@@ -402,6 +402,60 @@ test("browser extension popup clears visible save/update prompts when autosave i
   }
 });
 
+test("browser extension popup exposes and persists per-domain disablement for the current active tab", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = { gvServerUrl: "https://gvault.guber.dev", gvDisabledDomains: ["active.test"] };
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: {
+          create: async (payload) => ({ id: 9, ...payload }),
+          query: async () => [{ id: 7, url: "https://www.active.test/login" }]
+        },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              if (key && typeof key === "object") return Object.fromEntries(Object.entries(key).map(([item, fallback]) => [item, globalThis.__syncStore[item] ?? fallback]));
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          },
+          session: {
+            get: async (key) => {
+              if (key === "lastDetectedForms") return { lastDetectedForms: { count: 1, url: "https://stale.test/login", host: "stale.test" } };
+              return { [key]: undefined };
+            },
+            set: async () => undefined,
+            remove: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#domainDisabled");
+
+    assert.equal(await page.locator("#domainDisabled").isChecked(), true, "stored disabled domain should render checked for the active tab, not stale detection state");
+    assert.match(await page.locator("#domainDisabledLabel").textContent(), /active\.test/);
+    assert.doesNotMatch(await page.locator("#domainDisabledLabel").textContent(), /stale\.test/);
+
+    await page.locator("#domainDisabled").uncheck();
+    let syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.deepEqual(syncStore.gvDisabledDomains, [], "unchecking should remove the active-tab normalized domain");
+
+    await page.locator("#domainDisabled").check();
+    syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.deepEqual(syncStore.gvDisabledDomains, ["active.test"], "checking should add the active-tab normalized domain once");
+  } finally {
+    await browser.close();
+  }
+});
+
 test("browser extension options expose and persist autofill/autosave settings", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
@@ -440,6 +494,45 @@ test("browser extension options expose and persist autofill/autosave settings", 
     const syncStore = await page.evaluate(() => globalThis.__syncStore);
     assert.equal(syncStore.gvAutofillEnabled, true, "options should persist autofill setting changes");
     assert.equal(syncStore.gvAutosaveEnabled, false, "options should continue persisting autosave setting changes");
+  } finally {
+    await browser.close();
+  }
+});
+
+test("browser extension options expose and persist the per-domain disabled list", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(optionsHtml.replace('<script src="options.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = {
+        gvServerUrl: "https://gvault.guber.dev",
+        gvDisabledDomains: ["www.example.test", "ignored.test", "example.test"]
+      };
+      globalThis.chrome = {
+        storage: {
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              if (key && typeof key === "object") return Object.fromEntries(Object.entries(key).map(([item, fallback]) => [item, globalThis.__syncStore[item] ?? fallback]));
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: optionsScript });
+    await page.waitForSelector("#disabledDomains");
+
+    assert.equal(await page.locator("#disabledDomains").inputValue(), "example.test\nignored.test", "options should show normalized unique disabled domains");
+
+    await page.locator("#disabledDomains").fill("https://www.new.test/login\nEXAMPLE.test\nnew.test");
+    await page.locator("#save").click();
+
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.deepEqual(syncStore.gvDisabledDomains, ["new.test", "example.test"], "options should persist normalized unique disabled domains");
   } finally {
     await browser.close();
   }
