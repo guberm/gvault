@@ -180,6 +180,161 @@ test("service worker autofills a matching session login when autofill is enabled
   assert.equal(tabMessages[0].message.password, "session-password");
 });
 
+test("service worker stores multiple session logins for the same host", async () => {
+  const sessionStore = {};
+  const messages = [];
+  const context = serviceWorkerContext({ sessionStore, messages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  let response = await sendMessage(messages[0], {
+    type: "GV_SAVE_SESSION_LOGIN",
+    username: "primary@example.test",
+    password: "primary-password"
+  }, {});
+  assert.equal(response.ok, true);
+
+  response = await sendMessage(messages[0], {
+    type: "GV_SAVE_SESSION_LOGIN",
+    username: "admin@example.test",
+    password: "admin-password"
+  }, {});
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.sessionAutofill.host, "example.test", "legacy single session autofill record should remain for compatibility");
+  assert.equal(sessionStore.sessionAutofill.username, "admin@example.test", "legacy single record should track the most recent saved login");
+  assert.equal(sessionStore.sessionAutofillLogins.length, 2);
+  assert.equal(sessionStore.sessionAutofillLogins[0].username, "primary@example.test");
+  assert.equal(sessionStore.sessionAutofillLogins[1].username, "admin@example.test");
+});
+
+test("service worker opens a chooser instead of autofilling when multiple session logins match", async () => {
+  const sessionStore = {
+    sessionAutofillLogins: [
+      { host: "example.test", username: "primary@example.test", password: "primary-password", at: "2026-07-01T00:00:00.000Z" },
+      { host: "example.test", username: "admin@example.test", password: "admin-password", at: "2026-07-01T00:01:00.000Z" }
+    ]
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 31 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "multiple matching logins must not auto-send credentials to the content script");
+  assert.equal(sessionStore.pendingFillChoices.host, "example.test");
+  assert.equal(sessionStore.pendingFillChoices.tabId, 31);
+  assert.deepEqual(sessionStore.pendingFillChoices.choices.map((choice) => choice.username), ["primary@example.test", "admin@example.test"]);
+});
+
+test("service worker fills the selected multiple-match choice in the original tab", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "example.test",
+      tabId: 37,
+      choices: [
+        { username: "primary@example.test", password: "primary-password" },
+        { username: "admin@example.test", password: "admin-password" }
+      ]
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], { type: "GV_FILL_CHOICE", choiceIndex: 1 }, {});
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 37, "selected choice should fill the page tab that produced the match prompt");
+  assert.equal(tabMessages[0].message.username, "admin@example.test");
+  assert.equal(tabMessages[0].message.password, "admin-password");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "successful selected fill should clear the chooser prompt");
+});
+
+test("service worker refuses a selected multiple-match choice after the original tab navigates to another host", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "example.test",
+      tabId: 37,
+      choices: [
+        { username: "victim@example.test", password: "secret-password" }
+      ]
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({
+    sessionStore,
+    messages,
+    tabMessages,
+    tabUrls: { 37: "https://attacker.test/login" }
+  });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], { type: "GV_FILL_CHOICE", choiceIndex: 0 }, {});
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /no longer available|page changed/i);
+  assert.equal(tabMessages.length, 0, "stale chooser choices must not send credentials to a navigated tab");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "stale chooser choices should be cleared after refusal");
+});
+
+test("service worker refuses a selected multiple-match choice when autofill is disabled after chooser staging", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "example.test",
+      tabId: 37,
+      choices: [
+        { username: "victim@example.test", password: "secret-password" }
+      ]
+    }
+  };
+  const syncStore = { gvAutofillEnabled: false };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], { type: "GV_FILL_CHOICE", choiceIndex: 0 }, {});
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /disabled/i);
+  assert.equal(tabMessages.length, 0, "disabled autofill must not send chooser credentials to the content script");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "disabled autofill should clear stale chooser state");
+});
+
+test("service worker refuses a selected multiple-match choice when the chooser host becomes disabled", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "example.test",
+      tabId: 37,
+      choices: [
+        { username: "victim@example.test", password: "secret-password" }
+      ]
+    }
+  };
+  const syncStore = { gvDisabledDomains: ["example.test"] };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], { type: "GV_FILL_CHOICE", choiceIndex: 0 }, {});
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /disabled/i);
+  assert.equal(tabMessages.length, 0, "domain-disabled autofill must not send chooser credentials to the content script");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "domain-disabled autofill should clear stale chooser state");
+});
+
 test("service worker suppresses fill prompt state without blocking automatic session autofill", async () => {
   const sessionStore = {
     lastDetectedForms: { count: 1, host: "stale.test" },
@@ -381,7 +536,7 @@ async function sendMessage(listener, message, sender) {
   });
 }
 
-function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = [], tabMessages = [] } = {}) {
+function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = [], tabMessages = [], tabUrls = {} } = {}) {
   return {
     URL,
     Date,
@@ -389,6 +544,7 @@ function serviceWorkerContext({ sessionStore = {}, syncStore = {}, messages = []
     chrome: {
       tabs: {
         query: async () => [{ id: 7, url: "https://example.test/login" }],
+        get: async (tabId) => ({ id: tabId, url: tabUrls[tabId] || "https://example.test/login" }),
         sendMessage: async (tabId, message) => {
           tabMessages.push({ tabId, message });
           return { filled: 1 };

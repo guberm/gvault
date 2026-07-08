@@ -48,6 +48,38 @@ async function fillPromptEnabled() {
   return gvFillPromptEnabled !== false;
 }
 
+function normalizeSessionLogin(login) {
+  const host = hostFromUrl(login?.url) || normalizeDomainEntry(login?.host);
+  const username = String(login?.username || "");
+  const password = String(login?.password || "");
+  if (!host || !username || !password) return null;
+  return {
+    host,
+    username,
+    password,
+    at: login?.at || new Date().toISOString(),
+  };
+}
+
+function upsertSessionLogin(logins, login) {
+  const next = (Array.isArray(logins) ? logins : [])
+    .map(normalizeSessionLogin)
+    .filter(Boolean)
+    .filter((item) => !(item.host === login.host && item.username === login.username));
+  next.push(login);
+  return next;
+}
+
+function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host) {
+  const logins = (Array.isArray(sessionAutofillLogins) && sessionAutofillLogins.length > 0)
+    ? sessionAutofillLogins
+    : [sessionAutofill];
+  return logins
+    .map(normalizeSessionLogin)
+    .filter(Boolean)
+    .filter((login) => login.host === host);
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
@@ -58,10 +90,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await chrome.storage.session.remove("lastDetectedForms");
       }
 
-      const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
+      const sessionState = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
       const host = hostFromUrl(message.url);
-      if (!await domainDisabled(host) && await autofillEnabled() && sender.tab?.id && sessionAutofill?.host === host && sessionAutofill.username && sessionAutofill.password) {
-        await fillTab(sender.tab.id, sessionAutofill.username, sessionAutofill.password);
+      if (!await domainDisabled(host) && await autofillEnabled() && sender.tab?.id) {
+        const matches = matchingSessionLogins(sessionState, host);
+        if (matches.length === 1) {
+          await chrome.storage.session.remove("pendingFillChoices");
+          await fillTab(sender.tab.id, matches[0].username, matches[0].password);
+        } else if (matches.length > 1 && await fillPromptEnabled()) {
+          await chrome.storage.session.set({
+            pendingFillChoices: {
+              host,
+              tabId: sender.tab.id,
+              choices: matches,
+              at: new Date().toISOString(),
+            },
+          });
+        }
       }
       sendResponse({ ok: true });
       return;
@@ -69,14 +114,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message?.type === "GV_SAVE_SESSION_LOGIN") {
       const tab = await activeTab();
-      await chrome.storage.session.set({
-        sessionAutofill: {
-          host: hostFromUrl(tab?.url),
-          username: message.username || "",
-          password: message.password || "",
-          at: new Date().toISOString(),
-        },
+      const login = normalizeSessionLogin({
+        host: hostFromUrl(tab?.url),
+        username: message.username,
+        password: message.password,
       });
+      if (!login) {
+        sendResponse({ ok: false, error: "Username and password are required." });
+        return;
+      }
+      const { sessionAutofillLogins } = await chrome.storage.session.get("sessionAutofillLogins");
+      await chrome.storage.session.set({
+        sessionAutofill: login,
+        sessionAutofillLogins: upsertSessionLogin(sessionAutofillLogins, login),
+      });
+      sendResponse({ ok: true });
+      return;
+    }
+
+    if (message?.type === "GV_FILL_CHOICE") {
+      const { pendingFillChoices } = await chrome.storage.session.get("pendingFillChoices");
+      const choiceIndex = Number(message.choiceIndex);
+      const choice = Array.isArray(pendingFillChoices?.choices) ? pendingFillChoices.choices[choiceIndex] : null;
+      const login = normalizeSessionLogin({ ...choice, host: pendingFillChoices?.host });
+      if (!Number.isInteger(choiceIndex) || !login || !pendingFillChoices?.tabId) {
+        sendResponse({ ok: false, error: "Selected login is no longer available." });
+        return;
+      }
+      if (!await autofillEnabled() || await domainDisabled(login.host)) {
+        await chrome.storage.session.remove("pendingFillChoices");
+        sendResponse({ ok: false, error: "Autofill is disabled for this site." });
+        return;
+      }
+      const tab = await chrome.tabs.get(pendingFillChoices.tabId);
+      if (hostFromUrl(tab?.url) !== login.host) {
+        await chrome.storage.session.remove("pendingFillChoices");
+        sendResponse({ ok: false, error: "Selected login is no longer available because the page changed." });
+        return;
+      }
+      await fillTab(pendingFillChoices.tabId, login.username, login.password);
+      await chrome.storage.session.remove("pendingFillChoices");
       sendResponse({ ok: true });
       return;
     }

@@ -4,6 +4,9 @@ const username = document.getElementById("username");
 const password = document.getElementById("password");
 const sessionAutofill = document.getElementById("sessionAutofill");
 const themeButton = document.getElementById("themeButton");
+const fillChoices = document.getElementById("fillChoices");
+const fillChoicesTitle = document.getElementById("fillChoicesTitle");
+const fillChoicesList = document.getElementById("fillChoicesList");
 const savePrompt = document.getElementById("savePrompt");
 const savePromptTitle = document.getElementById("savePromptTitle");
 const savePromptText = document.getElementById("savePromptText");
@@ -53,6 +56,36 @@ async function loadActiveTabDomain() {
 function setCurrentDomain(domain) {
   currentDomain = normalizeDomainEntry(domain);
   domainDisabledLabel.textContent = currentDomain ? `Disable automatic fill and save prompts on ${currentDomain}` : "Disable automatic fill and save prompts on this site";
+}
+
+function clearFillChoices() {
+  fillChoices.hidden = true;
+  fillChoicesList.replaceChildren();
+}
+
+function showFillChoices(pendingFillChoices) {
+  const choices = Array.isArray(pendingFillChoices?.choices) ? pendingFillChoices.choices : [];
+  if (choices.length < 2) {
+    clearFillChoices();
+    return;
+  }
+  fillChoices.hidden = false;
+  fillChoicesTitle.textContent = `Choose a login for ${pendingFillChoices.host || "this site"}`;
+  fillChoicesList.replaceChildren(...choices.map((choice, choiceIndex) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = choice.username || `Login ${choiceIndex + 1}`;
+    button.onclick = async () => {
+      const filled = await chrome.runtime.sendMessage({ type: "GV_FILL_CHOICE", choiceIndex });
+      if (!filled?.ok) {
+        setStatus(filled?.error || "Fill failed.");
+        return;
+      }
+      clearFillChoices();
+      setStatus("Filled selected login.");
+    };
+    return button;
+  }));
 }
 
 async function loadDomainDisabledSetting() {
@@ -126,6 +159,11 @@ async function loadPendingSavePrompt() {
   }
   const { pendingSaveLogin } = await chrome.storage.session.get("pendingSaveLogin");
   showSavePrompt(pendingSaveLogin);
+}
+
+async function loadPendingFillChoices() {
+  const { pendingFillChoices } = await chrome.storage.session.get("pendingFillChoices");
+  showFillChoices(pendingFillChoices);
 }
 
 async function applyTheme(theme) {
@@ -202,9 +240,18 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvFillP
 });
 
 loadPendingSavePrompt();
+loadPendingFillChoices();
 
 chrome.storage.onChanged?.addListener?.((changes, areaName) => {
   if (areaName !== "session") return;
+
+  if (changes.pendingFillChoices) {
+    if (changes.pendingFillChoices.newValue) {
+      showFillChoices(changes.pendingFillChoices.newValue);
+    } else {
+      clearFillChoices();
+    }
+  }
 
   if (changes.pendingUpdateLogin) {
     if (changes.pendingUpdateLogin.newValue) {

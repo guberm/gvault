@@ -375,7 +375,7 @@ Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 - [x] #284 Autofill enable/disable setting. — https://github.com/guberm/gvault/issues/284
 - [x] #285 Per-domain disabled list. — https://github.com/guberm/gvault/issues/285
 - [x] #286 Fill prompt behavior setting. — https://github.com/guberm/gvault/issues/286
-- [ ] #287 Multiple-match chooser. — https://github.com/guberm/gvault/issues/287
+- [x] #287 Multiple-match chooser. — https://github.com/guberm/gvault/issues/287
 - [ ] #288 No-match state. — https://github.com/guberm/gvault/issues/288
 - [ ] #289 Equivalent domains. — https://github.com/guberm/gvault/issues/289
 - [ ] #290 Subdomain match rules. — https://github.com/guberm/gvault/issues/290
