@@ -191,7 +191,11 @@
           <input id="autofillEnabled" type="checkbox" checked />
           <span>Automatically fill matching session logins</span>
         </label>
-        <p class="muted">Turn off to stop automatic page fill while keeping manual fill available.</p>
+        <label class="check">
+          <input id="domainDisabled" type="checkbox" />
+          <span id="domainDisabledLabel">Disable automatic fill and save prompts on this site</span>
+        </label>
+        <p class="muted">Turn off globally, or disable only the current site while keeping manual fill available.</p>
       </section>
 
       <section class="card" aria-label="Autosave settings">

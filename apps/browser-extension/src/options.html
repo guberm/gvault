@@ -26,6 +26,7 @@
       .check { display: flex; align-items: center; gap: 8px; }
       .check input { min-height: auto; }
       input { min-height: 36px; border: 1px solid var(--border); border-radius: 7px; padding: 0 10px; background: var(--surface); color: var(--ink); }
+      textarea { min-height: 90px; border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; background: var(--surface); color: var(--ink); font: inherit; }
       button { min-height: 36px; border: 0; border-radius: 7px; padding: 0 12px; background: var(--accent); color: white; font: inherit; font-weight: 700; }
     </style>
   </head>
@@ -34,6 +35,8 @@
     <label>Self-hosted server URL <input id="serverUrl" value="http://127.0.0.1:8080" /></label>
     <label class="check"><input id="autofillEnabled" type="checkbox" checked /> Automatically fill matching session logins</label>
     <label class="check"><input id="autosaveEnabled" type="checkbox" checked /> Prompt to save or update submitted logins</label>
+    <label>Per-domain disabled list <textarea id="disabledDomains" placeholder="example.com&#10;internal.test"></textarea></label>
+    <p>Domains listed here will not auto-fill or show save/update prompts. Manual fill remains available.</p>
     <button id="save">Save</button>
     <button id="themeButton" type="button">Dark mode</button>
     <script src="options.js"></script>

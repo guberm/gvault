@@ -391,7 +391,7 @@ Last updated: 2026-07-03
 - [x] Update-password prompt.
 - [x] Autosave enable/disable setting.
 - [x] Autofill enable/disable setting.
-- [ ] Per-domain disabled list.
+- [x] Per-domain disabled list.
 - [ ] Fill prompt behavior setting.
 - [ ] Multiple-match chooser.
 - [ ] No-match state.
