@@ -180,6 +180,37 @@ test("service worker autofills a matching session login when autofill is enabled
   assert.equal(tabMessages[0].message.password, "session-password");
 });
 
+test("service worker suppresses fill prompt state without blocking automatic session autofill", async () => {
+  const sessionStore = {
+    lastDetectedForms: { count: 1, host: "stale.test" },
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvFillPromptEnabled: false };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 22 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.lastDetectedForms, undefined, "disabled fill prompts must clear and not store form-detection prompt state");
+  assert.equal(tabMessages.length, 1, "fill prompt setting must not disable automatic session autofill");
+  assert.equal(tabMessages[0].message.type, "GV_FILL_LOGIN");
+  assert.equal(tabMessages[0].message.username, "person@example.test");
+  assert.equal(tabMessages[0].message.password, "session-password");
+});
+
 test("service worker suppresses matching session autofill when autofill setting is disabled", async () => {
   const sessionStore = {
     sessionAutofill: {

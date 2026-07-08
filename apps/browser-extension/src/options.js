@@ -24,10 +24,11 @@ function uniqueDomains(domains) {
   return [...new Set(domains.map(normalizeDomainEntry).filter(Boolean))];
 }
 
-chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvAutosaveEnabled", "gvDisabledDomains"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvAutosaveEnabled, gvDisabledDomains }) => {
+chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvFillPromptEnabled", "gvAutosaveEnabled", "gvDisabledDomains"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvFillPromptEnabled, gvAutosaveEnabled, gvDisabledDomains }) => {
   const serverUrl = gvServerUrl;
   if (serverUrl) document.getElementById("serverUrl").value = serverUrl;
   document.getElementById("autofillEnabled").checked = gvAutofillEnabled !== false;
+  document.getElementById("fillPromptEnabled").checked = gvFillPromptEnabled !== false;
   document.getElementById("autosaveEnabled").checked = gvAutosaveEnabled !== false;
   document.getElementById("disabledDomains").value = uniqueDomains(Array.isArray(gvDisabledDomains) ? gvDisabledDomains : []).join("\n");
   applyTheme(gvTheme || "light");
@@ -36,6 +37,7 @@ chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvAutos
 document.getElementById("save").onclick = () => chrome.storage.sync.set({
   gvServerUrl: document.getElementById("serverUrl").value,
   gvAutofillEnabled: document.getElementById("autofillEnabled").checked,
+  gvFillPromptEnabled: document.getElementById("fillPromptEnabled").checked,
   gvAutosaveEnabled: document.getElementById("autosaveEnabled").checked,
   gvDisabledDomains: uniqueDomains(document.getElementById("disabledDomains").value.split(/\n|,/))
 });

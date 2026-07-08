@@ -306,6 +306,44 @@ test("browser extension popup exposes and persists the autofill setting", async 
   }
 });
 
+test("browser extension popup exposes and persists the fill prompt setting", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = { gvServerUrl: "https://gvault.guber.dev", gvFillPromptEnabled: false };
+      globalThis.chrome = {
+        runtime: { sendMessage: async () => ({ ok: true }), openOptionsPage() {} },
+        tabs: { create: async (payload) => ({ id: 9, ...payload }) },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          },
+          session: { get: async () => ({ lastDetectedForms: { count: 0 } }), set: async () => undefined }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#fillPromptEnabled");
+
+    assert.equal(await page.locator("#fillPromptEnabled").isChecked(), false, "stored disabled fill prompt setting should render unchecked");
+    assert.match(await page.locator("body").textContent(), /Show fill prompts for matching logins/);
+
+    await page.locator("#fillPromptEnabled").check();
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.equal(syncStore.gvFillPromptEnabled, true, "popup should persist fill prompt setting changes");
+  } finally {
+    await browser.close();
+  }
+});
+
 test("browser extension popup exposes and persists the autosave setting", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
@@ -465,6 +503,7 @@ test("browser extension options expose and persist autofill/autosave settings", 
       globalThis.__syncStore = {
         gvServerUrl: "https://gvault.guber.dev",
         gvAutofillEnabled: false,
+        gvFillPromptEnabled: false,
         gvAutosaveEnabled: true
       };
       globalThis.chrome = {
@@ -484,15 +523,19 @@ test("browser extension options expose and persist autofill/autosave settings", 
     await page.waitForSelector("#autofillEnabled");
 
     assert.equal(await page.locator("#autofillEnabled").isChecked(), false, "stored disabled autofill should render unchecked in options");
+    assert.equal(await page.locator("#fillPromptEnabled").isChecked(), false, "stored disabled fill prompts should render unchecked in options");
     assert.equal(await page.locator("#autosaveEnabled").isChecked(), true);
+    assert.match(await page.locator("body").textContent(), /Show fill prompts for matching logins/);
     assert.match(await page.locator("body").textContent(), /Automatically fill matching session logins/);
 
     await page.locator("#autofillEnabled").check();
+    await page.locator("#fillPromptEnabled").check();
     await page.locator("#autosaveEnabled").uncheck();
     await page.locator("#save").click();
 
     const syncStore = await page.evaluate(() => globalThis.__syncStore);
     assert.equal(syncStore.gvAutofillEnabled, true, "options should persist autofill setting changes");
+    assert.equal(syncStore.gvFillPromptEnabled, true, "options should persist fill prompt setting changes");
     assert.equal(syncStore.gvAutosaveEnabled, false, "options should continue persisting autosave setting changes");
   } finally {
     await browser.close();
