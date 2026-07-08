@@ -43,11 +43,20 @@ async function autofillEnabled() {
   return gvAutofillEnabled !== false;
 }
 
+async function fillPromptEnabled() {
+  const { gvFillPromptEnabled } = await chrome.storage.sync.get({ gvFillPromptEnabled: true });
+  return gvFillPromptEnabled !== false;
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
       const detected = { ...message, tabId: sender.tab?.id, at: new Date().toISOString() };
-      await chrome.storage.session.set({ lastDetectedForms: detected });
+      if (await fillPromptEnabled()) {
+        await chrome.storage.session.set({ lastDetectedForms: detected });
+      } else {
+        await chrome.storage.session.remove("lastDetectedForms");
+      }
 
       const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
       const host = hostFromUrl(message.url);

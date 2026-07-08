@@ -392,7 +392,7 @@ Last updated: 2026-07-03
 - [x] Autosave enable/disable setting.
 - [x] Autofill enable/disable setting.
 - [x] Per-domain disabled list.
-- [ ] Fill prompt behavior setting.
+- [x] Fill prompt behavior setting.
 - [ ] Multiple-match chooser.
 - [ ] No-match state.
 - [ ] Equivalent domains.

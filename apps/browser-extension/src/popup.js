@@ -10,6 +10,7 @@ const savePromptText = document.getElementById("savePromptText");
 const dismissSaveLogin = document.getElementById("dismissSaveLogin");
 const openWebVault = document.getElementById("openWebVault");
 const autofillEnabled = document.getElementById("autofillEnabled");
+const fillPromptEnabled = document.getElementById("fillPromptEnabled");
 const autosaveEnabled = document.getElementById("autosaveEnabled");
 const domainDisabled = document.getElementById("domainDisabled");
 const domainDisabledLabel = document.getElementById("domainDisabledLabel");
@@ -139,6 +140,15 @@ async function applyAutofillSetting(enabled) {
   setStatus(autofillEnabled.checked ? "Autofill enabled." : "Autofill disabled.");
 }
 
+async function applyFillPromptSetting(enabled) {
+  fillPromptEnabled.checked = enabled !== false;
+  await chrome.storage.sync.set({ gvFillPromptEnabled: fillPromptEnabled.checked });
+  if (!fillPromptEnabled.checked) {
+    await chrome.storage.session.remove("lastDetectedForms");
+  }
+  setStatus(fillPromptEnabled.checked ? "Fill prompts enabled." : "Fill prompts disabled.");
+}
+
 async function applyAutosaveSetting(enabled) {
   autosaveEnabled.checked = enabled !== false;
   await chrome.storage.sync.set({ gvAutosaveEnabled: autosaveEnabled.checked });
@@ -179,12 +189,14 @@ openWebVault.onclick = openConfiguredWebVault;
 themeButton.onclick = () => applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
 
 autofillEnabled.onchange = () => applyAutofillSetting(autofillEnabled.checked);
+fillPromptEnabled.onchange = () => applyFillPromptSetting(fillPromptEnabled.checked);
 autosaveEnabled.onchange = () => applyAutosaveSetting(autosaveEnabled.checked);
 domainDisabled.onchange = () => applyDomainDisabledSetting(domainDisabled.checked);
 
-chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvAutosaveEnabled }) => {
+chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvFillPromptEnabled", "gvAutosaveEnabled"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvFillPromptEnabled, gvAutosaveEnabled }) => {
   if (gvServerUrl) serverUrl.value = gvServerUrl;
   autofillEnabled.checked = gvAutofillEnabled !== false;
+  fillPromptEnabled.checked = gvFillPromptEnabled !== false;
   autosaveEnabled.checked = gvAutosaveEnabled !== false;
   applyTheme(gvTheme || "light");
 });
