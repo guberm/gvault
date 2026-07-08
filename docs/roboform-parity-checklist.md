@@ -393,7 +393,7 @@ Last updated: 2026-07-03
 - [x] Autofill enable/disable setting.
 - [x] Per-domain disabled list.
 - [x] Fill prompt behavior setting.
-- [ ] Multiple-match chooser.
+- [x] Multiple-match chooser.
 - [ ] No-match state.
 - [ ] Equivalent domains.
 - [ ] Subdomain match rules.

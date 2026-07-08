@@ -268,6 +268,69 @@ test("browser extension popup keeps the fresh prompt visible when stale counterp
   }
 });
 
+test("browser extension popup renders multiple matching login choices and fills the selected one", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        runtime: {
+          sendMessage: async (message) => {
+            globalThis.__sentMessages.push(message);
+            return { ok: true };
+          },
+          openOptionsPage() {}
+        },
+        tabs: {
+          create: async (payload) => ({ id: 9, ...payload }),
+          query: async () => [{ id: 7, url: "https://example.test/login" }]
+        },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: { get: async () => ({ gvServerUrl: "https://gvault.guber.dev" }), set: async () => undefined },
+          session: {
+            get: async (key) => {
+              if (key === "pendingUpdateLogin") return { pendingUpdateLogin: undefined };
+              if (key === "pendingSaveLogin") return { pendingSaveLogin: undefined };
+              if (key === "pendingFillChoices") {
+                return {
+                  pendingFillChoices: {
+                    host: "example.test",
+                    tabId: 42,
+                    choices: [
+                      { username: "primary@example.test" },
+                      { username: "admin@example.test" }
+                    ]
+                  }
+                };
+              }
+              return { lastDetectedForms: { count: 1, url: "https://example.test/login", host: "example.test" } };
+            },
+            set: async () => undefined,
+            remove: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#fillChoices:not([hidden])");
+
+    assert.match(await page.locator("#fillChoices").textContent(), /Choose a login for example\.test/);
+    assert.match(await page.locator("#fillChoices").textContent(), /primary@example\.test/);
+    assert.match(await page.locator("#fillChoices").textContent(), /admin@example\.test/);
+
+    await page.getByRole("button", { name: "admin@example.test" }).click();
+    const sentMessages = await page.evaluate(() => globalThis.__sentMessages);
+    assert.deepEqual(sentMessages.at(-1), { type: "GV_FILL_CHOICE", choiceIndex: 1 });
+    assert.equal(await page.locator("#fillChoices").isVisible(), false);
+    assert.equal(await page.locator("#status").textContent(), "Filled selected login.");
+  } finally {
+    await browser.close();
+  }
+});
+
 test("browser extension popup exposes and persists the autofill setting", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
