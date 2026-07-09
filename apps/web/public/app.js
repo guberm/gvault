@@ -87,7 +87,7 @@ function generatePassword() {
   }
   let alphabet = "";
   if ($("useUpper").checked) alphabet += "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  alphabet += "abcdefghijkmnopqrstuvwxyz";
+  if ($("useLower").checked) alphabet += "abcdefghijkmnopqrstuvwxyz";
   if ($("useNumbers").checked) alphabet += "23456789";
   if ($("useSymbols").checked) alphabet += "!@#$%^&*?";
   return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");

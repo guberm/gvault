@@ -407,7 +407,7 @@ Last updated: 2026-07-03
 
 - [x] Length control.
 - [x] Uppercase toggle.
-- [ ] Lowercase toggle.
+- [x] Lowercase toggle.
 - [ ] Numbers toggle.
 - [ ] Symbols toggle.
 - [ ] Exclude ambiguous characters.
