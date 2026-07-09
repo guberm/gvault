@@ -85,7 +85,9 @@ function generatePassword() {
     const words = Array.from({ length: 4 }, () => passphraseWords[randomInt(passphraseWords.length)]);
     return `${words.join("-")}-${randomInt(90) + 10}`;
   }
-  let alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let alphabet = "";
+  if ($("useUpper").checked) alphabet += "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  alphabet += "abcdefghijkmnopqrstuvwxyz";
   if ($("useNumbers").checked) alphabet += "23456789";
   if ($("useSymbols").checked) alphabet += "!@#$%^&*?";
   return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");
