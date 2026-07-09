@@ -46,7 +46,14 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await page.locator("[name=title]").fill("GitHub Work");
     await page.locator("[name=url]").fill("https://github.com/login");
     await page.locator("[name=username]").fill("michael@guber.dev");
-    await page.locator("[name=password]").fill("new-secret-password");
+    await page.locator("#passwordLength").evaluate((input) => {
+      input.value = "28";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await expectText(page, "#strengthLabel", "28 characters");
+    await page.locator("#generateButton").click();
+    assert.equal((await page.locator("[name=password]").inputValue()).length, 28, "generated password follows the selected length control");
+    assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows the selected length control");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");
