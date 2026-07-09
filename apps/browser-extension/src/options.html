@@ -38,6 +38,8 @@
     <label class="check"><input id="autosaveEnabled" type="checkbox" checked /> Prompt to save or update submitted logins</label>
     <label>Per-domain disabled list <textarea id="disabledDomains" placeholder="example.com&#10;internal.test"></textarea></label>
     <p>Domains listed here will not auto-fill or show save/update prompts. Manual fill remains available.</p>
+    <label>Equivalent domains <textarea id="equivalentDomains" placeholder="example.com, login.example.com&#10;shop.example.com, checkout.example.com"></textarea></label>
+    <p>Domains on the same line are treated as the same site for matching saved session logins.</p>
     <button id="save">Save</button>
     <button id="themeButton" type="button">Dark mode</button>
     <script src="options.js"></script>

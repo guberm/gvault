@@ -395,7 +395,7 @@ Last updated: 2026-07-03
 - [x] Fill prompt behavior setting.
 - [x] Multiple-match chooser.
 - [x] No-match state.
-- [ ] Equivalent domains.
+- [x] Equivalent domains.
 - [ ] Subdomain match rules.
 - [ ] Per-item URL match controls.
 
