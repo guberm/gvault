@@ -239,6 +239,75 @@ test("service worker can disable subdomain session autofill matching", async () 
   assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, true);
 });
 
+test("service worker honors exact-host per-login URL match controls", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      matchMode: "exact-host",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://accounts.example.test/login",
+    host: "accounts.example.test"
+  }, { tab: { id: 291 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "exact-host per-login controls must block parent-domain credentials on subdomains");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 0);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, true);
+});
+
+test("service worker honors URL-prefix per-login match controls", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      url: "https://example.test/admin/login",
+      username: "admin@example.test",
+      password: "session-password",
+      matchMode: "url-prefix",
+      matchUrl: "https://example.test/admin/",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  let response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/admin/login?step=1",
+    host: "example.test"
+  }, { tab: { id: 292 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].message.username, "admin@example.test");
+  assert.equal(tabMessages[0].message.password, "session-password");
+
+  response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/user/login",
+    host: "example.test"
+  }, { tab: { id: 293 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1, "URL-prefix per-login controls must block same-host sibling paths");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 0);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, true);
+});
+
 test("service worker autofills a session login for a configured equivalent domain", async () => {
   const sessionStore = {
     sessionAutofill: {
@@ -407,6 +476,41 @@ test("service worker refuses a selected multiple-match choice after the original
   assert.match(response.error, /no longer available|page changed/i);
   assert.equal(tabMessages.length, 0, "stale chooser choices must not send credentials to a navigated tab");
   assert.equal(sessionStore.pendingFillChoices, undefined, "stale chooser choices should be cleared after refusal");
+});
+
+test("service worker refuses a selected URL-prefix choice after same-host navigation leaves the allowed URL", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "example.test",
+      url: "https://example.test/admin/login",
+      tabId: 37,
+      choices: [
+        {
+          url: "https://example.test/admin/login",
+          username: "admin@example.test",
+          password: "secret-password",
+          matchMode: "url-prefix",
+          matchUrl: "https://example.test/admin/"
+        }
+      ]
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({
+    sessionStore,
+    messages,
+    tabMessages,
+    tabUrls: { 37: "https://example.test/user/login" }
+  });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], { type: "GV_FILL_CHOICE", choiceIndex: 0 }, {});
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /no longer available|page changed/i);
+  assert.equal(tabMessages.length, 0, "stale URL-prefix chooser choices must not send credentials after same-host navigation");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "stale URL-prefix chooser choices should be cleared after refusal");
 });
 
 test("service worker refuses a selected multiple-match choice when autofill is disabled after chooser staging", async () => {

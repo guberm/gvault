@@ -3,6 +3,8 @@ const serverUrl = document.getElementById("serverUrl");
 const username = document.getElementById("username");
 const password = document.getElementById("password");
 const sessionAutofill = document.getElementById("sessionAutofill");
+const sessionMatchMode = document.getElementById("sessionMatchMode");
+const sessionMatchUrl = document.getElementById("sessionMatchUrl");
 const themeButton = document.getElementById("themeButton");
 const fillChoices = document.getElementById("fillChoices");
 const fillChoicesTitle = document.getElementById("fillChoicesTitle");
@@ -205,7 +207,12 @@ document.getElementById("fill").onclick = async () => {
     return;
   }
   if (sessionAutofill.checked) {
-    await chrome.runtime.sendMessage({ type: "GV_SAVE_SESSION_LOGIN", ...payload });
+    await chrome.runtime.sendMessage({
+      type: "GV_SAVE_SESSION_LOGIN",
+      ...payload,
+      matchMode: sessionMatchMode.value,
+      matchUrl: sessionMatchUrl.value
+    });
     setStatus("Filled page and enabled session autofill for this site.");
     return;
   }

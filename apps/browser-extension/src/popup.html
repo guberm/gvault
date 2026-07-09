@@ -188,6 +188,19 @@
           <input id="sessionAutofill" type="checkbox" />
           <span>Use for this site during this browser session</span>
         </label>
+        <label>
+          <span>Session URL match</span>
+          <select id="sessionMatchMode">
+            <option value="domain">Domain and equivalent domains</option>
+            <option value="exact-host">Exact host only</option>
+            <option value="url-exact">Exact page URL</option>
+            <option value="url-prefix">URL prefix</option>
+          </select>
+        </label>
+        <label>
+          <span>Match URL or prefix</span>
+          <input id="sessionMatchUrl" placeholder="https://example.com/login" />
+        </label>
         <button id="fill" type="button">Fill current page</button>
       </section>
 
