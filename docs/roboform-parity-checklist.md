@@ -397,7 +397,7 @@ Last updated: 2026-07-03
 - [x] No-match state.
 - [x] Equivalent domains.
 - [x] Subdomain match rules.
-- [ ] Per-item URL match controls.
+- [x] Per-item URL match controls.
 
 ---
 

@@ -281,6 +281,72 @@ test("browser extension popup keeps the fresh prompt visible when stale counterp
   }
 });
 
+test("browser extension popup sends per-item URL match controls when saving session autofill", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(popupHtml.replace('<script src="popup.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__sentMessages = [];
+      globalThis.chrome = {
+        runtime: {
+          sendMessage: async (message) => {
+            globalThis.__sentMessages.push(message);
+            return { ok: true };
+          },
+          openOptionsPage() {}
+        },
+        tabs: {
+          create: async (payload) => ({ id: 9, ...payload }),
+          query: async () => [{ id: 7, url: "https://example.test/admin/login" }]
+        },
+        storage: {
+          onChanged: { addListener() {} },
+          sync: { get: async () => ({ gvServerUrl: "https://gvault.guber.dev" }), set: async () => undefined },
+          session: {
+            get: async (key) => {
+              if (key === "pendingUpdateLogin") return { pendingUpdateLogin: undefined };
+              if (key === "pendingSaveLogin") return { pendingSaveLogin: undefined };
+              if (key === "pendingFillChoices") return { pendingFillChoices: undefined };
+              return { lastDetectedForms: { count: 1, url: "https://example.test/admin/login", host: "example.test" } };
+            },
+            set: async () => undefined,
+            remove: async () => undefined
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: popupScript });
+    await page.waitForSelector("#sessionMatchMode");
+
+    assert.match(await page.locator("body").textContent(), /Session URL match/);
+    assert.match(await page.locator("body").textContent(), /Match URL or prefix/);
+
+    await page.locator("#username").fill("admin@example.test");
+    await page.locator("#password").fill("secret-password");
+    await page.locator("#sessionAutofill").check();
+    await page.locator("#sessionMatchMode").selectOption("url-prefix");
+    await page.locator("#sessionMatchUrl").fill("https://example.test/admin/");
+    await page.locator("#fill").click();
+
+    const sentMessages = await page.evaluate(() => globalThis.__sentMessages);
+    assert.deepEqual(sentMessages.at(0), {
+      type: "GV_FILL_ACTIVE_TAB",
+      username: "admin@example.test",
+      password: "secret-password"
+    });
+    assert.deepEqual(sentMessages.at(1), {
+      type: "GV_SAVE_SESSION_LOGIN",
+      username: "admin@example.test",
+      password: "secret-password",
+      matchMode: "url-prefix",
+      matchUrl: "https://example.test/admin/"
+    });
+  } finally {
+    await browser.close();
+  }
+});
+
 test("browser extension popup renders multiple matching login choices and fills the selected one", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();

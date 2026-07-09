@@ -379,7 +379,7 @@ Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 - [x] #288 No-match state. — https://github.com/guberm/gvault/issues/288
 - [x] #289 Equivalent domains. — https://github.com/guberm/gvault/issues/289
 - [x] #290 Subdomain match rules. — https://github.com/guberm/gvault/issues/290
-- [ ] #291 Per-item URL match controls. — https://github.com/guberm/gvault/issues/291
+- [x] #291 Per-item URL match controls. — https://github.com/guberm/gvault/issues/291
 
 ## 10. Generator and security tools — 10.1 Password generator
 
