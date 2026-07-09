@@ -50,9 +50,18 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
       input.value = "28";
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
+    await page.locator("#useUpper").uncheck();
+    await page.evaluate(() => {
+      window.crypto.getRandomValues = (array) => {
+        array[0] = 0;
+        return array;
+      };
+    });
     await expectText(page, "#strengthLabel", "28 characters");
     await page.locator("#generateButton").click();
-    assert.equal((await page.locator("[name=password]").inputValue()).length, 28, "generated password follows the selected length control");
+    const generatedPassword = await page.locator("[name=password]").inputValue();
+    assert.equal(generatedPassword.length, 28, "generated password follows the selected length control");
+    assert.doesNotMatch(generatedPassword, /[A-Z]/, "uppercase toggle removes uppercase letters from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows the selected length control");
     await page.getByRole("button", { name: "Save changes" }).click();
 

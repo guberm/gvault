@@ -406,7 +406,7 @@ Last updated: 2026-07-03
 ## 10.1 Password generator
 
 - [x] Length control.
-- [ ] Uppercase toggle.
+- [x] Uppercase toggle.
 - [ ] Lowercase toggle.
 - [ ] Numbers toggle.
 - [ ] Symbols toggle.
