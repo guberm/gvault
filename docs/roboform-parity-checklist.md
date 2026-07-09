@@ -396,7 +396,7 @@ Last updated: 2026-07-03
 - [x] Multiple-match chooser.
 - [x] No-match state.
 - [x] Equivalent domains.
-- [ ] Subdomain match rules.
+- [x] Subdomain match rules.
 - [ ] Per-item URL match controls.
 
 ---

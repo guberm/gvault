@@ -703,6 +703,46 @@ test("browser extension options expose and persist equivalent domain groups", as
   }
 });
 
+test("browser extension options expose and persist the subdomain matching setting", async () => {
+  const browser = await chromium.launch(chromeLaunchOptions());
+  const page = await browser.newPage();
+  try {
+    await page.setContent(optionsHtml.replace('<script src="options.js"></script>', ""));
+    await page.evaluate(() => {
+      globalThis.__syncStore = {
+        gvServerUrl: "https://gvault.guber.dev",
+        gvSubdomainMatchingEnabled: false
+      };
+      globalThis.chrome = {
+        storage: {
+          sync: {
+            get: async (key) => {
+              if (Array.isArray(key)) return Object.fromEntries(key.map((item) => [item, globalThis.__syncStore[item]]));
+              if (typeof key === "string") return { [key]: globalThis.__syncStore[key] };
+              if (key && typeof key === "object") return Object.fromEntries(Object.entries(key).map(([item, fallback]) => [item, globalThis.__syncStore[item] ?? fallback]));
+              return { ...globalThis.__syncStore };
+            },
+            set: async (value) => { Object.assign(globalThis.__syncStore, value); }
+          }
+        }
+      };
+    });
+    await page.addScriptTag({ content: optionsScript });
+    await page.waitForSelector("#subdomainMatchingEnabled");
+
+    assert.equal(await page.locator("#subdomainMatchingEnabled").isChecked(), false, "stored disabled subdomain matching should render unchecked in options");
+    assert.match(await page.locator("body").textContent(), /Match saved logins on subdomains/);
+
+    await page.locator("#subdomainMatchingEnabled").check();
+    await page.locator("#save").click();
+
+    const syncStore = await page.evaluate(() => globalThis.__syncStore);
+    assert.equal(syncStore.gvSubdomainMatchingEnabled, true, "options should persist subdomain matching setting changes");
+  } finally {
+    await browser.close();
+  }
+});
+
 async function renderPopupStatus(lastDetectedForms, expectedText) {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();
