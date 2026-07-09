@@ -83,21 +83,28 @@ function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
-      const detected = { ...message, tabId: sender.tab?.id, at: new Date().toISOString() };
-      if (await fillPromptEnabled()) {
+      const sessionState = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
+      const host = hostFromUrl(message.url);
+      const matches = matchingSessionLogins(sessionState, host);
+      const detected = {
+        ...message,
+        tabId: sender.tab?.id,
+        at: new Date().toISOString(),
+        matchingLoginCount: matches.length,
+        noMatchingLogin: (message.count || 0) > 0 && matches.length === 0,
+      };
+      const promptsEnabled = await fillPromptEnabled();
+      if (promptsEnabled) {
         await chrome.storage.session.set({ lastDetectedForms: detected });
       } else {
         await chrome.storage.session.remove("lastDetectedForms");
       }
 
-      const sessionState = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
-      const host = hostFromUrl(message.url);
       if (!await domainDisabled(host) && await autofillEnabled() && sender.tab?.id) {
-        const matches = matchingSessionLogins(sessionState, host);
         if (matches.length === 1) {
           await chrome.storage.session.remove("pendingFillChoices");
           await fillTab(sender.tab.id, matches[0].username, matches[0].password);
-        } else if (matches.length > 1 && await fillPromptEnabled()) {
+        } else if (matches.length > 1 && promptsEnabled) {
           await chrome.storage.session.set({
             pendingFillChoices: {
               host,
@@ -106,7 +113,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
               at: new Date().toISOString(),
             },
           });
+        } else {
+          await chrome.storage.session.remove("pendingFillChoices");
         }
+      } else if (matches.length < 2) {
+        await chrome.storage.session.remove("pendingFillChoices");
       }
       sendResponse({ ok: true });
       return;

@@ -43,6 +43,19 @@ test("browser extension popup reports clear no-form status after a zero-count sc
   assert.equal(statusText, "No login, identity/address, or payment-card form detected yet. You can still fill manually.");
 });
 
+test("browser extension popup reports no matching session login when login forms have no match", async () => {
+  const statusText = await renderPopupStatus({
+    count: 1,
+    identityAddressCount: 0,
+    paymentCardCount: 0,
+    matchingLoginCount: 0,
+    noMatchingLogin: true,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, "No matching login");
+  assert.equal(statusText, "No matching login for 1 login form detected on this page. You can still fill manually.");
+});
+
 test("browser extension popup shows a save-new-login prompt from captured credentials", async () => {
   const browser = await chromium.launch(chromeLaunchOptions());
   const page = await browser.newPage();

@@ -296,5 +296,9 @@ chrome.storage.session.get("lastDetectedForms").then(async ({ lastDetectedForms 
     setStatus(NO_FORMS_STATUS);
     return;
   }
+  if (lastDetectedForms.noMatchingLogin && count > 0) {
+    setStatus(`No matching login for ${count} login form${count === 1 ? "" : "s"} detected on this page. You can still fill manually.`);
+    return;
+  }
   setStatus(`${parts.join(" and ")} detected on this page.`);
 });
