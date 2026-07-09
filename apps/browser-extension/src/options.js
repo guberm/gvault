@@ -40,12 +40,13 @@ function formatEquivalentDomainGroups(groups) {
     .join("\n");
 }
 
-chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvFillPromptEnabled", "gvAutosaveEnabled", "gvDisabledDomains", "gvEquivalentDomains"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvFillPromptEnabled, gvAutosaveEnabled, gvDisabledDomains, gvEquivalentDomains }) => {
+chrome.storage.sync.get(["gvServerUrl", "gvTheme", "gvAutofillEnabled", "gvFillPromptEnabled", "gvAutosaveEnabled", "gvSubdomainMatchingEnabled", "gvDisabledDomains", "gvEquivalentDomains"]).then(({ gvServerUrl, gvTheme, gvAutofillEnabled, gvFillPromptEnabled, gvAutosaveEnabled, gvSubdomainMatchingEnabled, gvDisabledDomains, gvEquivalentDomains }) => {
   const serverUrl = gvServerUrl;
   if (serverUrl) document.getElementById("serverUrl").value = serverUrl;
   document.getElementById("autofillEnabled").checked = gvAutofillEnabled !== false;
   document.getElementById("fillPromptEnabled").checked = gvFillPromptEnabled !== false;
   document.getElementById("autosaveEnabled").checked = gvAutosaveEnabled !== false;
+  document.getElementById("subdomainMatchingEnabled").checked = gvSubdomainMatchingEnabled !== false;
   document.getElementById("disabledDomains").value = uniqueDomains(Array.isArray(gvDisabledDomains) ? gvDisabledDomains : []).join("\n");
   document.getElementById("equivalentDomains").value = formatEquivalentDomainGroups(gvEquivalentDomains);
   applyTheme(gvTheme || "light");
@@ -56,6 +57,7 @@ document.getElementById("save").onclick = () => chrome.storage.sync.set({
   gvAutofillEnabled: document.getElementById("autofillEnabled").checked,
   gvFillPromptEnabled: document.getElementById("fillPromptEnabled").checked,
   gvAutosaveEnabled: document.getElementById("autosaveEnabled").checked,
+  gvSubdomainMatchingEnabled: document.getElementById("subdomainMatchingEnabled").checked,
   gvDisabledDomains: uniqueDomains(document.getElementById("disabledDomains").value.split(/\n|,/)),
   gvEquivalentDomains: parseEquivalentDomainGroups(document.getElementById("equivalentDomains").value)
 });

@@ -180,6 +180,65 @@ test("service worker autofills a matching session login when autofill is enabled
   assert.equal(tabMessages[0].message.password, "session-password");
 });
 
+test("service worker autofills a parent-domain session login on a subdomain by default", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://accounts.example.test/login",
+    host: "accounts.example.test"
+  }, { tab: { id: 28 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 28);
+  assert.equal(tabMessages[0].message.type, "GV_FILL_LOGIN");
+  assert.equal(tabMessages[0].message.username, "person@example.test");
+  assert.equal(tabMessages[0].message.password, "session-password");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 1);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, false);
+});
+
+test("service worker can disable subdomain session autofill matching", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvSubdomainMatchingEnabled: false };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://accounts.example.test/login",
+    host: "accounts.example.test"
+  }, { tab: { id: 29 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "disabled subdomain matching must not send parent-domain credentials to the content script");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 0);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, true);
+});
+
 test("service worker autofills a session login for a configured equivalent domain", async () => {
   const sessionStore = {
     sessionAutofill: {
@@ -607,6 +666,36 @@ test("service worker treats equivalent-domain submissions as known logins instea
   assert.equal(response.ok, true);
   assert.equal(sessionStore.pendingSaveLogin, undefined, "equivalent-domain known logins must not create save-new-login prompts");
   assert.equal(sessionStore.pendingUpdateLogin.host, "example-login.test");
+  assert.equal(sessionStore.pendingUpdateLogin.username, "person@example.test");
+  assert.equal(sessionStore.pendingUpdateLogin.oldPassword, "old-password");
+  assert.equal(sessionStore.pendingUpdateLogin.password, "new-password");
+});
+
+test("service worker treats subdomain submissions as known logins instead of save-new-login prompts", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "old-password",
+      at: "2026-07-01T00:00:00.000Z"
+    },
+    pendingSaveLogin: { username: "stale-save@example.test", password: "stale" }
+  };
+  const messages = [];
+  const context = serviceWorkerContext({ sessionStore, messages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_LOGIN_SUBMITTED",
+    username: "person@example.test",
+    password: "new-password",
+    url: "https://accounts.example.test/login",
+    host: "accounts.example.test"
+  }, { tab: { id: 30 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.pendingSaveLogin, undefined, "subdomain known logins must not create save-new-login prompts");
+  assert.equal(sessionStore.pendingUpdateLogin.host, "accounts.example.test");
   assert.equal(sessionStore.pendingUpdateLogin.username, "person@example.test");
   assert.equal(sessionStore.pendingUpdateLogin.oldPassword, "old-password");
   assert.equal(sessionStore.pendingUpdateLogin.password, "new-password");

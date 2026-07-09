@@ -28,11 +28,19 @@ function normalizeEquivalentDomainGroups(groups) {
     .filter((group) => group.length > 1);
 }
 
-function hostsEquivalent(hostA, hostB, equivalentDomainGroups) {
+function hostMatchesSubdomainRule(loginHost, pageHost, subdomainMatchingEnabled = true) {
+  const normalizedLoginHost = normalizeDomainEntry(loginHost);
+  const normalizedPageHost = normalizeDomainEntry(pageHost);
+  if (!subdomainMatchingEnabled || !normalizedLoginHost || !normalizedPageHost) return false;
+  return normalizedPageHost.endsWith(`.${normalizedLoginHost}`);
+}
+
+function hostsEquivalent(hostA, hostB, equivalentDomainGroups, subdomainMatchingEnabled = true) {
   const normalizedA = normalizeDomainEntry(hostA);
   const normalizedB = normalizeDomainEntry(hostB);
   if (!normalizedA || !normalizedB) return false;
   if (normalizedA === normalizedB) return true;
+  if (hostMatchesSubdomainRule(normalizedA, normalizedB, subdomainMatchingEnabled)) return true;
   return normalizeEquivalentDomainGroups(equivalentDomainGroups)
     .some((group) => group.includes(normalizedA) && group.includes(normalizedB));
 }
@@ -88,23 +96,23 @@ function upsertSessionLogin(logins, login) {
   return next;
 }
 
-function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, equivalentDomainGroups = []) {
+function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, equivalentDomainGroups = [], subdomainMatchingEnabled = true) {
   const logins = (Array.isArray(sessionAutofillLogins) && sessionAutofillLogins.length > 0)
     ? sessionAutofillLogins
     : [sessionAutofill];
   return logins
     .map(normalizeSessionLogin)
     .filter(Boolean)
-    .filter((login) => hostsEquivalent(login.host, host, equivalentDomainGroups));
+    .filter((login) => hostsEquivalent(login.host, host, equivalentDomainGroups, subdomainMatchingEnabled));
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
       const sessionState = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
-      const { gvEquivalentDomains } = await chrome.storage.sync.get({ gvEquivalentDomains: [] });
+      const { gvEquivalentDomains, gvSubdomainMatchingEnabled } = await chrome.storage.sync.get({ gvEquivalentDomains: [], gvSubdomainMatchingEnabled: true });
       const host = hostFromUrl(message.url);
-      const matches = matchingSessionLogins(sessionState, host, gvEquivalentDomains);
+      const matches = matchingSessionLogins(sessionState, host, gvEquivalentDomains, gvSubdomainMatchingEnabled !== false);
       const detected = {
         ...message,
         tabId: sender.tab?.id,
@@ -197,8 +205,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       const { sessionAutofill, sessionAutofillLogins } = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
-      const { gvEquivalentDomains } = await chrome.storage.sync.get({ gvEquivalentDomains: [] });
-      const knownLogin = matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, gvEquivalentDomains)
+      const { gvEquivalentDomains, gvSubdomainMatchingEnabled } = await chrome.storage.sync.get({ gvEquivalentDomains: [], gvSubdomainMatchingEnabled: true });
+      const knownLogin = matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, gvEquivalentDomains, gvSubdomainMatchingEnabled !== false)
         .find((login) => login.username === message.username);
       if (knownLogin) {
         if (knownLogin.password && knownLogin.password !== message.password) {
