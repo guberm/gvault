@@ -19,6 +19,24 @@ async function domainDisabled(host) {
   return Boolean(normalizedHost && disabledDomains.includes(normalizedHost));
 }
 
+function normalizeEquivalentDomainGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .map((group) => [...new Set((Array.isArray(group) ? group : [])
+      .map(normalizeDomainEntry)
+      .filter(Boolean))])
+    .filter((group) => group.length > 1);
+}
+
+function hostsEquivalent(hostA, hostB, equivalentDomainGroups) {
+  const normalizedA = normalizeDomainEntry(hostA);
+  const normalizedB = normalizeDomainEntry(hostB);
+  if (!normalizedA || !normalizedB) return false;
+  if (normalizedA === normalizedB) return true;
+  return normalizeEquivalentDomainGroups(equivalentDomainGroups)
+    .some((group) => group.includes(normalizedA) && group.includes(normalizedB));
+}
+
 async function clearPendingPrompts() {
   await chrome.storage.session.remove("pendingSaveLogin");
   await chrome.storage.session.remove("pendingUpdateLogin");
@@ -70,22 +88,23 @@ function upsertSessionLogin(logins, login) {
   return next;
 }
 
-function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host) {
+function matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, equivalentDomainGroups = []) {
   const logins = (Array.isArray(sessionAutofillLogins) && sessionAutofillLogins.length > 0)
     ? sessionAutofillLogins
     : [sessionAutofill];
   return logins
     .map(normalizeSessionLogin)
     .filter(Boolean)
-    .filter((login) => login.host === host);
+    .filter((login) => hostsEquivalent(login.host, host, equivalentDomainGroups));
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     if (message?.type === "GV_FORMS_DETECTED") {
       const sessionState = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
+      const { gvEquivalentDomains } = await chrome.storage.sync.get({ gvEquivalentDomains: [] });
       const host = hostFromUrl(message.url);
-      const matches = matchingSessionLogins(sessionState, host);
+      const matches = matchingSessionLogins(sessionState, host, gvEquivalentDomains);
       const detected = {
         ...message,
         tabId: sender.tab?.id,
@@ -177,15 +196,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      const { sessionAutofill } = await chrome.storage.session.get("sessionAutofill");
-      if (sessionAutofill?.host === host && sessionAutofill.username === message.username) {
-        if (sessionAutofill.password && sessionAutofill.password !== message.password) {
+      const { sessionAutofill, sessionAutofillLogins } = await chrome.storage.session.get(["sessionAutofill", "sessionAutofillLogins"]);
+      const { gvEquivalentDomains } = await chrome.storage.sync.get({ gvEquivalentDomains: [] });
+      const knownLogin = matchingSessionLogins({ sessionAutofill, sessionAutofillLogins }, host, gvEquivalentDomains)
+        .find((login) => login.username === message.username);
+      if (knownLogin) {
+        if (knownLogin.password && knownLogin.password !== message.password) {
           await chrome.storage.session.set({
             pendingUpdateLogin: {
               host,
               url: message.url || "",
               username: message.username || "",
-              oldPassword: sessionAutofill.password,
+              oldPassword: knownLogin.password,
               password: message.password || "",
               tabId: sender.tab?.id,
               at: new Date().toISOString(),

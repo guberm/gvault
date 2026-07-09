@@ -180,6 +180,38 @@ test("service worker autofills a matching session login when autofill is enabled
   assert.equal(tabMessages[0].message.password, "session-password");
 });
 
+test("service worker autofills a session login for a configured equivalent domain", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "session-password",
+      at: "2026-07-01T00:00:00.000Z"
+    }
+  };
+  const syncStore = { gvEquivalentDomains: [["example.test", "example-login.test"]] };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example-login.test/login",
+    host: "example-login.test"
+  }, { tab: { id: 26 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 1);
+  assert.equal(tabMessages[0].tabId, 26);
+  assert.equal(tabMessages[0].message.type, "GV_FILL_LOGIN");
+  assert.equal(tabMessages[0].message.username, "person@example.test");
+  assert.equal(tabMessages[0].message.password, "session-password");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 1);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, false);
+});
+
 test("service worker stores multiple session logins for the same host", async () => {
   const sessionStore = {};
   const messages = [];
@@ -547,6 +579,37 @@ test("service worker ignores unchanged known session login submissions", async (
   assert.equal(response.ok, true);
   assert.equal(sessionStore.pendingSaveLogin, undefined);
   assert.equal(sessionStore.pendingUpdateLogin, undefined, "unchanged known logins should clear stale update prompts");
+});
+
+test("service worker treats equivalent-domain submissions as known logins instead of save-new-login prompts", async () => {
+  const sessionStore = {
+    sessionAutofill: {
+      host: "example.test",
+      username: "person@example.test",
+      password: "old-password",
+      at: "2026-07-01T00:00:00.000Z"
+    },
+    pendingSaveLogin: { username: "stale-save@example.test", password: "stale" }
+  };
+  const syncStore = { gvEquivalentDomains: [["example.test", "example-login.test"]] };
+  const messages = [];
+  const context = serviceWorkerContext({ sessionStore, syncStore, messages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_LOGIN_SUBMITTED",
+    username: "person@example.test",
+    password: "new-password",
+    url: "https://example-login.test/login",
+    host: "example-login.test"
+  }, { tab: { id: 27 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(sessionStore.pendingSaveLogin, undefined, "equivalent-domain known logins must not create save-new-login prompts");
+  assert.equal(sessionStore.pendingUpdateLogin.host, "example-login.test");
+  assert.equal(sessionStore.pendingUpdateLogin.username, "person@example.test");
+  assert.equal(sessionStore.pendingUpdateLogin.oldPassword, "old-password");
+  assert.equal(sessionStore.pendingUpdateLogin.password, "new-password");
 });
 
 test("service worker can dismiss a pending update-password prompt", async () => {
