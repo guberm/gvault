@@ -385,7 +385,7 @@ Parent issue: #23 — https://github.com/guberm/gvault/issues/23
 
 Parent issue: #24 — https://github.com/guberm/gvault/issues/24
 
-- [ ] #292 Length control. — https://github.com/guberm/gvault/issues/292
+- [x] #292 Length control. — https://github.com/guberm/gvault/issues/292
 - [ ] #293 Uppercase toggle. — https://github.com/guberm/gvault/issues/293
 - [ ] #294 Lowercase toggle. — https://github.com/guberm/gvault/issues/294
 - [ ] #295 Numbers toggle. — https://github.com/guberm/gvault/issues/295
