@@ -394,7 +394,7 @@ Last updated: 2026-07-03
 - [x] Per-domain disabled list.
 - [x] Fill prompt behavior setting.
 - [x] Multiple-match chooser.
-- [ ] No-match state.
+- [x] No-match state.
 - [ ] Equivalent domains.
 - [ ] Subdomain match rules.
 - [ ] Per-item URL match controls.

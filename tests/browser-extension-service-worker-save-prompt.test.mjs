@@ -233,6 +233,37 @@ test("service worker opens a chooser instead of autofilling when multiple sessio
   assert.deepEqual(sessionStore.pendingFillChoices.choices.map((choice) => choice.username), ["primary@example.test", "admin@example.test"]);
 });
 
+test("service worker records a no-match state when login forms are detected without matching session logins", async () => {
+  const sessionStore = {
+    pendingFillChoices: {
+      host: "stale.test",
+      tabId: 30,
+      choices: [{ username: "stale@stale.test", password: "stale-password" }]
+    },
+    sessionAutofillLogins: [
+      { host: "other.test", username: "person@other.test", password: "other-password", at: "2026-07-01T00:00:00.000Z" }
+    ]
+  };
+  const messages = [];
+  const tabMessages = [];
+  const context = serviceWorkerContext({ sessionStore, messages, tabMessages });
+  vm.runInNewContext(serviceWorkerScript, context);
+
+  const response = await sendMessage(messages[0], {
+    type: "GV_FORMS_DETECTED",
+    count: 1,
+    url: "https://example.test/login",
+    host: "example.test"
+  }, { tab: { id: 35 } });
+
+  assert.equal(response.ok, true);
+  assert.equal(tabMessages.length, 0, "no-match state must not send credentials to the content script");
+  assert.equal(sessionStore.pendingFillChoices, undefined, "no-match state should clear stale fill chooser choices");
+  assert.equal(sessionStore.lastDetectedForms.host, "example.test");
+  assert.equal(sessionStore.lastDetectedForms.matchingLoginCount, 0);
+  assert.equal(sessionStore.lastDetectedForms.noMatchingLogin, true);
+});
+
 test("service worker fills the selected multiple-match choice in the original tab", async () => {
   const sessionStore = {
     pendingFillChoices: {
