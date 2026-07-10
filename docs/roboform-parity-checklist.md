@@ -408,7 +408,7 @@ Last updated: 2026-07-03
 - [x] Length control.
 - [x] Uppercase toggle.
 - [x] Lowercase toggle.
-- [ ] Numbers toggle.
+- [x] Numbers toggle.
 - [ ] Symbols toggle.
 - [ ] Exclude ambiguous characters.
 - [ ] Passphrase mode.

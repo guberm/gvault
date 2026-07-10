@@ -77,6 +77,19 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     assert.equal(uppercaseOnlyPassword.length, 28, "lowercase toggle preserves generated length");
     assert.doesNotMatch(uppercaseOnlyPassword, /[a-z]/, "lowercase toggle removes lowercase letters from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows lowercase toggle length");
+
+    await page.locator("#useNumbers").uncheck();
+    await page.evaluate(() => {
+      window.crypto.getRandomValues = (array) => {
+        array[0] = 24;
+        return array;
+      };
+    });
+    await page.locator("#generateButton").click();
+    const numberFreePassword = await page.locator("[name=password]").inputValue();
+    assert.equal(numberFreePassword.length, 28, "numbers toggle preserves generated length");
+    assert.doesNotMatch(numberFreePassword, /[0-9]/, "numbers toggle removes digits from generated passwords");
+    assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows numbers toggle length");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");

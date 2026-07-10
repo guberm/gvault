@@ -388,7 +388,7 @@ Parent issue: #24 — https://github.com/guberm/gvault/issues/24
 - [x] #292 Length control. — https://github.com/guberm/gvault/issues/292
 - [x] #293 Uppercase toggle. — https://github.com/guberm/gvault/issues/293
 - [x] #294 Lowercase toggle. — https://github.com/guberm/gvault/issues/294
-- [ ] #295 Numbers toggle. — https://github.com/guberm/gvault/issues/295
+- [x] #295 Numbers toggle. — https://github.com/guberm/gvault/issues/295
 - [ ] #296 Symbols toggle. — https://github.com/guberm/gvault/issues/296
 - [ ] #297 Exclude ambiguous characters. — https://github.com/guberm/gvault/issues/297
 - [ ] #298 Passphrase mode. — https://github.com/guberm/gvault/issues/298
