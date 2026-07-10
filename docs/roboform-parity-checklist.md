@@ -411,7 +411,7 @@ Last updated: 2026-07-03
 - [x] Numbers toggle.
 - [x] Symbols toggle.
 - [x] Exclude ambiguous characters.
-- [ ] Passphrase mode.
+- [x] Passphrase mode.
 - [ ] Strength indicator.
 - [ ] Copy generated password.
 - [ ] Use generated password in editor.

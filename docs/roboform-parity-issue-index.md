@@ -391,7 +391,7 @@ Parent issue: #24 — https://github.com/guberm/gvault/issues/24
 - [x] #295 Numbers toggle. — https://github.com/guberm/gvault/issues/295
 - [x] #296 Symbols toggle. — https://github.com/guberm/gvault/issues/296
 - [x] #297 Exclude ambiguous characters. — https://github.com/guberm/gvault/issues/297
-- [ ] #298 Passphrase mode. — https://github.com/guberm/gvault/issues/298
+- [x] #298 Passphrase mode. — https://github.com/guberm/gvault/issues/298
 - [ ] #299 Strength indicator. — https://github.com/guberm/gvault/issues/299
 - [ ] #300 Copy generated password. — https://github.com/guberm/gvault/issues/300
 - [ ] #301 Use generated password in editor. — https://github.com/guberm/gvault/issues/301

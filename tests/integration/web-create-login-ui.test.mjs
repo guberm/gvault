@@ -121,6 +121,18 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await page.locator("#generateButton").click();
     const fullAlphabetPassword = await page.locator("[name=password]").inputValue();
     assert.match(fullAlphabetPassword, /I/, "disabling exclude ambiguous restores the full alphabet");
+
+    await page.locator("#usePassphrase").check();
+    await page.evaluate(() => {
+      window.crypto.getRandomValues = (array) => {
+        array[0] = 0;
+        return array;
+      };
+    });
+    await page.locator("#generateButton").click();
+    const generatedPassphrase = "cedar-cedar-cedar-cedar-10";
+    assert.equal(await page.locator("[name=password]").inputValue(), generatedPassphrase, "passphrase mode fills the Login password field");
+    assert.equal(await page.locator("#generatedPassword").inputValue(), generatedPassphrase, "passphrase mode updates the generator preview");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");
