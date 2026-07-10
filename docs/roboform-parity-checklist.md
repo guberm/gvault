@@ -409,7 +409,7 @@ Last updated: 2026-07-03
 - [x] Uppercase toggle.
 - [x] Lowercase toggle.
 - [x] Numbers toggle.
-- [ ] Symbols toggle.
+- [x] Symbols toggle.
 - [ ] Exclude ambiguous characters.
 - [ ] Passphrase mode.
 - [ ] Strength indicator.

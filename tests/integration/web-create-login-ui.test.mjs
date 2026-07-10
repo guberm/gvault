@@ -90,6 +90,20 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     assert.equal(numberFreePassword.length, 28, "numbers toggle preserves generated length");
     assert.doesNotMatch(numberFreePassword, /[0-9]/, "numbers toggle removes digits from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows numbers toggle length");
+
+    await page.locator("#useNumbers").check();
+    await page.locator("#useSymbols").uncheck();
+    await page.evaluate(() => {
+      window.crypto.getRandomValues = (array) => {
+        array[0] = 32;
+        return array;
+      };
+    });
+    await page.locator("#generateButton").click();
+    const symbolFreePassword = await page.locator("[name=password]").inputValue();
+    assert.equal(symbolFreePassword.length, 28, "symbols toggle preserves generated length");
+    assert.doesNotMatch(symbolFreePassword, /[!@#$%^&*?]/, "symbols toggle removes symbols from generated passwords");
+    assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows symbols toggle length");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");
