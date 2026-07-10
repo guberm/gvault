@@ -86,10 +86,11 @@ function generatePassword() {
     return `${words.join("-")}-${randomInt(90) + 10}`;
   }
   let alphabet = "";
-  if ($("useUpper").checked) alphabet += "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  if ($("useLower").checked) alphabet += "abcdefghijkmnopqrstuvwxyz";
-  if ($("useNumbers").checked) alphabet += "23456789";
+  if ($("useUpper").checked) alphabet += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  if ($("useLower").checked) alphabet += "abcdefghijklmnopqrstuvwxyz";
+  if ($("useNumbers").checked) alphabet += "0123456789";
   if ($("useSymbols").checked) alphabet += "!@#$%^&*?";
+  if ($("excludeAmbiguous").checked) alphabet = alphabet.replace(/[Il1O0]/g, "");
   return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");
 }
 

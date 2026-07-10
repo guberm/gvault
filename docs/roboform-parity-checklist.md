@@ -410,7 +410,7 @@ Last updated: 2026-07-03
 - [x] Lowercase toggle.
 - [x] Numbers toggle.
 - [x] Symbols toggle.
-- [ ] Exclude ambiguous characters.
+- [x] Exclude ambiguous characters.
 - [ ] Passphrase mode.
 - [ ] Strength indicator.
 - [ ] Copy generated password.

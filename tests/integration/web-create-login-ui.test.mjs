@@ -104,6 +104,23 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     assert.equal(symbolFreePassword.length, 28, "symbols toggle preserves generated length");
     assert.doesNotMatch(symbolFreePassword, /[!@#$%^&*?]/, "symbols toggle removes symbols from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows symbols toggle length");
+
+    const excludeAmbiguous = page.locator("#excludeAmbiguous");
+    assert.equal(await excludeAmbiguous.isChecked(), true, "ambiguous characters are excluded by default");
+    await page.evaluate(() => {
+      window.crypto.getRandomValues = (array) => {
+        array[0] = 8;
+        return array;
+      };
+    });
+    await page.locator("#generateButton").click();
+    const ambiguitySafePassword = await page.locator("[name=password]").inputValue();
+    assert.doesNotMatch(ambiguitySafePassword, /[Il1O0]/, "exclude ambiguous removes confusing characters");
+
+    await excludeAmbiguous.uncheck();
+    await page.locator("#generateButton").click();
+    const fullAlphabetPassword = await page.locator("[name=password]").inputValue();
+    assert.match(fullAlphabetPassword, /I/, "disabling exclude ambiguous restores the full alphabet");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");
