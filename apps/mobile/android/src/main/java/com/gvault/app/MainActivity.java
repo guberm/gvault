@@ -89,6 +89,16 @@ public final class MainActivity extends Activity {
     }
   }
 
+  @Override
+  public void onBackPressed() {
+    if (settingsVisible) {
+      showVaultScreen("Settings closed.");
+      renderFilteredVaultList(searchVault == null ? "" : searchVault.getText().toString());
+      return;
+    }
+    super.onBackPressed();
+  }
+
   private void showAccountScreen() {
     settingsVisible = false;
     root = new LinearLayout(this);
