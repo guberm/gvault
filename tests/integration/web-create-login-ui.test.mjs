@@ -47,6 +47,12 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await page.locator("[name=url]").fill("https://github.com/login");
     await page.locator("[name=username]").fill("michael@guber.dev");
     await page.locator("#passwordLength").evaluate((input) => {
+      input.value = "12";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await expectText(page, "#strengthLabel", "12 characters, 73 bits, good");
+    await expectText(page, "#strengthRating", "Good");
+    await page.locator("#passwordLength").evaluate((input) => {
       input.value = "28";
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
@@ -66,6 +72,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
 
     await page.locator("#useUpper").check();
     await page.locator("#useLower").uncheck();
+    await expectText(page, "#strengthLabel", "28 characters, 150 bits, strong");
     await page.evaluate(() => {
       window.crypto.getRandomValues = (array) => {
         array[0] = 24;
@@ -79,6 +86,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows lowercase toggle length");
 
     await page.locator("#useNumbers").uncheck();
+    await expectText(page, "#strengthLabel", "28 characters, 141 bits, strong");
     await page.evaluate(() => {
       window.crypto.getRandomValues = (array) => {
         array[0] = 24;
@@ -93,6 +101,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
 
     await page.locator("#useNumbers").check();
     await page.locator("#useSymbols").uncheck();
+    await expectText(page, "#strengthLabel", "28 characters, 140 bits, strong");
     await page.evaluate(() => {
       window.crypto.getRandomValues = (array) => {
         array[0] = 32;
@@ -118,6 +127,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     assert.doesNotMatch(ambiguitySafePassword, /[Il1O0]/, "exclude ambiguous removes confusing characters");
 
     await excludeAmbiguous.uncheck();
+    await expectText(page, "#strengthLabel", "28 characters, 145 bits, strong");
     await page.locator("#generateButton").click();
     const fullAlphabetPassword = await page.locator("[name=password]").inputValue();
     assert.match(fullAlphabetPassword, /I/, "disabling exclude ambiguous restores the full alphabet");
@@ -133,6 +143,17 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     const generatedPassphrase = "cedar-cedar-cedar-cedar-10";
     assert.equal(await page.locator("[name=password]").inputValue(), generatedPassphrase, "passphrase mode fills the Login password field");
     assert.equal(await page.locator("#generatedPassword").inputValue(), generatedPassphrase, "passphrase mode updates the generator preview");
+    await expectText(page, "#strengthLabel", "4 words + 2 digits, 21 bits, weak");
+    await expectText(page, "#strengthRating", "Weak");
+
+    await page.locator("#usePassphrase").uncheck();
+    await page.locator("#useUpper").uncheck();
+    await page.locator("#useNumbers").uncheck();
+    await expectText(page, "#strengthLabel", "No character sets selected, unavailable");
+    await expectText(page, "#strengthRating", "Unavailable");
+    await page.locator("#generateButton").click();
+    assert.equal(await page.locator("[name=password]").inputValue(), generatedPassphrase, "unavailable generator preserves the existing password");
+    await expectText(page, "#status", "Select at least one character set");
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expectText(page, "#detailTitle", "GitHub Work");

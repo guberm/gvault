@@ -412,7 +412,7 @@ Last updated: 2026-07-03
 - [x] Symbols toggle.
 - [x] Exclude ambiguous characters.
 - [x] Passphrase mode.
-- [ ] Strength indicator.
+- [x] Strength indicator.
 - [ ] Copy generated password.
 - [ ] Use generated password in editor.
 - [ ] Fill generated password into browser form.

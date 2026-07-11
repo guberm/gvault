@@ -122,9 +122,8 @@
               <section class="generator detail-card" aria-label="Password generator">
                 <div class="strength-row">
                   <span>Password strength</span>
-                  <strong>Very strong</strong>
+                  <strong id="strengthRating">Unavailable</strong>
                 </div>
-                <div class="strength-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
                 <label class="field">
                   <span>Password generator</span>
                   <input id="generatedPassword" value="d!9Tq8#vR$zL2@mP*k7Qw" readonly />
@@ -142,7 +141,7 @@
                   <label>Passphrase mode <input id="usePassphrase" type="checkbox" /></label>
                 </div>
                 <button id="generateButton" class="secondary-button" type="button">Generate new</button>
-                <p id="strengthLabel" class="muted">20 characters, strong</p>
+                <p id="strengthLabel" class="muted">Calculating strength…</p>
               </section>
             </section>
 
