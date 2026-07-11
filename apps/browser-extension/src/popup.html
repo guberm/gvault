@@ -159,8 +159,10 @@
           <h1>GVault</h1>
           <p class="muted">Self-hosted autofill</p>
         </div>
+        <button id="showSettings" class="link-button" type="button">Settings</button>
       </section>
 
+      <div id="contentSurface">
       <p class="status" id="status">Checking page forms...</p>
 
       <section id="fillChoices" class="card" aria-label="Multiple matching logins" hidden>
@@ -203,6 +205,13 @@
         </label>
         <button id="fill" type="button">Fill current page</button>
       </section>
+      </div>
+
+      <div id="settingsSurface" hidden>
+      <section class="links" aria-label="Settings navigation">
+        <h2>Settings</h2>
+        <button id="closeSettings" class="link-button" type="button">Back to vault</button>
+      </section>
 
       <section class="card" aria-label="Autofill settings">
         <label class="check">
@@ -239,6 +248,7 @@
           <button id="openOptions" class="link-button" type="button">Options</button>
         </div>
       </section>
+      </div>
     </main>
     <script src="popup.js"></script>
   </body>

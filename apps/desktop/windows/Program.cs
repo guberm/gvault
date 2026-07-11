@@ -130,22 +130,81 @@ var themeButton = new Button
 {
     Width = 160,
     Height = 40,
+    Location = new Point(32, 108),
+    FlatStyle = FlatStyle.Flat
+};
+
+var settingsButton = new Button
+{
+    Text = "Settings",
+    Width = 160,
+    Height = 40,
     Location = new Point(376, 382),
     FlatStyle = FlatStyle.Flat
 };
+
+var contentSurface = new Panel { Dock = DockStyle.Fill };
+var settingsSurface = new Panel { Dock = DockStyle.Fill, Visible = false };
+var settingsTitle = new Label
+{
+    Text = "Settings",
+    Font = new Font("Segoe UI", 24, FontStyle.Bold),
+    AutoSize = true,
+    Location = new Point(32, 32)
+};
+var settingsDescription = new Label
+{
+    Text = "Appearance and desktop client preferences.",
+    AutoSize = true,
+    Location = new Point(34, 82)
+};
+var backToContent = new Button
+{
+    Text = "Back to vault",
+    Width = 160,
+    Height = 40,
+    Location = new Point(32, 160),
+    FlatStyle = FlatStyle.Flat
+};
+
+void ShowSettings()
+{
+    contentSurface.Visible = false;
+    settingsSurface.Visible = true;
+}
+
+void ShowContent()
+{
+    settingsSurface.Visible = false;
+    contentSurface.Visible = true;
+}
+
+settingsButton.Click += (_, _) => ShowSettings();
+backToContent.Click += (_, _) => ShowContent();
 themeButton.Click += (_, _) =>
 {
     darkMode = !darkMode;
     ApplyTheme(darkMode);
 };
 
-form.Controls.Add(title);
-form.Controls.Add(subtitle);
-form.Controls.Add(statusPanel);
-form.Controls.Add(checklist);
-form.Controls.Add(openWeb);
-form.Controls.Add(openRepo);
-form.Controls.Add(themeButton);
+contentSurface.Controls.Add(title);
+contentSurface.Controls.Add(subtitle);
+contentSurface.Controls.Add(statusPanel);
+contentSurface.Controls.Add(checklist);
+contentSurface.Controls.Add(openWeb);
+contentSurface.Controls.Add(openRepo);
+contentSurface.Controls.Add(settingsButton);
+settingsSurface.Controls.Add(settingsTitle);
+settingsSurface.Controls.Add(settingsDescription);
+settingsSurface.Controls.Add(themeButton);
+settingsSurface.Controls.Add(backToContent);
+form.Controls.Add(settingsSurface);
+form.Controls.Add(contentSurface);
+form.KeyPreview = true;
+form.KeyDown += (_, eventArgs) =>
+{
+    if (eventArgs.KeyCode == Keys.Escape && settingsSurface.Visible) ShowContent();
+};
 ApplyTheme(darkMode);
 Application.Run(form);
 
@@ -166,6 +225,14 @@ void ApplyTheme(bool dark)
     statusText.ForeColor = muted;
     checklist.BackColor = surface;
     checklist.ForeColor = ink;
+    contentSurface.BackColor = bg;
+    settingsSurface.BackColor = bg;
+    settingsTitle.ForeColor = ink;
+    settingsDescription.ForeColor = muted;
+    settingsButton.BackColor = surface;
+    settingsButton.ForeColor = ink;
+    backToContent.BackColor = surface;
+    backToContent.ForeColor = ink;
     themeButton.Text = dark ? "Light mode" : "Dark mode";
     themeButton.BackColor = surface;
     themeButton.ForeColor = ink;

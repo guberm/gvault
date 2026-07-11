@@ -435,6 +435,7 @@ test("browser extension popup exposes and persists the autofill setting", async 
       };
     });
     await page.addScriptTag({ content: popupScript });
+    await page.locator("#showSettings").click();
     await page.waitForSelector("#autofillEnabled");
 
     assert.equal(await page.locator("#autofillEnabled").isChecked(), false, "stored disabled autofill setting should render unchecked");
@@ -473,6 +474,7 @@ test("browser extension popup exposes and persists the fill prompt setting", asy
       };
     });
     await page.addScriptTag({ content: popupScript });
+    await page.locator("#showSettings").click();
     await page.waitForSelector("#fillPromptEnabled");
 
     assert.equal(await page.locator("#fillPromptEnabled").isChecked(), false, "stored disabled fill prompt setting should render unchecked");
@@ -511,6 +513,7 @@ test("browser extension popup exposes and persists the autosave setting", async 
       };
     });
     await page.addScriptTag({ content: popupScript });
+    await page.locator("#showSettings").click();
     await page.waitForSelector("#autosaveEnabled");
 
     assert.equal(await page.locator("#autosaveEnabled").isChecked(), false, "stored disabled setting should render unchecked");
@@ -570,7 +573,9 @@ test("browser extension popup clears visible save/update prompts when autosave i
     await page.waitForSelector("#savePrompt:not([hidden])");
     assert.match(await page.locator("#savePrompt").textContent(), /Save login for example\.test/);
 
+    await page.locator("#showSettings").click();
     await page.locator("#autosaveEnabled").uncheck();
+    await page.locator("#closeSettings").click();
 
     assert.equal(await page.locator("#savePrompt").isVisible(), false, "disabling autosave should hide the current prompt immediately");
     const stores = await page.evaluate(() => ({ sync: globalThis.__syncStore, session: globalThis.__sessionStore }));
@@ -618,6 +623,7 @@ test("browser extension popup exposes and persists per-domain disablement for th
       };
     });
     await page.addScriptTag({ content: popupScript });
+    await page.locator("#showSettings").click();
     await page.waitForSelector("#domainDisabled");
 
     assert.equal(await page.locator("#domainDisabled").isChecked(), true, "stored disabled domain should render checked for the active tab, not stale detection state");

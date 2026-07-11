@@ -19,11 +19,23 @@ const fillPromptEnabled = document.getElementById("fillPromptEnabled");
 const autosaveEnabled = document.getElementById("autosaveEnabled");
 const domainDisabled = document.getElementById("domainDisabled");
 const domainDisabledLabel = document.getElementById("domainDisabledLabel");
+const contentSurface = document.getElementById("contentSurface");
+const settingsSurface = document.getElementById("settingsSurface");
 let currentDomain = "";
 let savePromptKind = "save";
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+function showContent() {
+  contentSurface.hidden = false;
+  settingsSurface.hidden = true;
+}
+
+function showSettings() {
+  contentSurface.hidden = true;
+  settingsSurface.hidden = false;
 }
 
 const NO_FORMS_STATUS = "No login, identity/address, or payment-card form detected yet. You can still fill manually.";
@@ -227,6 +239,9 @@ document.getElementById("saveServer").onclick = async () => {
 document.getElementById("openOptions").onclick = () => {
   chrome.runtime.openOptionsPage();
 };
+
+document.getElementById("showSettings").onclick = showSettings;
+document.getElementById("closeSettings").onclick = showContent;
 
 dismissSaveLogin.onclick = dismissPendingSaveLogin;
 openWebVault.onclick = openConfiguredWebVault;
