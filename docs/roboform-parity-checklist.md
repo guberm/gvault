@@ -414,7 +414,7 @@ Last updated: 2026-07-03
 - [x] Passphrase mode.
 - [x] Strength indicator.
 - [x] Copy generated password.
-- [ ] Use generated password in editor.
+- [x] Use generated password in editor.
 - [ ] Fill generated password into browser form.
 - [ ] Save generated password as Login.
 

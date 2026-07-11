@@ -142,6 +142,11 @@ function renderTypeFields() {
     }
     return `<label class="field"><span>${label}</span><input name="${name}" type="${inputType}" placeholder="${placeholder}" /></label>`;
   }).join("");
+  updateUseGeneratedPasswordButton();
+}
+
+function updateUseGeneratedPasswordButton() {
+  $("useGeneratedPasswordButton").disabled = !$("generatedPassword").value || $("itemType").value !== "login";
 }
 
 function getSearchText(item) {
@@ -743,20 +748,27 @@ $("itemType").addEventListener("change", renderTypeFields);
 updateStrengthIndicator();
 
 $("generateButton").addEventListener("click", () => {
-  const passwordField = $("itemForm").elements.namedItem("password");
-  if (!passwordField) {
-    setStatus("Switch to Login type to generate a password.", "warning");
-    return;
-  }
   const password = generatePassword();
   if (!password) {
     setStatus("Select at least one character set.", "warning");
     return;
   }
-  passwordField.value = password;
-  $("generatedPassword").value = passwordField.value;
+  $("generatedPassword").value = password;
   $("copyGeneratedPasswordButton").disabled = false;
-  setStatus("Generated password placed in the login editor.", "success");
+  updateUseGeneratedPasswordButton();
+  setStatus("Generated password ready.", "success");
+});
+
+$("useGeneratedPasswordButton").addEventListener("click", () => {
+  const password = $("generatedPassword").value;
+  const passwordField = $("itemForm").elements.namedItem("password");
+  if (!password || !passwordField) {
+    updateUseGeneratedPasswordButton();
+    setStatus("Switch to Login type to use the generated password.", "warning");
+    return;
+  }
+  passwordField.value = password;
+  setStatus("Generated password placed in the Login editor.", "success");
 });
 
 $("copyGeneratedPasswordButton").addEventListener("click", async () => {
