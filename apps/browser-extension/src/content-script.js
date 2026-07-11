@@ -142,6 +142,123 @@ function fillLogin(username, password) {
   return detectLoginForms().length;
 }
 
+let explicitlyAuthorizedPasswordInput = null;
+let directPointerSnapshot = null;
+const passwordTypeMutationVersions = new WeakMap();
+
+function recordPasswordTypeMutations(records) {
+  for (const record of records) {
+    const target = record.target;
+    passwordTypeMutationVersions.set(target, (passwordTypeMutationVersions.get(target) || 0) + 1);
+  }
+}
+
+const passwordTypeObserver = new MutationObserver(recordPasswordTypeMutations);
+passwordTypeObserver.observe(document, { attributes: true, attributeFilter: ["type"], subtree: true });
+
+function flushPasswordTypeMutations() {
+  recordPasswordTypeMutations(passwordTypeObserver.takeRecords());
+}
+
+// A page can synthesize focus events or call focus() itself. Only a genuine user
+// pointer gesture whose original target is the input may authorize a generated
+// secret target. Chrome's trusted click forwarded by a label has no qualifying
+// pointerdown on the input and therefore cannot authorize it.
+window.addEventListener("pointerdown", (event) => {
+  if (!event.isTrusted) return;
+  flushPasswordTypeMutations();
+  const target = event.target;
+  directPointerSnapshot = Object.freeze({
+    target,
+    wasConnectedPasswordInput: Boolean(target?.isConnected && target?.matches?.("input[type=password]")),
+    typeMutationVersion: passwordTypeMutationVersions.get(target) || 0,
+    pointerId: event.pointerId,
+    button: event.button
+  });
+  explicitlyAuthorizedPasswordInput = null;
+}, true);
+
+window.addEventListener("pointerup", (event) => {
+  if (!event.isTrusted) return;
+  flushPasswordTypeMutations();
+  const target = event.target;
+  const snapshot = directPointerSnapshot;
+  explicitlyAuthorizedPasswordInput = snapshot?.wasConnectedPasswordInput
+    && target === snapshot.target
+    && event.pointerId === snapshot.pointerId
+    && event.button === snapshot.button
+    && (passwordTypeMutationVersions.get(target) || 0) === snapshot.typeMutationVersion
+    && isSafeExplicitPasswordInput(target)
+    ? target
+    : null;
+  directPointerSnapshot = null;
+}, true);
+
+window.addEventListener("pointercancel", () => {
+  directPointerSnapshot = null;
+  explicitlyAuthorizedPasswordInput = null;
+}, true);
+
+function rectangleIntersection(first, second) {
+  const left = Math.max(first.left, second.left);
+  const top = Math.max(first.top, second.top);
+  const right = Math.min(first.right, second.right);
+  const bottom = Math.min(first.bottom, second.bottom);
+  return right > left && bottom > top ? { left, top, right, bottom } : null;
+}
+
+function visibleViewportRect(input) {
+  const viewport = { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
+  for (const clientRect of input.getClientRects()) {
+    if (clientRect.width <= 0 || clientRect.height <= 0) continue;
+    let visibleRect = rectangleIntersection(clientRect, viewport);
+    if (!visibleRect) continue;
+    for (let ancestor = input.parentElement; ancestor && visibleRect; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      if (![style.overflow, style.overflowX, style.overflowY].some((value) => ["hidden", "clip", "scroll", "auto"].includes(value))) continue;
+      visibleRect = rectangleIntersection(visibleRect, ancestor.getBoundingClientRect());
+    }
+    if (visibleRect) return visibleRect;
+  }
+  return null;
+}
+
+function isTopmostAtInteriorPoint(input, visibleRect) {
+  const x = visibleRect.left + ((visibleRect.right - visibleRect.left) / 2);
+  const y = visibleRect.top + ((visibleRect.bottom - visibleRect.top) / 2);
+  const hit = document.elementFromPoint(x, y);
+  return hit === input || input.contains(hit);
+}
+
+const MINIMUM_EFFECTIVE_OPACITY = 0.5;
+
+function isSafeExplicitPasswordInput(input) {
+  if (!input?.matches?.("input[type=password]") || !input.isConnected || input.disabled || input.readOnly) return false;
+  let effectiveOpacity = 1;
+  for (let element = input; element; element = element.parentElement) {
+    if (element.hidden || element.hasAttribute("hidden") || element.inert || element.hasAttribute("inert") || element.getAttribute("aria-hidden") === "true") return false;
+    const style = getComputedStyle(element);
+    if (style.display === "none" || ["hidden", "collapse"].includes(style.visibility) || style.contentVisibility === "hidden") return false;
+    effectiveOpacity *= Number(style.opacity);
+    // Opacity composes multiplicatively across ancestors. Require a substantial
+    // visible result rather than relying on an exact zero comparison, which lets
+    // practically invisible click targets authorize secret injection.
+    if (!Number.isFinite(effectiveOpacity) || effectiveOpacity < MINIMUM_EFFECTIVE_OPACITY) return false;
+    if (style.clipPath && style.clipPath !== "none") return false;
+    if (style.clip && style.clip !== "auto" && /rect\(\s*(?:0(?:px)?[ ,]+){3}0(?:px)?\s*\)/i.test(style.clip)) return false;
+  }
+  const visibleRect = visibleViewportRect(input);
+  return document.activeElement === input && Boolean(visibleRect) && isTopmostAtInteriorPoint(input, visibleRect);
+}
+
+function fillGeneratedPassword(password) {
+  if (!password) return 0;
+  const target = explicitlyAuthorizedPasswordInput;
+  if (!isSafeExplicitPasswordInput(target)) return 0;
+  setInputValue(target, password);
+  return 1;
+}
+
 function installSaveLoginPromptListeners() {
   for (const loginForm of detectLoginForms()) {
     const form = loginForm.passwordInput.closest("form");
@@ -167,6 +284,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ filled: fillLogin(message.username, message.password) });
     return true;
   }
+  if (message?.type === "GV_FILL_GENERATED_PASSWORD") {
+    sendResponse({ filled: fillGeneratedPassword(message.password) });
+    return true;
+  }
   if (message?.type === "GV_FORM_CONTEXT") {
     const identityAddressForms = detectIdentityAddressForms();
     const paymentCardForms = detectPaymentCardForms();
@@ -184,7 +305,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return false;
 });
 
-{
+function initializeDocumentDependentFeatures() {
   installSaveLoginPromptListeners();
   const identityAddressForms = detectIdentityAddressForms();
   const paymentCardForms = detectPaymentCardForms();
@@ -198,4 +319,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     url: location.href,
     host: location.hostname
   });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeDocumentDependentFeatures, { once: true });
+} else {
+  initializeDocumentDependentFeatures();
 }

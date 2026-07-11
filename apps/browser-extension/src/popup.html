@@ -177,6 +177,20 @@
         <button id="dismissSaveLogin" class="link-button" type="button">Not now</button>
       </section>
 
+      <section class="card" aria-label="Password generator">
+        <label>
+          <span>Password length</span>
+          <input id="generatedPasswordLength" type="number" min="12" max="64" step="1" value="20" />
+        </label>
+        <label>
+          <span>Generated password</span>
+          <input id="generatedPassword" type="text" readonly autocomplete="off" aria-label="Generated password" />
+        </label>
+        <button id="generatePassword" type="button">Generate password</button>
+        <button id="fillGeneratedPassword" type="button" disabled>Fill generated password</button>
+        <p>Click directly in one visible password field on the page before filling. Repeat for a confirmation field.</p>
+      </section>
+
       <section class="card" aria-label="Manual fill">
         <label>
           <span>Username</span>
