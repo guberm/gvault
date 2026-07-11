@@ -65,7 +65,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     });
     await expectText(page, "#strengthLabel", "28 characters");
     await page.locator("#generateButton").click();
-    const generatedPassword = await page.locator("[name=password]").inputValue();
+    const generatedPassword = await page.locator("#generatedPassword").inputValue();
     assert.equal(generatedPassword.length, 28, "generated password follows the selected length control");
     assert.doesNotMatch(generatedPassword, /[A-Z]/, "uppercase toggle removes uppercase letters from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows the selected length control");
@@ -80,7 +80,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
       };
     });
     await page.locator("#generateButton").click();
-    const uppercaseOnlyPassword = await page.locator("[name=password]").inputValue();
+    const uppercaseOnlyPassword = await page.locator("#generatedPassword").inputValue();
     assert.equal(uppercaseOnlyPassword.length, 28, "lowercase toggle preserves generated length");
     assert.doesNotMatch(uppercaseOnlyPassword, /[a-z]/, "lowercase toggle removes lowercase letters from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows lowercase toggle length");
@@ -94,7 +94,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
       };
     });
     await page.locator("#generateButton").click();
-    const numberFreePassword = await page.locator("[name=password]").inputValue();
+    const numberFreePassword = await page.locator("#generatedPassword").inputValue();
     assert.equal(numberFreePassword.length, 28, "numbers toggle preserves generated length");
     assert.doesNotMatch(numberFreePassword, /[0-9]/, "numbers toggle removes digits from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows numbers toggle length");
@@ -109,7 +109,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
       };
     });
     await page.locator("#generateButton").click();
-    const symbolFreePassword = await page.locator("[name=password]").inputValue();
+    const symbolFreePassword = await page.locator("#generatedPassword").inputValue();
     assert.equal(symbolFreePassword.length, 28, "symbols toggle preserves generated length");
     assert.doesNotMatch(symbolFreePassword, /[!@#$%^&*?]/, "symbols toggle removes symbols from generated passwords");
     assert.equal((await page.locator("#generatedPassword").inputValue()).length, 28, "generator preview follows symbols toggle length");
@@ -123,13 +123,13 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
       };
     });
     await page.locator("#generateButton").click();
-    const ambiguitySafePassword = await page.locator("[name=password]").inputValue();
+    const ambiguitySafePassword = await page.locator("#generatedPassword").inputValue();
     assert.doesNotMatch(ambiguitySafePassword, /[Il1O0]/, "exclude ambiguous removes confusing characters");
 
     await excludeAmbiguous.uncheck();
     await expectText(page, "#strengthLabel", "28 characters, 145 bits, strong");
     await page.locator("#generateButton").click();
-    const fullAlphabetPassword = await page.locator("[name=password]").inputValue();
+    const fullAlphabetPassword = await page.locator("#generatedPassword").inputValue();
     assert.match(fullAlphabetPassword, /I/, "disabling exclude ambiguous restores the full alphabet");
 
     await page.locator("#usePassphrase").check();
@@ -141,7 +141,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     });
     await page.locator("#generateButton").click();
     const generatedPassphrase = "cedar-cedar-cedar-cedar-10";
-    assert.equal(await page.locator("[name=password]").inputValue(), generatedPassphrase, "passphrase mode fills the Login password field");
+    assert.equal(await page.locator("[name=password]").inputValue(), "", "generation does not implicitly replace the Login password field");
     assert.equal(await page.locator("#generatedPassword").inputValue(), generatedPassphrase, "passphrase mode updates the generator preview");
     await expectText(page, "#strengthLabel", "4 words + 2 digits, 21 bits, weak");
     await expectText(page, "#strengthRating", "Weak");
@@ -152,7 +152,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await expectText(page, "#strengthLabel", "No character sets selected, unavailable");
     await expectText(page, "#strengthRating", "Unavailable");
     await page.locator("#generateButton").click();
-    assert.equal(await page.locator("[name=password]").inputValue(), generatedPassphrase, "unavailable generator preserves the existing password");
+    assert.equal(await page.locator("[name=password]").inputValue(), "", "unavailable generator preserves the existing password");
     await expectText(page, "#status", "Select at least one character set");
     await page.getByRole("button", { name: "Save changes" }).click();
 
@@ -160,6 +160,51 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     await expectText(page, "#items", "GitHub Work");
     await expectText(page, "#items", "Existing login");
     assert.equal(await page.locator(".item-row").count(), 2, "new Login item is added without overwriting the existing item");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("generated password is transferred to the Login editor only on explicit use and saves through the editor", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await page.locator("[name=title]").fill("Generated password login");
+    await page.locator("[name=password]").fill("existing-editor-password");
+    const useButton = page.getByRole("button", { name: "Use generated password in editor" });
+    assert.equal(await useButton.isDisabled(), true, "use action is unavailable while the preview is empty");
+
+    await page.locator("#generateButton").click();
+    const generatedPassword = await page.locator("#generatedPassword").inputValue();
+    assert.notEqual(generatedPassword, "", "generation populates the preview");
+    await assertInputValue(page, "[name=password]", "existing-editor-password");
+    assert.equal(await useButton.isEnabled(), true, "use action becomes available for a non-empty preview in Login editor");
+
+    await useButton.click();
+    await assertInputValue(page, "[name=password]", generatedPassword);
+    await expectText(page, "#status", "Generated password placed in the Login editor.");
+    assert.equal(
+      (await page.locator("#status").textContent()).includes(generatedPassword),
+      false,
+      "status does not reveal the generated password",
+    );
+
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.locator(".item-row").filter({ hasText: "Generated password login" }).click();
+    await assertInputValue(page, "[name=password]", generatedPassword);
+
+    await page.locator("[name=type]").selectOption("secure-note");
+    await page.locator("[name=body]").fill("unrelated secure note body");
+    assert.equal(await useButton.isDisabled(), true, "use action is unavailable outside a Login editor");
+    await assertInputValue(page, "[name=body]", "unrelated secure note body");
   } finally {
     await browser?.close();
     await new Promise((resolve) => server.close(resolve));
@@ -208,7 +253,11 @@ test("password generator copies only the current preview and reports clipboard f
     });
     await copyButton.click();
     await expectText(page, "#status", "Could not copy generated password.");
-    assert.doesNotMatch(await page.locator("#status").textContent(), new RegExp(generatedPassword));
+    assert.equal(
+      (await page.locator("#status").textContent()).includes(generatedPassword),
+      false,
+      "copy failure status does not reveal the generated password",
+    );
 
     await page.evaluate(() => {
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
