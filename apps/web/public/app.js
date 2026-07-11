@@ -79,18 +79,51 @@ function requireUnlocked() {
   return true;
 }
 
-function generatePassword() {
-  const length = Number($("passwordLength").value);
-  if ($("usePassphrase").checked) {
-    const words = Array.from({ length: 4 }, () => passphraseWords[randomInt(passphraseWords.length)]);
-    return `${words.join("-")}-${randomInt(90) + 10}`;
-  }
+function passwordAlphabet() {
   let alphabet = "";
   if ($("useUpper").checked) alphabet += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   if ($("useLower").checked) alphabet += "abcdefghijklmnopqrstuvwxyz";
   if ($("useNumbers").checked) alphabet += "0123456789";
   if ($("useSymbols").checked) alphabet += "!@#$%^&*?";
   if ($("excludeAmbiguous").checked) alphabet = alphabet.replace(/[Il1O0]/g, "");
+  return alphabet;
+}
+
+function strengthRating(bits) {
+  if (bits >= 80) return "strong";
+  if (bits >= 50) return "good";
+  return "weak";
+}
+
+function passwordStrength() {
+  if ($("usePassphrase").checked) {
+    const bits = Math.round((4 * Math.log2(passphraseWords.length)) + Math.log2(90));
+    const rating = strengthRating(bits);
+    return { detail: `4 words + 2 digits, ${bits} bits, ${rating}`, rating };
+  }
+  const length = Number($("passwordLength").value);
+  const alphabet = passwordAlphabet();
+  if (!alphabet) return { detail: "No character sets selected, unavailable", rating: "unavailable" };
+  const bits = Math.round(length * Math.log2(alphabet.length));
+  const rating = strengthRating(bits);
+  return { detail: `${length} characters, ${bits} bits, ${rating}`, rating };
+}
+
+function updateStrengthIndicator() {
+  const strength = passwordStrength();
+  $("strengthLabel").textContent = strength.detail;
+  $("strengthRating").textContent = strength.rating[0].toUpperCase() + strength.rating.slice(1);
+  $("strengthRating").dataset.rating = strength.rating;
+}
+
+function generatePassword() {
+  const length = Number($("passwordLength").value);
+  if ($("usePassphrase").checked) {
+    const words = Array.from({ length: 4 }, () => passphraseWords[randomInt(passphraseWords.length)]);
+    return `${words.join("-")}-${randomInt(90) + 10}`;
+  }
+  const alphabet = passwordAlphabet();
+  if (!alphabet) return "";
   return Array.from({ length }, () => alphabet[randomInt(alphabet.length)]).join("");
 }
 
@@ -698,9 +731,16 @@ $("lockButton").addEventListener("click", () => {
 });
 
 $("itemType").addEventListener("change", renderTypeFields);
-$("passwordLength").addEventListener("input", () => {
-  $("strengthLabel").textContent = `${$("passwordLength").value} characters, strong`;
-});
+[
+  "passwordLength",
+  "useUpper",
+  "useLower",
+  "useNumbers",
+  "useSymbols",
+  "excludeAmbiguous",
+  "usePassphrase",
+].forEach((id) => $(id).addEventListener("input", updateStrengthIndicator));
+updateStrengthIndicator();
 
 $("generateButton").addEventListener("click", () => {
   const passwordField = $("itemForm").elements.namedItem("password");
@@ -708,7 +748,12 @@ $("generateButton").addEventListener("click", () => {
     setStatus("Switch to Login type to generate a password.", "warning");
     return;
   }
-  passwordField.value = generatePassword();
+  const password = generatePassword();
+  if (!password) {
+    setStatus("Select at least one character set.", "warning");
+    return;
+  }
+  passwordField.value = password;
   $("generatedPassword").value = passwordField.value;
   setStatus("Generated password placed in the login editor.", "success");
 });
