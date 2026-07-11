@@ -21,11 +21,40 @@ const domainDisabled = document.getElementById("domainDisabled");
 const domainDisabledLabel = document.getElementById("domainDisabledLabel");
 const contentSurface = document.getElementById("contentSurface");
 const settingsSurface = document.getElementById("settingsSurface");
+const generatedPassword = document.getElementById("generatedPassword");
+const generatedPasswordLength = document.getElementById("generatedPasswordLength");
+const fillGeneratedPassword = document.getElementById("fillGeneratedPassword");
 let currentDomain = "";
 let savePromptKind = "save";
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+const GENERATED_PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+const GENERATED_PASSWORD_DEFAULT_LENGTH = 20;
+const GENERATED_PASSWORD_MIN_LENGTH = 12;
+const GENERATED_PASSWORD_MAX_LENGTH = 64;
+
+function normalizeGeneratedPasswordLength(length) {
+  const parsed = typeof length === "string" && length.trim() === "" ? Number.NaN : Number(length);
+  // Lengths are whole characters: floor finite values, then clamp to the UI's supported range.
+  const integer = Number.isFinite(parsed) ? Math.floor(parsed) : GENERATED_PASSWORD_DEFAULT_LENGTH;
+  return Math.min(GENERATED_PASSWORD_MAX_LENGTH, Math.max(GENERATED_PASSWORD_MIN_LENGTH, integer));
+}
+
+function secureRandomPassword(length) {
+  const size = normalizeGeneratedPasswordLength(length);
+  const limit = 256 - (256 % GENERATED_PASSWORD_ALPHABET.length);
+  let result = "";
+  while (result.length < size) {
+    const bytes = new Uint8Array(size - result.length);
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte < limit) result += GENERATED_PASSWORD_ALPHABET[byte % GENERATED_PASSWORD_ALPHABET.length];
+    }
+  }
+  return result;
 }
 
 function showContent() {
@@ -229,6 +258,25 @@ document.getElementById("fill").onclick = async () => {
     return;
   }
   setStatus("Fill command sent to the current page.");
+};
+
+document.getElementById("generatePassword").onclick = () => {
+  const length = normalizeGeneratedPasswordLength(generatedPasswordLength.value);
+  generatedPasswordLength.value = String(length);
+  generatedPassword.value = secureRandomPassword(length);
+  fillGeneratedPassword.disabled = false;
+  setStatus("Generated a password. Review it, then fill explicitly.");
+};
+
+fillGeneratedPassword.onclick = async () => {
+  const value = generatedPassword.value;
+  if (!value) return;
+  const result = await chrome.runtime.sendMessage({ type: "GV_FILL_GENERATED_PASSWORD", password: value });
+  if (!result?.ok) {
+    setStatus(result?.error || "Generated-password fill failed.");
+    return;
+  }
+  setStatus("Filled the clicked password field. Click the confirmation field and repeat if needed.");
 };
 
 document.getElementById("saveServer").onclick = async () => {

@@ -314,6 +314,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return;
     }
 
+    if (message?.type === "GV_FILL_GENERATED_PASSWORD") {
+      const tab = await activeTab();
+      if (!tab?.id) {
+        sendResponse({ ok: false, filled: 0, error: "No active tab." });
+        return;
+      }
+      if (!message.password) {
+        sendResponse({ ok: false, filled: 0, error: "Generate a password first." });
+        return;
+      }
+      const result = await chrome.tabs.sendMessage(tab.id, {
+        type: "GV_FILL_GENERATED_PASSWORD",
+        password: message.password,
+      });
+      const filled = Number(result?.filled) || 0;
+      sendResponse(filled > 0
+        ? { ok: true, filled }
+        : { ok: false, filled: 0, error: "Click directly in a visible password field on the page first, then try again." });
+      return;
+    }
+
     sendResponse({ ok: false, error: "Unknown message." });
   })().catch((error) => sendResponse({ ok: false, error: error.message }));
   return true;

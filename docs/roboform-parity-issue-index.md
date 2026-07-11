@@ -395,7 +395,7 @@ Parent issue: #24 — https://github.com/guberm/gvault/issues/24
 - [x] #299 Strength indicator. — https://github.com/guberm/gvault/issues/299
 - [x] #300 Copy generated password. — https://github.com/guberm/gvault/issues/300
 - [x] #301 Use generated password in editor. — https://github.com/guberm/gvault/issues/301
-- [ ] #302 Fill generated password into browser form. — https://github.com/guberm/gvault/issues/302
+- [x] #302 Fill generated password into a visible browser password field authorized by a trusted direct pointer gesture on that exact field only; reject label-forwarded activation and revalidate focus, visibility, and topmost hit-testing at fill time. — https://github.com/guberm/gvault/issues/302
 - [ ] #303 Save generated password as Login. — https://github.com/guberm/gvault/issues/303
 
 ## 10. Generator and security tools — 10.2 Security Center
