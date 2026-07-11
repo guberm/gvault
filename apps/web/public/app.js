@@ -755,7 +755,19 @@ $("generateButton").addEventListener("click", () => {
   }
   passwordField.value = password;
   $("generatedPassword").value = passwordField.value;
+  $("copyGeneratedPasswordButton").disabled = false;
   setStatus("Generated password placed in the login editor.", "success");
+});
+
+$("copyGeneratedPasswordButton").addEventListener("click", async () => {
+  const password = $("generatedPassword").value;
+  if (!password) return;
+  try {
+    await navigator.clipboard.writeText(password);
+    setStatus("Generated password copied.", "success");
+  } catch {
+    setStatus("Could not copy generated password.", "warning");
+  }
 });
 
 $("itemForm").addEventListener("submit", async (event) => {

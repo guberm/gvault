@@ -413,7 +413,7 @@ Last updated: 2026-07-03
 - [x] Exclude ambiguous characters.
 - [x] Passphrase mode.
 - [x] Strength indicator.
-- [ ] Copy generated password.
+- [x] Copy generated password.
 - [ ] Use generated password in editor.
 - [ ] Fill generated password into browser form.
 - [ ] Save generated password as Login.

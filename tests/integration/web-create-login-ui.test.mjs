@@ -166,6 +166,61 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
   }
 });
 
+test("password generator copies only the current preview and reports clipboard failures honestly", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      window.__clipboardWrites = [];
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value) => {
+            window.__clipboardWrites.push(value);
+          },
+        },
+      });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    const copyButton = page.getByRole("button", { name: "Copy generated password" });
+    await assertInputValue(page, "#generatedPassword", "");
+    assert.equal(await copyButton.isDisabled(), true, "copy is unavailable while the preview is empty");
+
+    await page.locator("#generateButton").click();
+    const generatedPassword = await page.locator("#generatedPassword").inputValue();
+    assert.notEqual(generatedPassword, "", "generation populates the password preview");
+    assert.equal(await copyButton.isEnabled(), true, "copy becomes available after generation");
+
+    await copyButton.click();
+    assert.deepEqual(await page.evaluate(() => window.__clipboardWrites), [generatedPassword]);
+    await expectText(page, "#status", "Generated password copied.");
+
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => {
+        throw new Error("clipboard rejected");
+      };
+    });
+    await copyButton.click();
+    await expectText(page, "#status", "Could not copy generated password.");
+    assert.doesNotMatch(await page.locator("#status").textContent(), new RegExp(generatedPassword));
+
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    });
+    await copyButton.click();
+    await expectText(page, "#status", "Could not copy generated password.");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 function chromeLaunchOptions() {
   const executablePath = chromeExecutable();
   return executablePath ? { executablePath } : {};
