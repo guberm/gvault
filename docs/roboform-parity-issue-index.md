@@ -340,7 +340,7 @@ Parent issue: #21 — https://github.com/guberm/gvault/issues/21
 - [x] #259 Current code display. — https://github.com/guberm/gvault/issues/259
 - [x] #260 Countdown. — https://github.com/guberm/gvault/issues/260
 - [x] #261 Copy code. — https://github.com/guberm/gvault/issues/261
-- [ ] #262 Link TOTP to Login. — https://github.com/guberm/gvault/issues/262
+- [x] #262 Link TOTP to Login. — https://github.com/guberm/gvault/issues/262 — PR #467
 
 ## 8. Organization
 

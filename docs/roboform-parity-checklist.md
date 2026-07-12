@@ -358,7 +358,7 @@ Last updated: 2026-07-03
 - [x] Current code display.
 - [x] Countdown.
 - [x] Copy code.
-- [ ] Link TOTP to Login.
+- [x] Link TOTP to Login. (#262, PR #467)
 
 ---
 
