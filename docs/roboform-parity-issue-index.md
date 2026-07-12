@@ -339,7 +339,7 @@ Parent issue: #21 — https://github.com/guberm/gvault/issues/21
 - [ ] #258 QR add where platform supports it. — https://github.com/guberm/gvault/issues/258
 - [x] #259 Current code display. — https://github.com/guberm/gvault/issues/259
 - [x] #260 Countdown. — https://github.com/guberm/gvault/issues/260
-- [ ] #261 Copy code. — https://github.com/guberm/gvault/issues/261
+- [x] #261 Copy code. — https://github.com/guberm/gvault/issues/261
 - [ ] #262 Link TOTP to Login. — https://github.com/guberm/gvault/issues/262
 
 ## 8. Organization
