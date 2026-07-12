@@ -416,7 +416,7 @@ Last updated: 2026-07-03
 - [x] Copy generated password.
 - [x] Use generated password in editor.
 - [x] Fill generated password into a visible browser password field authorized by a trusted direct pointer gesture on that exact field (one field per action; no label-forwarded click, focus-event trust, or field scanning; focus, visibility, and topmost hit-testing revalidated at fill time).
-- [ ] Save generated password as Login.
+- [x] Save generated password as Login.
 
 ## 10.2 Security Center
 
