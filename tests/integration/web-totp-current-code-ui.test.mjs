@@ -60,12 +60,14 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await page.locator("[name=title]").fill("Existing login");
     await page.locator("[name=username]").fill("existing@example.local");
     await page.getByRole("button", { name: "Save changes" }).click();
+    const existingLoginId = await page.locator(".item-row.active").getAttribute("data-id");
+    assert.ok(existingLoginId);
 
     await page.locator("#newItemButton").click();
     await page.getByLabel("Item type").selectOption("authenticator");
     await page.locator("[name=title]").fill("Primary authenticator");
     await page.getByLabel("TOTP secret").fill(rfcSecret);
-    await page.getByLabel("Linked Login").selectOption({ label: "Existing login — existing@example.local" });
+    await page.getByLabel("Linked Login").selectOption(existingLoginId);
     await page.getByRole("button", { name: "Save changes" }).click();
     await assertText(page.getByLabel("Current TOTP code"), "287082");
     assert.equal(await page.locator(".item-row").count(), 2, "authenticator uses the canonical vault item list");
@@ -213,24 +215,30 @@ test("linked authenticator relationships fail closed when stale or ambiguous and
     await unlock(page);
 
     await page.locator("[name=title]").fill("Duplicate");
-    await page.locator("[name=username]").fill("first@example.local");
-    await page.locator("[name=url]").fill("https://first.example.local");
+    await page.locator("[name=username]").fill("same@example.local");
+    await page.locator("[name=url]").fill("https://same.example.local");
     await page.getByRole("button", { name: "Save changes" }).click();
     const firstLoginId = await page.locator(".item-row.active").getAttribute("data-id");
     assert.ok(firstLoginId);
 
     await page.locator("#newItemButton").click();
     await page.locator("[name=title]").fill("Duplicate");
-    await page.locator("[name=username]").fill("second@example.local");
-    await page.locator("[name=url]").fill("https://second.example.local");
+    await page.locator("[name=username]").fill("same@example.local");
+    await page.locator("[name=url]").fill("https://same.example.local");
     await page.getByRole("button", { name: "Save changes" }).click();
+    const secondLoginId = await page.locator(".item-row.active").getAttribute("data-id");
+    assert.ok(secondLoginId);
 
     await page.locator("#newItemButton").click();
     await page.getByLabel("Item type").selectOption("authenticator");
-    const optionLabels = await page.getByLabel("Linked Login").locator("option").allTextContents();
-    assert.equal(new Set(optionLabels).size, optionLabels.length, "duplicate Login titles have distinct non-secret option labels");
-    assert.equal(optionLabels.some((label) => label.includes("first@example.local")), true);
-    assert.equal(optionLabels.some((label) => label.includes("second@example.local")), true);
+    const loginOptions = page.getByLabel("Linked Login").locator("option:not([value=''])");
+    const optionLabels = await loginOptions.allTextContents();
+    const optionValues = await loginOptions.evaluateAll((options) => options.map((option) => option.value));
+    assert.equal(new Set(optionLabels).size, optionLabels.length, "identical Login metadata still has distinct non-secret option labels");
+    assert.deepEqual(new Set(optionValues), new Set([firstLoginId, secondLoginId]), "option values remain the exact Login IDs");
+    assert.equal(optionLabels.every((label) => label.includes("same@example.local")), true);
+    assert.equal(optionLabels.some((label) => label.endsWith(firstLoginId.slice(0, 8))), true);
+    assert.equal(optionLabels.some((label) => label.endsWith(secondLoginId.slice(0, 8))), true);
     await page.locator("[name=title]").fill("First authenticator");
     await page.getByLabel("TOTP secret").fill(rfcSecret);
     await page.getByLabel("Linked Login").selectOption(firstLoginId);

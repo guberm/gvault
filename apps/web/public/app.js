@@ -228,7 +228,7 @@ function renderTypeFields() {
   }).join("") + (type === "authenticator" ? `
     <label class="field"><span>Linked Login</span><select name="loginId">
       <option value="">Not linked</option>
-      ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} — ${item.username || item.url || item.id}`)}</option>`).join("")}
+      ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} — ${item.username || item.url || item.id} — ${item.id.slice(0, 8)}`)}</option>`).join("")}
     </select></label>
   ` : "");
   updateUseGeneratedPasswordButton();
