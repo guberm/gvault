@@ -75,7 +75,7 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     assert.equal((await page.locator("#status").innerText()).includes(rfcSecret), false, "secret is absent from status text");
 
     await page.getByRole("button", { name: "Sync" }).click();
-    await assertText(page.locator("#status"), "Sync complete: 2 pushed");
+    await assertText(page.locator("#status"), "Sync complete: 2 pushed", 5_000);
     const push = sync.requests.find((request) => request.path === "/api/sync/push");
     assert.ok(push, "encrypted records were pushed");
     assert.equal(push.raw.includes(rfcSecret), false, "plaintext TOTP secret is absent from the sync request");
@@ -203,14 +203,24 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
   }
 });
 
-test("linked authenticator relationships fail closed when stale or ambiguous and duplicate Login titles stay distinguishable", async () => {
+test("linked authenticator relationships fail closed when stale or ambiguous and same-prefix Login IDs stay distinguishable", async () => {
   const sync = { records: [], requests: [] };
   const server = await startServer(sync);
   let browser;
   try {
     browser = await chromium.launch(chromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-    await page.addInitScript(() => { Date.now = () => 59_000; });
+    await page.addInitScript(() => {
+      Date.now = () => 59_000;
+      const ids = [
+        "00000000-0000-4000-8000-000000000000",
+        "12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "12345678-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "aaaaaaaa-0000-4000-8000-000000000001",
+        "bbbbbbbb-0000-4000-8000-000000000002",
+      ];
+      Crypto.prototype.randomUUID = () => ids.shift();
+    });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await unlock(page);
 
@@ -219,7 +229,7 @@ test("linked authenticator relationships fail closed when stale or ambiguous and
     await page.locator("[name=url]").fill("https://same.example.local");
     await page.getByRole("button", { name: "Save changes" }).click();
     const firstLoginId = await page.locator(".item-row.active").getAttribute("data-id");
-    assert.ok(firstLoginId);
+    assert.equal(firstLoginId, "12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 
     await page.locator("#newItemButton").click();
     await page.locator("[name=title]").fill("Duplicate");
@@ -227,7 +237,7 @@ test("linked authenticator relationships fail closed when stale or ambiguous and
     await page.locator("[name=url]").fill("https://same.example.local");
     await page.getByRole("button", { name: "Save changes" }).click();
     const secondLoginId = await page.locator(".item-row.active").getAttribute("data-id");
-    assert.ok(secondLoginId);
+    assert.equal(secondLoginId, "12345678-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 
     await page.locator("#newItemButton").click();
     await page.getByLabel("Item type").selectOption("authenticator");
@@ -237,8 +247,8 @@ test("linked authenticator relationships fail closed when stale or ambiguous and
     assert.equal(new Set(optionLabels).size, optionLabels.length, "identical Login metadata still has distinct non-secret option labels");
     assert.deepEqual(new Set(optionValues), new Set([firstLoginId, secondLoginId]), "option values remain the exact Login IDs");
     assert.equal(optionLabels.every((label) => label.includes("same@example.local")), true);
-    assert.equal(optionLabels.some((label) => label.endsWith(firstLoginId.slice(0, 8))), true);
-    assert.equal(optionLabels.some((label) => label.endsWith(secondLoginId.slice(0, 8))), true);
+    assert.equal(optionLabels.some((label) => label.endsWith(firstLoginId)), true);
+    assert.equal(optionLabels.some((label) => label.endsWith(secondLoginId)), true);
     await page.locator("[name=title]").fill("First authenticator");
     await page.getByLabel("TOTP secret").fill(rfcSecret);
     await page.getByLabel("Linked Login").selectOption(firstLoginId);
