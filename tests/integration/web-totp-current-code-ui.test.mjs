@@ -75,7 +75,7 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     assert.equal((await page.locator("#status").innerText()).includes(rfcSecret), false, "secret is absent from status text");
 
     await page.getByRole("button", { name: "Sync" }).click();
-    await assertText(page.locator("#status"), "Sync complete: 2 pushed", 5_000);
+    await assertText(page.locator("#status"), "Sync complete: 2 pushed, 0 imported.", 15_000);
     const push = sync.requests.find((request) => request.path === "/api/sync/push");
     assert.ok(push, "encrypted records were pushed");
     assert.equal(push.raw.includes(rfcSecret), false, "plaintext TOTP secret is absent from the sync request");
