@@ -755,6 +755,7 @@ $("generateButton").addEventListener("click", () => {
   }
   $("generatedPassword").value = password;
   $("copyGeneratedPasswordButton").disabled = false;
+  $("saveGeneratedLoginButton").disabled = false;
   updateUseGeneratedPasswordButton();
   setStatus("Generated password ready.", "success");
 });
@@ -769,6 +770,21 @@ $("useGeneratedPasswordButton").addEventListener("click", () => {
   }
   passwordField.value = password;
   setStatus("Generated password placed in the Login editor.", "success");
+});
+
+$("saveGeneratedLoginButton").addEventListener("click", () => {
+  const password = $("generatedPassword").value;
+  if (!password) {
+    $("saveGeneratedLoginButton").disabled = true;
+    return;
+  }
+  state.selectedId = "";
+  fillForm();
+  $("itemForm").elements.namedItem("password").value = password;
+  render();
+  setStatus("New Login draft ready. Add a name and save changes to keep it.", "success");
+  $("itemForm").scrollIntoView({ block: "start" });
+  $("itemForm").elements.namedItem("title").focus();
 });
 
 $("copyGeneratedPasswordButton").addEventListener("click", async () => {

@@ -211,6 +211,91 @@ test("generated password is transferred to the Login editor only on explicit use
   }
 });
 
+test("generated password starts a fresh Login draft and persists only through explicit save and sync", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const syncedRecords = new Map();
+    const apiRequests = [];
+    await page.addInitScript(() => {
+      localStorage.setItem("gv.token", "integration-token");
+      localStorage.setItem("gv.userId", "integration-user");
+    });
+    await page.route("**/api/**", async (route) => {
+      const request = route.request();
+      const body = request.postDataJSON();
+      apiRequests.push({ path: new URL(request.url()).pathname, body });
+      if (request.url().endsWith("/api/sync/push")) {
+        for (const record of body.records) syncedRecords.set(record.id, record);
+        await route.fulfill({ json: { records: body.records } });
+        return;
+      }
+      await route.fulfill({ json: { records: [...syncedRecords.values()] } });
+    });
+
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await page.locator("[name=title]").fill("Existing selected login");
+    await page.locator("[name=url]").fill("https://existing.example/login");
+    await page.locator("[name=username]").fill("existing@example.local");
+    await page.locator("[name=password]").fill("existing-login-password");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.locator(".item-row").filter({ hasText: "Existing selected login" }).click();
+
+    const saveGeneratedButton = page.getByRole("button", { name: "Save generated password as new Login" });
+    assert.equal(await saveGeneratedButton.isDisabled(), true, "save-as-Login is unavailable while the preview is empty");
+    await page.locator("#generateButton").click();
+    const generatedPassword = await page.locator("#generatedPassword").inputValue();
+    assert.notEqual(generatedPassword, "", "generation provides a password to save");
+    assert.equal(await saveGeneratedButton.isEnabled(), true, "save-as-Login becomes available after generation");
+
+    await saveGeneratedButton.click();
+    await assertInputValue(page, "[name=type]", "login");
+    await assertInputValue(page, "[name=title]", "");
+    await assertInputValue(page, "[name=folder]", "");
+    await assertInputValue(page, "[name=tags]", "");
+    await assertInputValue(page, "[name=url]", "");
+    await assertInputValue(page, "[name=username]", "");
+    await assertInputValue(page, "[name=password]", generatedPassword);
+    await assertInputValue(page, "[name=notes]", "");
+    await assertInputValue(page, "#generatedPassword", generatedPassword);
+    await expectText(page, "#formTitle", "New login");
+    await expectText(page, "#status", "New Login draft ready");
+    assert.equal((await page.locator("#status").textContent()).includes(generatedPassword), false, "draft status does not reveal the password");
+    assert.equal(await page.locator("[name=title]").evaluate((element) => element === document.activeElement), true, "fresh editor receives focus");
+    assert.equal(apiRequests.length, 0, "starting the draft performs no network write");
+    assert.equal(await page.locator(".item-row").count(), 1, "starting the draft performs no local save");
+
+    await page.locator("[name=title]").fill("Generated saved login");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    assert.equal(await page.locator(".item-row").count(), 2, "explicit Save creates a second Login");
+    await page.locator(".item-row").filter({ hasText: "Existing selected login" }).click();
+    await assertInputValue(page, "[name=password]", "existing-login-password");
+
+    await page.getByRole("button", { name: "Sync", exact: true }).click();
+    await expectText(page, "#status", "Sync complete");
+    assert.equal(syncedRecords.size, 2, "both Login records reached the sync API");
+
+    await page.reload();
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await page.getByRole("button", { name: "Sync", exact: true }).click();
+    await expectText(page, "#items", "Generated saved login");
+    await page.locator(".item-row").filter({ hasText: "Generated saved login" }).click();
+    await assertInputValue(page, "[name=password]", generatedPassword);
+    await page.locator(".item-row").filter({ hasText: "Existing selected login" }).click();
+    await assertInputValue(page, "[name=password]", "existing-login-password");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("password generator copies only the current preview and reports clipboard failures honestly", async () => {
   const server = await startStaticServer();
   let browser;
