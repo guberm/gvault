@@ -96,9 +96,13 @@ function clearTotpDisplay() {
 
 async function updateTotpDisplay() {
   clearTimeout(totpTimer);
-  const item = state.items.find((candidate) => candidate.id === state.selectedId && candidate.type === "authenticator");
+  const selected = state.items.find((candidate) => candidate.id === state.selectedId);
+  const item = selected?.type === "authenticator"
+    ? selected
+    : state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === selected?.id);
   const secret = item?.secret || "";
-  const selectedId = item?.id || "";
+  const selectedId = selected?.id || "";
+  const authenticatorId = item?.id || "";
   const request = ++totpRequest;
   $("totpResult").replaceChildren();
   if (!state.masterPassword || !secret) return;
@@ -106,8 +110,11 @@ async function updateTotpDisplay() {
     const now = Date.now();
     const code = await currentTotpCode(secret, now);
     const secondsRemaining = totpSecondsRemaining(now);
-    const selected = state.items.find((candidate) => candidate.id === state.selectedId);
-    if (request !== totpRequest || !state.masterPassword || selected?.id !== selectedId || selected?.secret !== secret) return;
+    const currentSelected = state.items.find((candidate) => candidate.id === state.selectedId);
+    const currentAuthenticator = currentSelected?.type === "authenticator"
+      ? currentSelected
+      : state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === currentSelected?.id);
+    if (request !== totpRequest || !state.masterPassword || currentSelected?.id !== selectedId || currentAuthenticator?.id !== authenticatorId || currentAuthenticator?.secret !== secret) return;
     const output = document.createElement("output");
     output.className = "totp-code";
     output.setAttribute("aria-label", "Current TOTP code");
@@ -213,7 +220,12 @@ function renderTypeFields() {
       return `<label class="field wide"><span>${label}</span><textarea name="${name}" placeholder="${placeholder}"></textarea></label>`;
     }
     return `<label class="field"><span>${label}</span><input name="${name}" type="${inputType}" placeholder="${placeholder}" /></label>`;
-  }).join("");
+  }).join("") + (type === "authenticator" ? `
+    <label class="field"><span>Linked Login</span><select name="loginId">
+      <option value="">Not linked</option>
+      ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.title)}</option>`).join("")}
+    </select></label>
+  ` : "");
   updateUseGeneratedPasswordButton();
 }
 
@@ -304,9 +316,12 @@ function itemSummary(item) {
 
 function renderDetail() {
   const item = state.items.find((candidate) => candidate.id === state.selectedId);
+  const linkedAuthenticator = item?.type === "login"
+    ? state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === item.id)
+    : undefined;
   $("favoriteButton").disabled = !item;
   clearTotpDisplay();
-  $("authenticatorCard").classList.toggle("hidden", item?.type !== "authenticator");
+  $("authenticatorCard").classList.toggle("hidden", item?.type !== "authenticator" && !linkedAuthenticator);
   if (!item) {
     $("detailTitle").textContent = "No item selected";
     $("detailSubtitle").textContent = "Create or select a vault item.";
@@ -330,7 +345,7 @@ function renderDetail() {
       <span>Updated ${new Date(item.updatedAt).toLocaleString()}</span>
     </div>
   `;
-  if (item.type === "authenticator") void updateTotpDisplay();
+  if (item.type === "authenticator" || linkedAuthenticator) void updateTotpDisplay();
 }
 
 function detailRows(item) {
@@ -378,7 +393,7 @@ function formToItem(form) {
   if (type === "secure-note") return { ...base, body: String(data.get("body") || "") };
   if (type === "identity") return { ...base, fullName: String(data.get("fullName") || ""), email: String(data.get("email") || ""), phone: String(data.get("phone") || ""), organization: String(data.get("organization") || "") };
   if (type === "payment-card") return { ...base, cardholderName: String(data.get("cardholderName") || ""), number: String(data.get("number") || ""), expiryMonth: String(data.get("expiryMonth") || ""), expiryYear: String(data.get("expiryYear") || ""), securityCode: String(data.get("securityCode") || "") };
-  if (type === "authenticator") return { ...base, secret: String(data.get("secret") || "").trim() };
+  if (type === "authenticator") return { ...base, secret: String(data.get("secret") || "").trim(), loginId: String(data.get("loginId") || "") };
   return { ...base, line1: String(data.get("line1") || ""), line2: String(data.get("line2") || ""), city: String(data.get("city") || ""), region: String(data.get("region") || ""), postalCode: String(data.get("postalCode") || ""), country: String(data.get("country") || "") };
 }
 

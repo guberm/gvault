@@ -65,6 +65,7 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await page.getByLabel("Item type").selectOption("authenticator");
     await page.locator("[name=title]").fill("Primary authenticator");
     await page.getByLabel("TOTP secret").fill(rfcSecret);
+    await page.getByLabel("Linked Login").selectOption({ label: "Existing login" });
     await page.getByRole("button", { name: "Save changes" }).click();
     await assertText(page.getByLabel("Current TOTP code"), "287082");
     assert.equal(await page.locator(".item-row").count(), 2, "authenticator uses the canonical vault item list");
@@ -165,8 +166,19 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     assert.equal(await page.locator(".item-row").filter({ hasText: "Existing login" }).count(), 1, "existing items are unaffected");
 
     await page.locator(".item-row").filter({ hasText: "Existing login" }).click();
-    assert.equal(await code.count(), 0, "selecting another item clears the authenticator code");
-    assert.equal(await countdown.count(), 0, "selecting another item clears the countdown");
+    await assertText(code, "969429");
+    await assertProgress(countdown, 30);
+    assert.equal(await page.locator("#authenticatorCard").isVisible(), true, "linked Login renders the existing live authenticator UI");
+
+    await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
+    await page.getByLabel("Linked Login").selectOption("");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await assertText(code, "969429");
+    await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
+    assert.equal(await page.getByLabel("Linked Login").inputValue(), "", "the relationship can be explicitly cleared");
+    await page.locator(".item-row").filter({ hasText: "Existing login" }).click();
+    assert.equal(await code.count(), 0, "clearing the relationship fails closed on the Login detail");
+    assert.equal(await countdown.count(), 0, "clearing the relationship removes the Login countdown");
     await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
     await assertProgress(countdown, 30);
 
