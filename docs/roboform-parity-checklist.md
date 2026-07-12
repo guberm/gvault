@@ -357,7 +357,7 @@ Last updated: 2026-07-03
 - [ ] QR add where platform supports it.
 - [x] Current code display.
 - [x] Countdown.
-- [ ] Copy code.
+- [x] Copy code.
 - [ ] Link TOTP to Login.
 
 ---
