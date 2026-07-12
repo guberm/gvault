@@ -65,7 +65,7 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await page.getByLabel("Item type").selectOption("authenticator");
     await page.locator("[name=title]").fill("Primary authenticator");
     await page.getByLabel("TOTP secret").fill(rfcSecret);
-    await page.getByLabel("Linked Login").selectOption({ label: "Existing login" });
+    await page.getByLabel("Linked Login").selectOption({ label: "Existing login — existing@example.local" });
     await page.getByRole("button", { name: "Save changes" }).click();
     await assertText(page.getByLabel("Current TOTP code"), "287082");
     assert.equal(await page.locator(".item-row").count(), 2, "authenticator uses the canonical vault item list");
@@ -195,6 +195,71 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     assert.equal(await code.count(), 0, "locking keeps authenticator code material out of the DOM");
     assert.equal(await countdown.count(), 0, "locking removes the countdown from the DOM");
     assert.equal(await page.locator("input").evaluateAll((inputs, secret) => inputs.some((input) => input.value === secret), rfcSecret), false, "locking clears decrypted secret fields");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("linked authenticator relationships fail closed when stale or ambiguous and duplicate Login titles stay distinguishable", async () => {
+  const sync = { records: [], requests: [] };
+  const server = await startServer(sync);
+  let browser;
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => { Date.now = () => 59_000; });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await unlock(page);
+
+    await page.locator("[name=title]").fill("Duplicate");
+    await page.locator("[name=username]").fill("first@example.local");
+    await page.locator("[name=url]").fill("https://first.example.local");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    const firstLoginId = await page.locator(".item-row.active").getAttribute("data-id");
+    assert.ok(firstLoginId);
+
+    await page.locator("#newItemButton").click();
+    await page.locator("[name=title]").fill("Duplicate");
+    await page.locator("[name=username]").fill("second@example.local");
+    await page.locator("[name=url]").fill("https://second.example.local");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    await page.locator("#newItemButton").click();
+    await page.getByLabel("Item type").selectOption("authenticator");
+    const optionLabels = await page.getByLabel("Linked Login").locator("option").allTextContents();
+    assert.equal(new Set(optionLabels).size, optionLabels.length, "duplicate Login titles have distinct non-secret option labels");
+    assert.equal(optionLabels.some((label) => label.includes("first@example.local")), true);
+    assert.equal(optionLabels.some((label) => label.includes("second@example.local")), true);
+    await page.locator("[name=title]").fill("First authenticator");
+    await page.getByLabel("TOTP secret").fill(rfcSecret);
+    await page.getByLabel("Linked Login").selectOption(firstLoginId);
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    await page.locator("#newItemButton").click();
+    await page.getByLabel("Item type").selectOption("authenticator");
+    await page.locator("[name=title]").fill("Second authenticator");
+    await page.getByLabel("TOTP secret").fill(rfcSecret);
+    await page.getByLabel("Linked Login").selectOption(firstLoginId);
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await assertText(page.getByLabel("Current TOTP code"), "287082", 5_000);
+
+    await page.locator(`.item-row[data-id="${firstLoginId}"]`).click();
+    assert.equal(await page.getByLabel("Current TOTP code").count(), 0, "multiple linked authenticators expose no code");
+    assert.equal(await page.getByRole("progressbar", { name: "TOTP code time remaining" }).count(), 0);
+    assert.equal(await page.locator("#authenticatorCard").isVisible(), false, "ambiguous relationship hides the TOTP block");
+
+    await page.locator(".item-row").filter({ hasText: "Second authenticator" }).click();
+    await page.getByLabel("Linked Login").evaluate((select) => {
+      select.add(new Option("Missing Login", "missing-login-id"));
+      select.value = "missing-login-id";
+    });
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await assertText(page.getByLabel("Current TOTP code"), "287082", 5_000);
+    await page.locator(".item-row").filter({ hasText: "Second authenticator" }).click();
+    assert.equal(await page.getByLabel("Linked Login").inputValue(), "", "stale Login IDs render as unlinked instead of inferring a target");
+    await page.locator(`.item-row[data-id="${firstLoginId}"]`).click();
+    await assertText(page.getByLabel("Current TOTP code"), "287082", 5_000);
   } finally {
     await browser?.close();
     await new Promise((resolve) => server.close(resolve));

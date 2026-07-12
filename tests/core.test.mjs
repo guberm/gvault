@@ -48,6 +48,11 @@ test("canonical authenticator model validates and keeps its seed out of search",
     customFields: [],
   };
   assert.equal(isVaultItem(item), true);
+  assert.equal(isVaultItem({ ...item, loginId: undefined }), true);
+  assert.equal(isVaultItem({ ...item, loginId: "login_1" }), true);
+  for (const loginId of [42, {}, []]) {
+    assert.equal(isVaultItem({ ...item, loginId }), false, `rejects malformed loginId ${JSON.stringify(loginId)}`);
+  }
   assert.equal(isVaultItem({ ...item, secret: undefined }), false);
   assert.deepEqual(searchVault([item], "primary"), [item]);
   assert.deepEqual(searchVault([item], item.secret), []);

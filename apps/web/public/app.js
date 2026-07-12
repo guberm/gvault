@@ -86,6 +86,11 @@ function requireUnlocked() {
 let totpTimer;
 let totpRequest = 0;
 
+function linkedAuthenticatorForLogin(loginId) {
+  const matches = state.items.filter((candidate) => candidate.type === "authenticator" && candidate.loginId === loginId);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 function clearTotpDisplay() {
   clearTimeout(totpTimer);
   totpTimer = undefined;
@@ -99,7 +104,7 @@ async function updateTotpDisplay() {
   const selected = state.items.find((candidate) => candidate.id === state.selectedId);
   const item = selected?.type === "authenticator"
     ? selected
-    : state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === selected?.id);
+    : linkedAuthenticatorForLogin(selected?.id);
   const secret = item?.secret || "";
   const selectedId = selected?.id || "";
   const authenticatorId = item?.id || "";
@@ -113,7 +118,7 @@ async function updateTotpDisplay() {
     const currentSelected = state.items.find((candidate) => candidate.id === state.selectedId);
     const currentAuthenticator = currentSelected?.type === "authenticator"
       ? currentSelected
-      : state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === currentSelected?.id);
+      : linkedAuthenticatorForLogin(currentSelected?.id);
     if (request !== totpRequest || !state.masterPassword || currentSelected?.id !== selectedId || currentAuthenticator?.id !== authenticatorId || currentAuthenticator?.secret !== secret) return;
     const output = document.createElement("output");
     output.className = "totp-code";
@@ -223,7 +228,7 @@ function renderTypeFields() {
   }).join("") + (type === "authenticator" ? `
     <label class="field"><span>Linked Login</span><select name="loginId">
       <option value="">Not linked</option>
-      ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.title)}</option>`).join("")}
+      ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} — ${item.username || item.url || item.id}`)}</option>`).join("")}
     </select></label>
   ` : "");
   updateUseGeneratedPasswordButton();
@@ -317,7 +322,7 @@ function itemSummary(item) {
 function renderDetail() {
   const item = state.items.find((candidate) => candidate.id === state.selectedId);
   const linkedAuthenticator = item?.type === "login"
-    ? state.items.find((candidate) => candidate.type === "authenticator" && candidate.loginId === item.id)
+    ? linkedAuthenticatorForLogin(item.id)
     : undefined;
   $("favoriteButton").disabled = !item;
   clearTotpDisplay();

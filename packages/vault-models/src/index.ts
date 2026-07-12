@@ -65,6 +65,8 @@ export interface AuthenticatorItem extends VaultItemBase {
   type: "authenticator";
   /** Base32-encoded TOTP seed. It must remain inside the encrypted item payload. */
   secret: string;
+  /** Exact Login item ID. It remains inside the encrypted item payload. */
+  loginId?: string;
 }
 
 export interface CustomItem extends VaultItemBase {
@@ -109,7 +111,8 @@ export function isVaultItem(value: unknown): value is VaultItem {
     case "payment-card": return typeof item.cardholderName === "string" && typeof item.number === "string"
       && typeof item.expiryMonth === "string" && typeof item.expiryYear === "string";
     case "address": return typeof item.line1 === "string" && typeof item.city === "string" && typeof item.country === "string";
-    case "authenticator": return typeof item.secret === "string";
+    case "authenticator": return typeof item.secret === "string"
+      && (item.loginId === undefined || typeof item.loginId === "string");
     case "custom": return Array.isArray(item.fields);
     default: return false;
   }
