@@ -30,6 +30,15 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
       const nativeSetTimeout = window.setTimeout.bind(window);
       Date.now = () => now;
       window.__setTotpTestTime = (value) => { now = value; };
+      window.__clipboardWrites = [];
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value) => {
+            window.__clipboardWrites.push(value);
+          },
+        },
+      });
       window.setTimeout = (callback, delay, ...args) => {
         if (delay > 0 && delay <= 1_000) {
           totpTick = () => callback(...args);
@@ -85,6 +94,36 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await assertText(code, "287082");
     await assertProgress(countdown, 1);
     assert.equal(await announcement.textContent(), "Current TOTP code 287082");
+    const copyButton = page.getByRole("button", { name: "Copy current TOTP code", exact: true });
+    assert.equal(await copyButton.isEnabled(), true, "copy is enabled with a valid rendered code");
+    await copyButton.click();
+    assert.deepEqual(await page.evaluate(() => window.__clipboardWrites), [await code.textContent()], "copy uses the rendered output text exactly");
+    await assertText(page.locator("#status"), "Current TOTP code copied.");
+    assert.equal(await page.locator("#status").getAttribute("data-tone"), "success");
+    assert.equal(await announcement.textContent(), "Current TOTP code 287082", "copy feedback does not enter the code-only live region");
+
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = async () => { throw new Error("clipboard rejected"); };
+    });
+    await copyButton.click();
+    await assertText(page.locator("#status"), "Could not copy current TOTP code.");
+    assert.equal(await page.locator("#status").getAttribute("data-tone"), "warning");
+    assert.equal((await page.locator("#status").textContent()).includes("287082"), false, "failure status does not leak the code");
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    });
+    await copyButton.click();
+    await assertText(page.locator("#status"), "Could not copy current TOTP code.");
+    assert.equal(await announcement.textContent(), "Current TOTP code 287082", "clipboard failure does not enter the code-only live region");
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: async (value) => { window.__clipboardWrites.push(value); } },
+      });
+    });
+    const staleCopyButton = await copyButton.elementHandle();
+    assert.ok(staleCopyButton);
+    await page.evaluate(() => { window.__clipboardWrites = []; });
     assert.equal(await countdown.evaluate((node) => Boolean(node.closest("[aria-live]"))), false, "countdown is outside every live region");
     await page.evaluate(() => {
       window.__totpAnnouncementMutations = 0;
@@ -104,8 +143,13 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await assertProgress(countdown, 30);
     assert.equal(await announcement.textContent(), "Current TOTP code 359152", "rollover updates the live code announcement");
     assert.equal(await page.evaluate(() => window.__totpAnnouncementMutations), 1, "rollover mutates the live region once");
+    await staleCopyButton.evaluate((button) => button.click());
+    assert.deepEqual(await page.evaluate(() => window.__clipboardWrites), [], "a detached pre-rollover copy control cannot copy");
+    await page.getByRole("button", { name: "Copy current TOTP code", exact: true }).click();
+    assert.deepEqual(await page.evaluate(() => window.__clipboardWrites), ["359152"], "the replacement control copies the replacement output");
 
     await page.locator("#newItemButton").click();
+    assert.equal(await copyButton.count(), 0, "deselecting the authenticator clears copy eligibility");
     assert.equal(await code.count(), 0, "deselecting the authenticator clears its code");
     assert.equal(await countdown.count(), 0, "deselecting the authenticator clears its countdown");
     assert.equal(await announcement.textContent(), "", "deselecting clears the code announcement");
@@ -131,9 +175,11 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await assertText(page.getByRole("alert"), "invalid Base32 TOTP secret");
     assert.equal(await code.count(), 0, "invalid secret removes the prior code");
     assert.equal(await countdown.count(), 0, "invalid secret removes the countdown");
+    assert.equal(await copyButton.count(), 0, "invalid secret removes copy eligibility");
     assert.equal(await announcement.textContent(), "", "invalid secret clears the prior live announcement");
 
     await page.getByRole("button", { name: "Lock now" }).click();
+    assert.equal(await copyButton.count(), 0, "locking keeps copy eligibility out of the DOM");
     assert.equal(await code.count(), 0, "locking keeps authenticator code material out of the DOM");
     assert.equal(await countdown.count(), 0, "locking removes the countdown from the DOM");
     assert.equal(await page.locator("input").evaluateAll((inputs, secret) => inputs.some((input) => input.value === secret), rfcSecret), false, "locking clears decrypted secret fields");
