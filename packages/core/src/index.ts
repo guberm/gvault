@@ -384,5 +384,9 @@ function safeSearchProjection(item: VaultItem): unknown {
     const { number: _number, securityCode: _securityCode, ...rest } = item;
     return rest;
   }
+  if (item.type === "authenticator") {
+    const { secret: _secret, ...rest } = item;
+    return rest;
+  }
   return item;
 }
