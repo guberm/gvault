@@ -33,6 +33,7 @@
           <button data-filter="identity" type="button">Identities <span id="countIdentity">0</span></button>
           <button data-filter="payment-card" type="button">Payment cards <span id="countCard">0</span></button>
           <button data-filter="address" type="button">Addresses <span id="countAddress">0</span></button>
+          <button data-filter="authenticator" type="button">Authenticators <span id="countAuthenticator">0</span></button>
           <button data-filter="favorite" type="button">Favorites <span id="countFavorite">0</span></button>
         </nav>
 
@@ -119,6 +120,11 @@
                 <span>Add a login, secure note, identity, payment card, or address. Then sync encrypted records to your server.</span>
               </div>
 
+              <section id="authenticatorCard" class="authenticator detail-card hidden" aria-label="Authenticator">
+                <h2>Authenticator</h2>
+                <div id="totpResult" aria-live="polite"></div>
+              </section>
+
               <section class="generator detail-card" aria-label="Password generator">
                 <div class="strength-row">
                   <span>Password strength</span>
@@ -159,6 +165,7 @@
                     <option value="identity">Identity</option>
                     <option value="payment-card">Payment card</option>
                     <option value="address">Address</option>
+                    <option value="authenticator">Authenticator</option>
                   </select>
                 </label>
                 <label class="field">

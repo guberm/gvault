@@ -1,3 +1,5 @@
+import { currentTotpCode } from "./totp.js";
+
 const deviceId = localStorage.getItem("gv.deviceId") || crypto.randomUUID();
 localStorage.setItem("gv.deviceId", deviceId);
 const savedTheme = localStorage.getItem("gv.theme") || "light";
@@ -19,6 +21,7 @@ const typeLabels = {
   identity: "Identity",
   "payment-card": "Payment card",
   address: "Address",
+  authenticator: "Authenticator",
 };
 
 const typeFields = {
@@ -50,6 +53,7 @@ const typeFields = {
     ["postalCode", "Postal code", "text", "10001"],
     ["country", "Country", "text", "United States"],
   ],
+  authenticator: [["secret", "TOTP secret", "password", "Base32 secret"]],
 };
 
 const passphraseWords = ["cedar", "harbor", "signal", "matrix", "orbit", "ember", "forest", "summit", "anchor", "cobalt", "vector", "meadow"];
@@ -77,6 +81,46 @@ function requireUnlocked() {
     return false;
   }
   return true;
+}
+
+let totpTimer;
+let totpRequest = 0;
+
+function clearTotpDisplay() {
+  clearTimeout(totpTimer);
+  totpTimer = undefined;
+  totpRequest += 1;
+  $("totpResult").replaceChildren();
+}
+
+async function updateTotpDisplay() {
+  clearTimeout(totpTimer);
+  const item = state.items.find((candidate) => candidate.id === state.selectedId && candidate.type === "authenticator");
+  const secret = item?.secret || "";
+  const selectedId = item?.id || "";
+  const request = ++totpRequest;
+  $("totpResult").replaceChildren();
+  if (!state.masterPassword || !secret) return;
+  try {
+    const code = await currentTotpCode(secret, Date.now());
+    const selected = state.items.find((candidate) => candidate.id === state.selectedId);
+    if (request !== totpRequest || !state.masterPassword || selected?.id !== selectedId || selected?.secret !== secret) return;
+    const output = document.createElement("output");
+    output.className = "totp-code";
+    output.setAttribute("aria-label", "Current TOTP code");
+    output.setAttribute("inputmode", "numeric");
+    output.textContent = code;
+    $("totpResult").replaceChildren(output);
+    const delay = 1_000 - (Date.now() % 1_000);
+    totpTimer = setTimeout(updateTotpDisplay, delay);
+  } catch {
+    if (request !== totpRequest) return;
+    const error = document.createElement("p");
+    error.className = "totp-error";
+    error.setAttribute("role", "alert");
+    error.textContent = "This authenticator has an invalid Base32 TOTP secret.";
+    $("totpResult").replaceChildren(error);
+  }
 }
 
 function passwordAlphabet() {
@@ -181,6 +225,7 @@ function renderCounts() {
     identity: state.items.filter((item) => item.type === "identity").length,
     "payment-card": state.items.filter((item) => item.type === "payment-card").length,
     address: state.items.filter((item) => item.type === "address").length,
+    authenticator: state.items.filter((item) => item.type === "authenticator").length,
     favorite: state.items.filter((item) => item.favorite).length,
   };
   $("countAll").textContent = counts.all;
@@ -189,6 +234,7 @@ function renderCounts() {
   $("countIdentity").textContent = counts.identity;
   $("countCard").textContent = counts["payment-card"];
   $("countAddress").textContent = counts.address;
+  $("countAuthenticator").textContent = counts.authenticator;
   $("countFavorite").textContent = counts.favorite;
 }
 
@@ -224,12 +270,15 @@ function itemSummary(item) {
   if (item.type === "identity") return [item.fullName, item.email].filter(Boolean).join(" - ") || "Identity";
   if (item.type === "payment-card") return `${item.cardholderName || "Card"} ${item.number ? "- **** " + item.number.slice(-4) : ""}`;
   if (item.type === "address") return [item.city, item.region, item.country].filter(Boolean).join(", ") || "Address";
+  if (item.type === "authenticator") return "Authenticator";
   return item.type;
 }
 
 function renderDetail() {
   const item = state.items.find((candidate) => candidate.id === state.selectedId);
   $("favoriteButton").disabled = !item;
+  clearTotpDisplay();
+  $("authenticatorCard").classList.toggle("hidden", item?.type !== "authenticator");
   if (!item) {
     $("detailTitle").textContent = "No item selected";
     $("detailSubtitle").textContent = "Create or select a vault item.";
@@ -253,6 +302,7 @@ function renderDetail() {
       <span>Updated ${new Date(item.updatedAt).toLocaleString()}</span>
     </div>
   `;
+  if (item.type === "authenticator") void updateTotpDisplay();
 }
 
 function detailRows(item) {
@@ -261,6 +311,7 @@ function detailRows(item) {
   if (item.type === "identity") return [["Full name", item.fullName], ["Email", item.email], ["Phone", item.phone], ["Organization", item.organization]];
   if (item.type === "payment-card") return [["Cardholder", item.cardholderName], ["Number", item.number ? "**** " + item.number.slice(-4) : ""], ["Expiry", [item.expiryMonth, item.expiryYear].filter(Boolean).join("/")], ["Security code", item.securityCode, true]];
   if (item.type === "address") return [["Line 1", item.line1], ["Line 2", item.line2], ["City", item.city], ["Region", item.region], ["Postal code", item.postalCode], ["Country", item.country]];
+  if (item.type === "authenticator") return [["Secret", item.secret, true]];
   return [];
 }
 
@@ -299,6 +350,7 @@ function formToItem(form) {
   if (type === "secure-note") return { ...base, body: String(data.get("body") || "") };
   if (type === "identity") return { ...base, fullName: String(data.get("fullName") || ""), email: String(data.get("email") || ""), phone: String(data.get("phone") || ""), organization: String(data.get("organization") || "") };
   if (type === "payment-card") return { ...base, cardholderName: String(data.get("cardholderName") || ""), number: String(data.get("number") || ""), expiryMonth: String(data.get("expiryMonth") || ""), expiryYear: String(data.get("expiryYear") || ""), securityCode: String(data.get("securityCode") || "") };
+  if (type === "authenticator") return { ...base, secret: String(data.get("secret") || "").trim() };
   return { ...base, line1: String(data.get("line1") || ""), line2: String(data.get("line2") || ""), city: String(data.get("city") || ""), region: String(data.get("region") || ""), postalCode: String(data.get("postalCode") || ""), country: String(data.get("country") || "") };
 }
 
@@ -731,6 +783,8 @@ $("lockButton").addEventListener("click", () => {
   state.items = [];
   state.selectedId = "";
   state.editingId = "";
+  clearTotpDisplay();
+  fillForm();
   render();
   setStatus("Vault locked. Decrypted session data cleared.", "success");
 });

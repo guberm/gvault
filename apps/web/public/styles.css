@@ -103,6 +103,8 @@ h2 { font-size: 16px; line-height: 1.25; }
 .detail-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 34px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .detail-row span { color: var(--muted); font-size: 12px; }
 .detail-row strong { overflow-wrap: anywhere; }
+.totp-code { display: block; margin-top: 12px; font-size: 2rem; letter-spacing: 0.18em; font-variant-numeric: tabular-nums; }
+.totp-error { margin-top: 12px; color: var(--warning); }
 .detail-row button { width: 34px; min-height: 34px; padding: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
 .detail-meta { display: grid; gap: 4px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
 .strength-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }

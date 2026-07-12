@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseBitwardenCsv, parseCsvRows, parseLoginCsv, parseOnePasswordCsv, parseRoboFormCsv } from "../packages/core/dist/index.js";
+import { generatePassphrase, generatePassword, estimatePasswordStrength, findLoginsForUrl, parseBitwardenCsv, parseCsvRows, parseLoginCsv, parseOnePasswordCsv, parseRoboFormCsv, searchVault } from "../packages/core/dist/index.js";
+import { isVaultItem } from "../packages/vault-models/dist/index.js";
 import { decryptJson, encryptJson } from "../packages/crypto/dist/index.js";
 
 test("password generator and strength indicator work", () => {
@@ -32,6 +33,24 @@ test("URL matching finds login records by normalized host", () => {
     customFields: []
   }];
   assert.equal(findLoginsForUrl(items, "https://www.example.com/account").length, 1);
+});
+
+test("canonical authenticator model validates and keeps its seed out of search", () => {
+  const item = {
+    id: "authenticator_1",
+    type: "authenticator",
+    title: "Primary authenticator",
+    secret: "JBSWY3DPEHPK3PXP",
+    tags: [],
+    favorite: false,
+    createdAt: "2026-07-12T00:00:00.000Z",
+    updatedAt: "2026-07-12T00:00:00.000Z",
+    customFields: [],
+  };
+  assert.equal(isVaultItem(item), true);
+  assert.equal(isVaultItem({ ...item, secret: undefined }), false);
+  assert.deepEqual(searchVault([item], "primary"), [item]);
+  assert.deepEqual(searchVault([item], item.secret), []);
 });
 
 test("CSV parser handles quoted commas and escaped quotes", () => {

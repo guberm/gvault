@@ -355,7 +355,7 @@ Last updated: 2026-07-03
 - [ ] TOTP secret storage.
 - [ ] Manual secret entry.
 - [ ] QR add where platform supports it.
-- [ ] Current code display.
+- [x] Current code display.
 - [ ] Countdown.
 - [ ] Copy code.
 - [ ] Link TOTP to Login.
