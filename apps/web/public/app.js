@@ -122,7 +122,20 @@ async function updateTotpDisplay() {
     progress.setAttribute("aria-valuetext", `${secondsRemaining} seconds remaining`);
     progress.max = 30;
     progress.value = secondsRemaining;
-    $("totpResult").replaceChildren(output, progress);
+    const copyButton = document.createElement("button");
+    copyButton.className = "secondary-button";
+    copyButton.type = "button";
+    copyButton.textContent = "Copy current TOTP code";
+    copyButton.addEventListener("click", async () => {
+      if (!copyButton.isConnected || !output.isConnected || !$("totpResult").contains(output)) return;
+      try {
+        await navigator.clipboard.writeText(output.textContent);
+        setStatus("Current TOTP code copied.", "success");
+      } catch {
+        setStatus("Could not copy current TOTP code.", "warning");
+      }
+    });
+    $("totpResult").replaceChildren(output, progress, copyButton);
     const announcement = `Current TOTP code ${code}`;
     if ($("totpAnnouncement").textContent !== announcement) $("totpAnnouncement").textContent = announcement;
     const delay = 1_000 - (Date.now() % 1_000);
