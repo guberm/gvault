@@ -356,7 +356,7 @@ Last updated: 2026-07-03
 - [ ] Manual secret entry.
 - [ ] QR add where platform supports it.
 - [x] Current code display.
-- [ ] Countdown.
+- [x] Countdown.
 - [ ] Copy code.
 - [ ] Link TOTP to Login.
 

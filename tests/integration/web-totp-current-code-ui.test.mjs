@@ -26,8 +26,22 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.addInitScript(() => {
       let now = 59_000;
+      let totpTick;
+      const nativeSetTimeout = window.setTimeout.bind(window);
       Date.now = () => now;
       window.__setTotpTestTime = (value) => { now = value; };
+      window.setTimeout = (callback, delay, ...args) => {
+        if (delay > 0 && delay <= 1_000) {
+          totpTick = () => callback(...args);
+          return 260;
+        }
+        return nativeSetTimeout(callback, delay, ...args);
+      };
+      window.__runTotpTestTick = () => {
+        const tick = totpTick;
+        totpTick = undefined;
+        tick?.();
+      };
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
@@ -66,22 +80,62 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await assertText(page.locator("#status"), "Sync complete: 0 pushed, 2 imported", 5_000);
     await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
     const code = page.getByLabel("Current TOTP code");
+    const countdown = page.getByRole("progressbar", { name: "TOTP code time remaining" });
+    const announcement = page.locator("#totpAnnouncement");
     await assertText(code, "287082");
-    await page.evaluate(() => window.__setTotpTestTime(60_000));
-    await assertText(code, "359152", 2_000);
+    await assertProgress(countdown, 1);
+    assert.equal(await announcement.textContent(), "Current TOTP code 287082");
+    assert.equal(await countdown.evaluate((node) => Boolean(node.closest("[aria-live]"))), false, "countdown is outside every live region");
+    await page.evaluate(() => {
+      window.__totpAnnouncementMutations = 0;
+      new MutationObserver((records) => { window.__totpAnnouncementMutations += records.length; })
+        .observe(document.querySelector("#totpAnnouncement"), { childList: true, characterData: true, subtree: true });
+      window.__setTotpTestTime(59_500);
+      window.__runTotpTestTick();
+    });
+    await assertProgress(countdown, 1);
+    assert.equal(await announcement.textContent(), "Current TOTP code 287082", "same-code tick keeps live text stable");
+    assert.equal(await page.evaluate(() => window.__totpAnnouncementMutations), 0, "same-code tick does not mutate the live region");
+    await page.evaluate(() => {
+      window.__setTotpTestTime(60_000);
+      window.__runTotpTestTick();
+    });
+    await assertText(code, "359152");
+    await assertProgress(countdown, 30);
+    assert.equal(await announcement.textContent(), "Current TOTP code 359152", "rollover updates the live code announcement");
+    assert.equal(await page.evaluate(() => window.__totpAnnouncementMutations), 1, "rollover mutates the live region once");
 
     await page.locator("#newItemButton").click();
     assert.equal(await code.count(), 0, "deselecting the authenticator clears its code");
-    await page.evaluate(() => window.__setTotpTestTime(90_000));
-    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    assert.equal(await countdown.count(), 0, "deselecting the authenticator clears its countdown");
+    assert.equal(await announcement.textContent(), "", "deselecting clears the code announcement");
+    await page.evaluate(() => {
+      window.__setTotpTestTime(90_000);
+      window.__runTotpTestTick();
+    });
     assert.equal(await code.count(), 0, "a stale timer cannot restore a deselected authenticator code");
+    assert.equal(await countdown.count(), 0, "a stale timer cannot restore a deselected countdown");
 
     await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
     await assertText(code, "969429");
     assert.equal(await page.locator(".item-row").filter({ hasText: "Existing login" }).count(), 1, "existing items are unaffected");
 
+    await page.locator(".item-row").filter({ hasText: "Existing login" }).click();
+    assert.equal(await code.count(), 0, "selecting another item clears the authenticator code");
+    assert.equal(await countdown.count(), 0, "selecting another item clears the countdown");
+    await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
+    await assertProgress(countdown, 30);
+
+    await page.getByLabel("TOTP secret").fill("invalid!");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await assertText(page.getByRole("alert"), "invalid Base32 TOTP secret");
+    assert.equal(await code.count(), 0, "invalid secret removes the prior code");
+    assert.equal(await countdown.count(), 0, "invalid secret removes the countdown");
+    assert.equal(await announcement.textContent(), "", "invalid secret clears the prior live announcement");
+
     await page.getByRole("button", { name: "Lock now" }).click();
     assert.equal(await code.count(), 0, "locking keeps authenticator code material out of the DOM");
+    assert.equal(await countdown.count(), 0, "locking removes the countdown from the DOM");
     assert.equal(await page.locator("input").evaluateAll((inputs, secret) => inputs.some((input) => input.value === secret), rfcSecret), false, "locking clears decrypted secret fields");
   } finally {
     await browser?.close();
@@ -92,6 +146,14 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
 async function unlock(page) {
   await page.getByLabel("Master password").fill("local-master-password");
   await page.getByRole("button", { name: "Unlock vault" }).click();
+}
+
+async function assertProgress(locator, expected) {
+  await locator.waitFor({ state: "attached" });
+  assert.equal(await locator.getAttribute("aria-valuemin"), "0");
+  assert.equal(await locator.getAttribute("aria-valuemax"), "30");
+  assert.equal(await locator.getAttribute("aria-valuenow"), String(expected));
+  assert.equal(await locator.getAttribute("aria-valuetext"), `${expected} seconds remaining`);
 }
 
 async function assertText(locator, expected, timeout = 1_000) {

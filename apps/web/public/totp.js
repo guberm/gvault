@@ -1,5 +1,9 @@
 const base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
+export function totpSecondsRemaining(timeMs = Date.now()) {
+  return 30 - Math.floor((timeMs % 30_000) / 1_000);
+}
+
 export async function currentTotpCode(secret, timeMs = Date.now()) {
   const keyBytes = decodeBase32(secret);
   const counter = Math.floor(timeMs / 30_000);

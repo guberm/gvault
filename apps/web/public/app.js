@@ -1,4 +1,4 @@
-import { currentTotpCode } from "./totp.js";
+import { currentTotpCode, totpSecondsRemaining } from "./totp.js";
 
 const deviceId = localStorage.getItem("gv.deviceId") || crypto.randomUUID();
 localStorage.setItem("gv.deviceId", deviceId);
@@ -91,6 +91,7 @@ function clearTotpDisplay() {
   totpTimer = undefined;
   totpRequest += 1;
   $("totpResult").replaceChildren();
+  $("totpAnnouncement").textContent = "";
 }
 
 async function updateTotpDisplay() {
@@ -102,7 +103,9 @@ async function updateTotpDisplay() {
   $("totpResult").replaceChildren();
   if (!state.masterPassword || !secret) return;
   try {
-    const code = await currentTotpCode(secret, Date.now());
+    const now = Date.now();
+    const code = await currentTotpCode(secret, now);
+    const secondsRemaining = totpSecondsRemaining(now);
     const selected = state.items.find((candidate) => candidate.id === state.selectedId);
     if (request !== totpRequest || !state.masterPassword || selected?.id !== selectedId || selected?.secret !== secret) return;
     const output = document.createElement("output");
@@ -110,11 +113,23 @@ async function updateTotpDisplay() {
     output.setAttribute("aria-label", "Current TOTP code");
     output.setAttribute("inputmode", "numeric");
     output.textContent = code;
-    $("totpResult").replaceChildren(output);
+    const progress = document.createElement("progress");
+    progress.className = "totp-countdown";
+    progress.setAttribute("aria-label", "TOTP code time remaining");
+    progress.setAttribute("aria-valuemin", "0");
+    progress.setAttribute("aria-valuemax", "30");
+    progress.setAttribute("aria-valuenow", String(secondsRemaining));
+    progress.setAttribute("aria-valuetext", `${secondsRemaining} seconds remaining`);
+    progress.max = 30;
+    progress.value = secondsRemaining;
+    $("totpResult").replaceChildren(output, progress);
+    const announcement = `Current TOTP code ${code}`;
+    if ($("totpAnnouncement").textContent !== announcement) $("totpAnnouncement").textContent = announcement;
     const delay = 1_000 - (Date.now() % 1_000);
     totpTimer = setTimeout(updateTotpDisplay, delay);
   } catch {
     if (request !== totpRequest) return;
+    $("totpAnnouncement").textContent = "";
     const error = document.createElement("p");
     error.className = "totp-error";
     error.setAttribute("role", "alert");
