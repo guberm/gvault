@@ -352,8 +352,8 @@ Last updated: 2026-07-03
 
 ## 7.9 Authenticator/TOTP
 
-- [x] TOTP secret storage. (#256, PR #463)
-- [ ] Manual secret entry.
+- [x] TOTP secret storage. (#256, PR #469)
+- [x] Manual secret entry. (#257)
 - [ ] QR add where platform supports it.
 - [x] Current code display.
 - [x] Countdown.
