@@ -60,6 +60,21 @@ const passphraseWords = ["cedar", "harbor", "signal", "matrix", "orbit", "ember"
 
 const $ = (id) => document.getElementById(id);
 
+let qrCodeScanningSupported = false;
+
+async function detectQrCodeScanningSupport() {
+  if (typeof globalThis.BarcodeDetector !== "function" || typeof globalThis.BarcodeDetector.getSupportedFormats !== "function") return;
+  try {
+    const formats = await globalThis.BarcodeDetector.getSupportedFormats();
+    qrCodeScanningSupported = formats.includes("qr_code");
+    appendQrScanControl();
+  } catch {
+    qrCodeScanningSupported = false;
+  }
+}
+
+void detectQrCodeScanningSupport();
+
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("gv.theme", theme);
@@ -231,7 +246,98 @@ function renderTypeFields() {
       ${state.items.filter((item) => item.type === "login").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} — ${item.username || item.url || item.id} — ${item.id}`)}</option>`).join("")}
     </select></label>
   ` : "");
+  appendQrScanControl();
   updateUseGeneratedPasswordButton();
+}
+
+function appendQrScanControl() {
+  if (!qrCodeScanningSupported || $("itemType").value !== "authenticator" || $("typeFields").querySelector('[name="authenticatorQrImage"]')) return;
+  const label = document.createElement("label");
+  label.className = "field";
+  const text = document.createElement("span");
+  text.textContent = "Scan authenticator QR code";
+  const input = document.createElement("input");
+  input.name = "authenticatorQrImage";
+  input.type = "file";
+  input.accept = "image/*";
+  input.setAttribute("capture", "environment");
+  label.append(text, input);
+  $("typeFields").append(label);
+}
+
+function isValidBase32Secret(secret) {
+  const normalized = String(secret).toUpperCase().replace(/[\s-]/g, "").replace(/=+$/, "");
+  if (!normalized || /[^A-Z2-7]/.test(normalized)) return false;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0;
+  let bitCount = 0;
+  let byteCount = 0;
+  for (const character of normalized) {
+    bits = (bits << 5) | alphabet.indexOf(character);
+    bitCount += 5;
+    if (bitCount >= 8) {
+      bitCount -= 8;
+      byteCount += 1;
+    }
+  }
+  return byteCount > 0 && (bitCount === 0 || (bits & ((1 << bitCount) - 1)) === 0);
+}
+
+function parseTotpQrPayload(rawValue) {
+  let url;
+  try {
+    url = new URL(rawValue);
+  } catch {
+    throw new Error("The selected image does not contain a valid authenticator QR code.");
+  }
+  if (url.protocol !== "otpauth:") throw new Error("The selected image does not contain a valid authenticator QR code.");
+  if (url.hostname.toLowerCase() !== "totp") throw new Error("Only TOTP authenticator QR codes are supported.");
+
+  const supportedParameters = new Set(["secret", "issuer", "algorithm", "digits", "period"]);
+  const hasUnknownParameter = [...url.searchParams.keys()].some((name) => !supportedParameters.has(name));
+  const hasDuplicateParameter = [...supportedParameters].some((name) => url.searchParams.getAll(name).length > 1);
+  const algorithm = (url.searchParams.get("algorithm") || "SHA1").toUpperCase();
+  const digits = url.searchParams.get("digits") || "6";
+  const period = url.searchParams.get("period") || "30";
+  if (hasUnknownParameter || hasDuplicateParameter || algorithm !== "SHA1" || digits !== "6" || period !== "30") {
+    throw new Error("This authenticator QR code uses unsupported settings.");
+  }
+
+  const secret = (url.searchParams.get("secret") || "").trim();
+  let label = "";
+  try {
+    label = decodeURIComponent(url.pathname.replace(/^\/+/, "")).trim();
+  } catch {
+    throw new Error("The selected image does not contain a valid authenticator QR code.");
+  }
+  const issuer = (url.searchParams.get("issuer") || "").trim();
+  if (!isValidBase32Secret(secret) || (!label && !issuer)) throw new Error("The selected image does not contain a valid authenticator QR code.");
+  return { secret, title: label || issuer };
+}
+
+async function scanAuthenticatorQr(file, sourceInput, scanRequest) {
+  let image;
+  try {
+    image = await createImageBitmap(file);
+    const detector = new BarcodeDetector({ formats: ["qr_code"] });
+    const detected = await detector.detect(image);
+    const rawValue = detected.find((result) => typeof result.rawValue === "string" && result.rawValue)?.rawValue || "";
+    const parsed = parseTotpQrPayload(rawValue);
+    if (!sourceInput.isConnected || $("itemType").value !== "authenticator" || sourceInput.qrScanRequest !== scanRequest) return;
+    $("itemForm").elements.namedItem("title").value = parsed.title;
+    $("itemForm").elements.namedItem("secret").value = parsed.secret;
+    setStatus("Authenticator QR code added to the editor. Review it and save changes.", "success");
+  } catch (error) {
+    if (!sourceInput.isConnected || $("itemType").value !== "authenticator" || sourceInput.qrScanRequest !== scanRequest) return;
+    const safeMessages = new Set([
+      "The selected image does not contain a valid authenticator QR code.",
+      "Only TOTP authenticator QR codes are supported.",
+      "This authenticator QR code uses unsupported settings.",
+    ]);
+    setStatus(safeMessages.has(error?.message) ? error.message : "The selected image could not be scanned as an authenticator QR code.", "warning");
+  } finally {
+    image?.close?.();
+  }
 }
 
 function updateUseGeneratedPasswordButton() {
@@ -838,6 +944,14 @@ $("lockButton").addEventListener("click", () => {
 });
 
 $("itemType").addEventListener("change", renderTypeFields);
+$("typeFields").addEventListener("change", (event) => {
+  const input = event.target.closest('input[name="authenticatorQrImage"]');
+  const file = input?.files?.[0];
+  if (!file) return;
+  const scanRequest = Symbol();
+  input.qrScanRequest = scanRequest;
+  void scanAuthenticatorQr(file, input, scanRequest).finally(() => { input.value = ""; });
+});
 [
   "passwordLength",
   "useUpper",
