@@ -17,7 +17,7 @@ const rfcSecret = String.fromCharCode(...[
   71, 69, 90, 68, 71, 78, 66, 86, 71, 89, 51, 84, 81, 79, 74, 81,
 ]);
 
-test("selected encrypted vault authenticator displays the current RFC 6238 code", async () => {
+test("manually entered TOTP secret creates an encrypted authenticator and displays the current RFC 6238 code", async () => {
   const sync = { records: [], requests: [] };
   const server = await startServer(sync);
   let browser;
@@ -66,9 +66,13 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await page.locator("#newItemButton").click();
     await page.getByLabel("Item type").selectOption("authenticator");
     await page.locator("[name=title]").fill("Primary authenticator");
-    await page.getByLabel("TOTP secret").fill(rfcSecret);
+    const secretInput = page.getByLabel("TOTP secret");
+    assert.equal(await secretInput.getAttribute("type"), "password", "manual secret entry is concealed");
+    await secretInput.fill(rfcSecret);
     await page.getByLabel("Linked Login").selectOption(existingLoginId);
     await page.getByRole("button", { name: "Save changes" }).click();
+    await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
+    assert.equal(await page.getByLabel("TOTP secret").inputValue(), rfcSecret, "the manually entered secret remains on the saved Authenticator editor");
     await assertText(page.getByLabel("Current TOTP code"), "287082");
     assert.equal(await page.locator(".item-row").count(), 2, "authenticator uses the canonical vault item list");
     assert.equal((await page.locator("body").innerText()).includes(rfcSecret), false, "secret is absent from visible text");
@@ -91,6 +95,7 @@ test("selected encrypted vault authenticator displays the current RFC 6238 code"
     await page.getByRole("button", { name: "Sync" }).click();
     await assertText(page.locator("#status"), "Sync complete: 0 pushed, 2 imported", 5_000);
     await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
+    assert.equal(await page.getByLabel("TOTP secret").inputValue(), rfcSecret, "the manually entered secret survives encrypted sync and unlock");
     const code = page.getByLabel("Current TOTP code");
     const countdown = page.getByRole("progressbar", { name: "TOTP code time remaining" });
     const announcement = page.locator("#totpAnnouncement");
