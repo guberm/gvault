@@ -58,6 +58,24 @@ test("canonical authenticator model validates and keeps its seed out of search",
   assert.deepEqual(searchVault([item], item.secret), []);
 });
 
+test("authenticator TOTP secrets survive encrypted storage without plaintext metadata", async () => {
+  const item = {
+    id: "authenticator_storage_1",
+    type: "authenticator",
+    title: "Stored authenticator",
+    secret: "JBSWY3DPEHPK3PXP",
+    tags: [],
+    favorite: false,
+    createdAt: "2026-07-15T00:00:00.000Z",
+    updatedAt: "2026-07-15T00:00:00.000Z",
+    customFields: [],
+  };
+  const envelope = await encryptJson(item, "correct horse battery staple");
+
+  assert.equal(JSON.stringify(envelope).includes(item.secret), false);
+  assert.deepEqual(await decryptJson(envelope, "correct horse battery staple"), item);
+});
+
 test("CSV parser handles quoted commas and escaped quotes", () => {
   assert.deepEqual(parseCsvRows('Name,Note\n"Bank, Inc.","say ""hello"""'), [["Name", "Note"], ["Bank, Inc.", 'say "hello"']]);
 });

@@ -334,7 +334,7 @@ Parent issue: #20 — https://github.com/guberm/gvault/issues/20
 
 Parent issue: #21 — https://github.com/guberm/gvault/issues/21
 
-- [ ] #256 TOTP secret storage. — https://github.com/guberm/gvault/issues/256
+- [x] #256 TOTP secret storage. — https://github.com/guberm/gvault/issues/256
 - [ ] #257 Manual secret entry. — https://github.com/guberm/gvault/issues/257
 - [ ] #258 QR add where platform supports it. — https://github.com/guberm/gvault/issues/258
 - [x] #259 Current code display. — https://github.com/guberm/gvault/issues/259
