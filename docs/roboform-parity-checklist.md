@@ -354,7 +354,7 @@ Last updated: 2026-07-03
 
 - [x] TOTP secret storage. (#256, PR #469)
 - [x] Manual secret entry. (#257)
-- [ ] QR add where platform supports it.
+- [x] QR add where platform supports it. (#258, PR #471)
 - [x] Current code display.
 - [x] Countdown.
 - [x] Copy code.
