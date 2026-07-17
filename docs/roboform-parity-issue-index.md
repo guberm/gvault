@@ -347,7 +347,7 @@ Parent issue: #21 — https://github.com/guberm/gvault/issues/21
 Parent issue: #22 — https://github.com/guberm/gvault/issues/22
 
 - [x] #263 Folders. — https://github.com/guberm/gvault/issues/263
-- [ ] #264 Nested folders or collections. — https://github.com/guberm/gvault/issues/264
+- [x] #264 Nested folders or collections. — https://github.com/guberm/gvault/issues/264
 - [ ] #265 Tags. — https://github.com/guberm/gvault/issues/265
 - [ ] #266 Favorites. — https://github.com/guberm/gvault/issues/266
 - [ ] #267 Trash/archive. — https://github.com/guberm/gvault/issues/267
