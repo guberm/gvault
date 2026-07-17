@@ -365,7 +365,7 @@ Last updated: 2026-07-03
 # 8. Organization
 
 - [x] Folders.
-- [ ] Nested folders or collections.
+- [x] Nested folders or collections. (#264, PR #476)
 - [ ] Tags.
 - [ ] Favorites.
 - [ ] Trash/archive.
