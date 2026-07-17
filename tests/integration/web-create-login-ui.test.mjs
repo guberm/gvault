@@ -432,6 +432,44 @@ test("web nested folder paths form a filterable hierarchy", async () => {
   }
 });
 
+test("web tags group and filter vault items", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    for (const [title, tags] of [["Shared work login", "Shared, Work"], ["Shared home login", "Shared, Home, Shared"], ["Untagged login", ""]]) {
+      if (await page.locator(".item-row").count()) await page.locator("#newItemButton").click();
+      await page.locator("[name=title]").fill(title);
+      await page.locator("[name=tags]").fill(tags);
+      await page.getByRole("button", { name: "Save changes" }).click();
+    }
+
+    const tags = page.locator("#tagList button");
+    assert.deepEqual(await tags.evaluateAll((buttons) => buttons.map((button) => button.dataset.filter)), [
+      "tag:Home",
+      "tag:Shared",
+      "tag:Work",
+    ]);
+    assert.equal(await page.locator('[data-filter="tag:Shared"]').getAttribute("aria-label"), "Shared (2)");
+    assert.equal(await page.locator('[data-filter="tag:Shared"]').textContent(), "Shared2");
+
+    await page.locator('[data-filter="tag:Shared"]').click();
+    assert.deepEqual(await page.locator(".item-row strong").allTextContents(), ["Shared home login", "Shared work login"]);
+
+    await page.locator('[data-filter="tag:Work"]').click();
+    assert.deepEqual(await page.locator(".item-row strong").allTextContents(), ["Shared work login"]);
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 function chromeLaunchOptions() {
   const executablePath = chromeExecutable();
   return executablePath ? { executablePath } : {};

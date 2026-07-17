@@ -364,13 +364,20 @@ function folderPath(folder) {
   return String(folder || "").split("/").map((part) => part.trim()).filter(Boolean).join("/");
 }
 
+function itemTags(item) {
+  return [...new Set((item.tags || []).map((tag) => String(tag).trim()).filter(Boolean))];
+}
+
 function filteredItems() {
   const query = $("search").value.trim().toLowerCase();
   return state.items.filter((item) => {
     const selectedFolder = state.filter.startsWith("folder:") ? state.filter.slice(7) : "";
+    const selectedTag = state.filter.startsWith("tag:") ? state.filter.slice(4) : "";
     const itemFolder = folderPath(item.folder);
     const matchesFilter = selectedFolder
       ? itemFolder === selectedFolder || itemFolder.startsWith(`${selectedFolder}/`)
+      : selectedTag
+        ? itemTags(item).includes(selectedTag)
       : state.filter === "all" || item.type === state.filter || (state.filter === "favorite" && item.favorite);
     return matchesFilter && (!query || getSearchText(item).includes(query));
   });
@@ -395,6 +402,23 @@ function renderFolders() {
     button.title = folder;
     button.style.paddingInlineStart = `${10 + ((parts.length - 1) * 16)}px`;
     button.append(parts.at(-1), Object.assign(document.createElement("span"), { textContent: count }));
+    return button;
+  }));
+  document.querySelectorAll("[data-filter]").forEach((button) => button.classList.toggle("active", button.dataset.filter === state.filter));
+}
+
+function renderTags() {
+  const counts = new Map();
+  for (const item of state.items) {
+    for (const tag of itemTags(item)) counts.set(tag, (counts.get(tag) || 0) + 1);
+  }
+  if (state.filter.startsWith("tag:") && !counts.has(state.filter.slice(4))) state.filter = "all";
+  $("tagList").replaceChildren(...[...counts].sort(([a], [b]) => a.localeCompare(b)).map(([tag, count]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.filter = `tag:${tag}`;
+    button.setAttribute("aria-label", `${tag} (${count})`);
+    button.append(tag, Object.assign(document.createElement("span"), { textContent: count }));
     return button;
   }));
   document.querySelectorAll("[data-filter]").forEach((button) => button.classList.toggle("active", button.dataset.filter === state.filter));
@@ -510,6 +534,7 @@ function render() {
   $("lockButton").disabled = !unlocked;
   renderCounts();
   renderFolders();
+  renderTags();
   renderItems();
   renderDetail();
   if (unlocked) {
@@ -1118,6 +1143,13 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
 });
 
 $("folderList").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-filter]");
+  if (!button) return;
+  state.filter = button.dataset.filter;
+  render();
+});
+
+$("tagList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-filter]");
   if (!button) return;
   state.filter = button.dataset.filter;
