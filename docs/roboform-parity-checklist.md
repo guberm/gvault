@@ -364,7 +364,7 @@ Last updated: 2026-07-03
 
 # 8. Organization
 
-- [ ] Folders.
+- [x] Folders.
 - [ ] Nested folders or collections.
 - [ ] Tags.
 - [ ] Favorites.
