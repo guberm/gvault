@@ -360,11 +360,17 @@ function getSearchText(item) {
   ].filter(Boolean).join(" ").toLowerCase();
 }
 
+function folderPath(folder) {
+  return String(folder || "").split("/").map((part) => part.trim()).filter(Boolean).join("/");
+}
+
 function filteredItems() {
   const query = $("search").value.trim().toLowerCase();
   return state.items.filter((item) => {
-    const matchesFilter = state.filter.startsWith("folder:")
-      ? item.folder === state.filter.slice(7)
+    const selectedFolder = state.filter.startsWith("folder:") ? state.filter.slice(7) : "";
+    const itemFolder = folderPath(item.folder);
+    const matchesFilter = selectedFolder
+      ? itemFolder === selectedFolder || itemFolder.startsWith(`${selectedFolder}/`)
       : state.filter === "all" || item.type === state.filter || (state.filter === "favorite" && item.favorite);
     return matchesFilter && (!query || getSearchText(item).includes(query));
   });
@@ -373,14 +379,22 @@ function filteredItems() {
 function renderFolders() {
   const counts = new Map();
   for (const item of state.items) {
-    if (item.folder) counts.set(item.folder, (counts.get(item.folder) || 0) + 1);
+    const parts = folderPath(item.folder).split("/").filter(Boolean);
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const path = parts.slice(0, depth).join("/");
+      counts.set(path, (counts.get(path) || 0) + 1);
+    }
   }
   if (state.filter.startsWith("folder:") && !counts.has(state.filter.slice(7))) state.filter = "all";
   $("folderList").replaceChildren(...[...counts].sort(([a], [b]) => a.localeCompare(b)).map(([folder, count]) => {
     const button = document.createElement("button");
+    const parts = folder.split("/");
     button.type = "button";
     button.dataset.filter = `folder:${folder}`;
-    button.append(folder, Object.assign(document.createElement("span"), { textContent: count }));
+    button.setAttribute("aria-label", `${folder} (${count})`);
+    button.title = folder;
+    button.style.paddingInlineStart = `${10 + ((parts.length - 1) * 16)}px`;
+    button.append(parts.at(-1), Object.assign(document.createElement("span"), { textContent: count }));
     return button;
   }));
   document.querySelectorAll("[data-filter]").forEach((button) => button.classList.toggle("active", button.dataset.filter === state.filter));
