@@ -389,6 +389,49 @@ test("web folders group and filter vault items", async () => {
   }
 });
 
+test("web nested folder paths form a filterable hierarchy", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    for (const [title, folder] of [["Client login", "Work/Clients"], ["Internal login", "Work/Internal"], ["Home login", "Home"]]) {
+      if (await page.locator(".item-row").count()) await page.locator("#newItemButton").click();
+      await page.locator("[name=title]").fill(title);
+      await page.locator("[name=folder]").fill(folder);
+      await page.getByRole("button", { name: "Save changes" }).click();
+    }
+
+    const folders = page.locator("#folderList button");
+    assert.deepEqual(await folders.evaluateAll((buttons) => buttons.map((button) => button.dataset.filter)), [
+      "folder:Home",
+      "folder:Work",
+      "folder:Work/Clients",
+      "folder:Work/Internal",
+    ]);
+    assert.equal(await page.locator("#folderList").getAttribute("role"), null);
+    assert.equal(await page.locator('[data-filter="folder:Work/Clients"]').getAttribute("role"), null);
+    assert.equal(await page.locator('[data-filter="folder:Work/Clients"]').getAttribute("aria-level"), null);
+    assert.equal(await page.locator('[data-filter="folder:Work/Clients"]').getAttribute("aria-label"), "Work/Clients (1)");
+    assert.equal(await page.locator('[data-filter="folder:Work/Clients"]').textContent(), "Clients1");
+
+    await page.locator('[data-filter="folder:Work"]').click();
+    assert.equal(await page.locator(".item-row").count(), 2, "a parent folder includes descendant items");
+    assert.equal((await page.locator("#items").textContent()).includes("Home login"), false);
+
+    await page.locator('[data-filter="folder:Work/Clients"]').click();
+    assert.deepEqual(await page.locator(".item-row strong").allTextContents(), ["Client login"]);
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 function chromeLaunchOptions() {
   const executablePath = chromeExecutable();
   return executablePath ? { executablePath } : {};
