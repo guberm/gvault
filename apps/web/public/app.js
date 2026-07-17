@@ -363,9 +363,27 @@ function getSearchText(item) {
 function filteredItems() {
   const query = $("search").value.trim().toLowerCase();
   return state.items.filter((item) => {
-    const matchesFilter = state.filter === "all" || item.type === state.filter || (state.filter === "favorite" && item.favorite);
+    const matchesFilter = state.filter.startsWith("folder:")
+      ? item.folder === state.filter.slice(7)
+      : state.filter === "all" || item.type === state.filter || (state.filter === "favorite" && item.favorite);
     return matchesFilter && (!query || getSearchText(item).includes(query));
   });
+}
+
+function renderFolders() {
+  const counts = new Map();
+  for (const item of state.items) {
+    if (item.folder) counts.set(item.folder, (counts.get(item.folder) || 0) + 1);
+  }
+  if (state.filter.startsWith("folder:") && !counts.has(state.filter.slice(7))) state.filter = "all";
+  $("folderList").replaceChildren(...[...counts].sort(([a], [b]) => a.localeCompare(b)).map(([folder, count]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.filter = `folder:${folder}`;
+    button.append(folder, Object.assign(document.createElement("span"), { textContent: count }));
+    return button;
+  }));
+  document.querySelectorAll("[data-filter]").forEach((button) => button.classList.toggle("active", button.dataset.filter === state.filter));
 }
 
 function renderCounts() {
@@ -477,6 +495,7 @@ function render() {
   $("lockState").nextElementSibling.textContent = unlocked ? "Vault is unlocked" : "Vault is locked";
   $("lockButton").disabled = !unlocked;
   renderCounts();
+  renderFolders();
   renderItems();
   renderDetail();
   if (unlocked) {
@@ -1079,11 +1098,16 @@ $("themeButton").addEventListener("click", () => applyTheme(document.documentEle
 
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll("[data-filter]").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
     state.filter = button.dataset.filter;
     render();
   });
+});
+
+$("folderList").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-filter]");
+  if (!button) return;
+  state.filter = button.dataset.filter;
+  render();
 });
 
 applyTheme(savedTheme);

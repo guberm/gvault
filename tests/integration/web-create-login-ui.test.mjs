@@ -355,6 +355,40 @@ test("password generator copies only the current preview and reports clipboard f
   }
 });
 
+test("web folders group and filter vault items", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await page.locator("[name=title]").fill("Work login");
+    await page.locator("[name=folder]").fill("Work");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.locator("#newItemButton").click();
+    await page.locator("[name=title]").fill("Personal login");
+    await page.locator("[name=folder]").fill("Personal");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    const folders = page.locator("#folderList button");
+    assert.equal(await folders.count(), 2, "one navigation entry is shown for each folder");
+    await expectText(page, "#folderList", "Personal");
+    await expectText(page, "#folderList", "Work");
+
+    await folders.filter({ hasText: "Work" }).click();
+    assert.equal(await page.locator(".item-row").count(), 1, "folder navigation filters the vault list");
+    await expectText(page, "#items", "Work login");
+    assert.equal((await page.locator("#items").textContent()).includes("Personal login"), false);
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 function chromeLaunchOptions() {
   const executablePath = chromeExecutable();
   return executablePath ? { executablePath } : {};
