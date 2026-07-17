@@ -366,7 +366,7 @@ Last updated: 2026-07-03
 
 - [x] Folders.
 - [x] Nested folders or collections. (#264, PR #476)
-- [ ] Tags.
+- [x] Tags. (#265, PR #478)
 - [ ] Favorites.
 - [ ] Trash/archive.
 - [ ] Restore from trash.
