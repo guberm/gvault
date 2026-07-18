@@ -1,3 +1,20 @@
+# GVault 0.1.9
+
+Android security and compatibility hotfix.
+
+Changed:
+- encrypted the Android Autofill cache with Android Keystore AES-GCM;
+- added an explicit 15-minute Autofill unlock grant and restart/sign-out/expiry cleanup;
+- enforced the shared 12-character master-password minimum on Android;
+- emitted canonical Android Login timestamps and fields with monotonic updates.
+
+Validation:
+- all 10 Android-focused tests passed;
+- signed APK built and installed on Pixel 7 Pro `29221FDH300MLF`;
+- physical-device restart/sign-out Autofill isolation, 11/12-character boundary,
+  canonical live record validation, locked startup, and empty crash buffer passed;
+- PR #498 received independent Reviewer approval after its timestamp finding was fixed.
+
 # GVault 0.1.8
 
 Web vault reference-alignment release.
