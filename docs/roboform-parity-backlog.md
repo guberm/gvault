@@ -64,6 +64,8 @@ This is a working snapshot, not a final product claim.
   - password requirements
   - confirmation for registration
   - clear error messages
+  - regular account login never reads or validates the master password
+  - vault unlock/restoration is a separate client-side step after login
   - no fake local unlock before server auth exists
 - Account-created confirmation.
 - Optional local unlock method where supported:

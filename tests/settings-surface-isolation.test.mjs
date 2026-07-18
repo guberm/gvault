@@ -11,7 +11,9 @@ const androidManifest = await readFile("apps/mobile/android/AndroidManifest.xml"
 const windows = await readFile("apps/desktop/windows/Program.cs", "utf8");
 
 test("browser popup settings is an isolated destination and close restores content", async () => {
-  const executablePath = ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find(existsSync);
+  const executablePath = process.env.GV_CHROME_EXECUTABLE
+    || process.env.GV_CHROME_PATH
+    || ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"].find(existsSync);
   const browser = await chromium.launch(executablePath ? { headless: true, executablePath } : { headless: true });
   const page = await browser.newPage();
   try {

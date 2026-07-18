@@ -31,6 +31,9 @@ not assume any of them are available:
 - Emergency access (trusted contact) workflow.
 - Key escrow or operator-side key recovery.
 - Server-side re-encryption of vault records without the master password.
+- Reset of a forgotten server account password using the master password. That
+  requires a reviewed master-protected recovery-token protocol (#501); a raw
+  master-password verifier is intentionally not stored by the server.
 
 ## What CAN be recovered
 
@@ -42,6 +45,10 @@ not assume any of them are available:
   (`apps/server/src/index.ts`), but the restored records are still encrypted
   under the original master password. Restoring a backup does not bypass the
   master-password requirement.
+- **A regular account login** uses email and the server account password only.
+  After login, Web and Android request the master password separately when the
+  encrypted vault must be unlocked/restored on that device. This local restore
+  step does not reset a forgotten server account password.
 
 ## User guidance
 

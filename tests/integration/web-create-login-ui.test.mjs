@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { webcrypto } from "node:crypto";
 import { createServer } from "node:http";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -28,10 +29,162 @@ test("web auth rejects a blank account password without sending a fallback crede
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.getByLabel("Email").fill("blank-password@example.test");
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Register" }).click();
     await expectText(page, "#status", "Account password is required");
     assert.equal(authRequests, 0, "blank account passwords never become a network credential");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web regular login uses account credentials without a master password", async () => {
+  const server = await startStaticServer();
+  let browser;
+  let loginBody;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.route("**/api/auth/login", async (route) => {
+      loginBody = route.request().postDataJSON();
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ token: "test-session", userId: "test-user" }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Email").fill("login-only@example.test");
+    await page.getByLabel("Account password").fill("account-password-only");
+    await page.getByLabel("Master password", { exact: true }).fill("previous-local-master");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await expectText(page, "#lockState", "Unlocked");
+    await page.evaluate(() => {
+      document.querySelector("#masterPassword").value = "retained-master";
+      document.querySelector("#confirmMasterPassword").value = "retained-confirmation";
+    });
+    await page.locator("#loginButton").click();
+    await expectText(page, "#status", "Server session established");
+    await expectText(page, "#lockState", "Locked");
+    assert.equal(await page.getByLabel("Master password", { exact: true }).inputValue(), "", "regular login clears the previous local master password input");
+    assert.equal(await page.getByLabel("Confirm master password").inputValue(), "", "regular login clears any master-password confirmation input");
+    assert.deepEqual(loginBody, { email: "login-only@example.test", password: "account-password-only" });
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web registration requires a confirmed master password without sending it to the server", async () => {
+  const server = await startStaticServer();
+  let browser;
+  let registerRequests = 0;
+  let registerBody;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.route("**/api/auth/register", async (route) => {
+      registerRequests += 1;
+      registerBody = route.request().postDataJSON();
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ token: "test-session", userId: "test-user" }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Email").fill("register-master@example.test");
+    await page.getByLabel("Account password").fill("account-password-only");
+    await page.getByRole("button", { name: "Register" }).click();
+    await expectText(page, "#status", "Master password is required");
+    assert.equal(registerRequests, 0);
+
+    await page.getByLabel("Master password", { exact: true }).fill("12345678901");
+    await page.getByLabel("Confirm master password").fill("12345678901");
+    await page.getByRole("button", { name: "Register" }).click();
+    await expectText(page, "#status", "Use at least 12 characters for the master password");
+    assert.equal(registerRequests, 0);
+
+    await page.getByLabel("Master password", { exact: true }).fill("registration-master-password");
+    await page.getByLabel("Confirm master password").fill("registration-master-password");
+    await page.getByRole("button", { name: "Register" }).click();
+    await expectText(page, "#status", "Server session ready");
+    assert.equal(registerRequests, 1);
+    assert.deepEqual(registerBody, { email: "register-master@example.test", password: "account-password-only" });
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web restore rejects a wrong master password without pushing any records", async () => {
+  const server = await startStaticServer();
+  const record = await encryptedRecordFor({
+    id: "restored-login",
+    type: "login",
+    title: "Server-backed login",
+    username: "restore@example.test",
+    password: "stored-password",
+    updatedAt: "2026-07-18T12:00:00.000Z",
+  }, "correct-master-password");
+  let browser;
+  let pushRequests = 0;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      localStorage.setItem("gv.token", "restore-token");
+      localStorage.setItem("gv.userId", "restore-user");
+    });
+    await page.route("**/api/sync/pull", (route) => route.fulfill({ json: { records: [record] } }));
+    await page.route("**/api/sync/push", (route) => {
+      pushRequests += 1;
+      return route.fulfill({ json: { records: [] } });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+
+    await page.getByLabel("Master password", { exact: true }).fill("incorrect-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await expectText(page, "#status", "Master password could not decrypt this vault");
+    await expectText(page, "#lockState", "Locked");
+    assert.equal(await page.getByLabel("Master password", { exact: true }).inputValue(), "", "failed candidate is cleared");
+    assert.equal(pushRequests, 0, "restore never writes before the candidate master password is authenticated");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web restore authenticates the master password and decrypts records before unlocking", async () => {
+  const server = await startStaticServer();
+  const record = await encryptedRecordFor({
+    id: "restored-login",
+    type: "login",
+    title: "Server-backed login",
+    username: "restore@example.test",
+    password: "stored-password",
+    updatedAt: "2026-07-18T12:00:00.000Z",
+  }, "correct-master-password");
+  let browser;
+  let pushRequests = 0;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      localStorage.setItem("gv.token", "restore-token");
+      localStorage.setItem("gv.userId", "restore-user");
+    });
+    await page.route("**/api/sync/pull", (route) => route.fulfill({ json: { records: [record] } }));
+    await page.route("**/api/sync/push", (route) => {
+      pushRequests += 1;
+      return route.fulfill({ json: { records: [] } });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+
+    await page.getByLabel("Master password", { exact: true }).fill("correct-master-password");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await expectText(page, "#lockState", "Unlocked");
+    await expectText(page, "#items", "Server-backed login");
+    assert.equal(pushRequests, 0, "authenticated restore is pull-only");
   } finally {
     await browser?.close();
     await new Promise((resolve) => server.close(resolve));
@@ -47,7 +200,7 @@ test("web create-card starts a fresh Login item editor and saves the Login recor
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
     await page.goto(baseUrl);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     await page.locator("[name=title]").fill("Existing login");
@@ -198,7 +351,7 @@ test("generated password is transferred to the Login editor only on explicit use
     browser = await chromium.launch(chromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     await page.locator("[name=title]").fill("Generated password login");
@@ -261,7 +414,7 @@ test("generated password starts a fresh Login draft and persists only through ex
     });
 
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     await page.locator("[name=title]").fill("Existing selected login");
@@ -292,7 +445,7 @@ test("generated password starts a fresh Login draft and persists only through ex
     await expectText(page, "#status", "New Login draft ready");
     assert.equal((await page.locator("#status").textContent()).includes(generatedPassword), false, "draft status does not reveal the password");
     assert.equal(await page.locator("[name=title]").evaluate((element) => element === document.activeElement), true, "fresh editor receives focus");
-    assert.equal(apiRequests.length, 0, "starting the draft performs no network write");
+    assert.equal(apiRequests.filter(({ path }) => path === "/api/sync/push").length, 0, "starting the draft performs no network write");
     assert.equal(await page.locator(".item-row").count(), 1, "starting the draft performs no local save");
 
     await page.locator("[name=title]").fill("Generated saved login");
@@ -306,7 +459,7 @@ test("generated password starts a fresh Login draft and persists only through ex
     assert.equal(syncedRecords.size, 2, "both Login records reached the sync API");
 
     await page.reload();
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
     await page.getByRole("button", { name: "Sync", exact: true }).click();
     await expectText(page, "#items", "Generated saved login");
@@ -339,7 +492,7 @@ test("password generator copies only the current preview and reports clipboard f
       });
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     const copyButton = page.getByRole("button", { name: "Copy generated password" });
@@ -387,7 +540,7 @@ test("web folders group and filter vault items", async () => {
     browser = await chromium.launch(chromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     await page.locator("[name=title]").fill("Work login");
@@ -421,7 +574,7 @@ test("web nested folder paths form a filterable hierarchy", async () => {
     browser = await chromium.launch(chromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     for (const [title, folder] of [["Client login", "Work/Clients"], ["Internal login", "Work/Internal"], ["Home login", "Home"]]) {
@@ -464,7 +617,7 @@ test("web tags group and filter vault items", async () => {
     browser = await chromium.launch(chromeLaunchOptions());
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
     await page.getByRole("button", { name: "Unlock vault" }).click();
 
     for (const [title, tags] of [["Shared work login", "Shared, Work"], ["Shared home login", "Shared, Home, Shared"], ["Untagged login", ""]]) {
@@ -530,6 +683,33 @@ async function assertInputValue(page, selector, expected) {
 
 async function expectText(page, selector, text) {
   await waitUntil(async () => ((await page.locator(selector).textContent()) || "").includes(text), `text ${text}`);
+}
+
+async function encryptedRecordFor(item, masterPassword, deleted = false) {
+  const salt = webcrypto.getRandomValues(new Uint8Array(16));
+  const nonce = webcrypto.getRandomValues(new Uint8Array(12));
+  const material = await webcrypto.subtle.importKey("raw", new TextEncoder().encode(masterPassword), "PBKDF2", false, ["deriveKey"]);
+  const key = await webcrypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt"],
+  );
+  const ciphertext = await webcrypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, new TextEncoder().encode(JSON.stringify(item)));
+  return {
+    id: item.id,
+    ownerId: "restore-user",
+    deviceId: "restore-device",
+    collection: "vault-items",
+    ciphertext: Buffer.from(ciphertext).toString("base64"),
+    nonce: Buffer.from(nonce).toString("base64"),
+    salt: Buffer.from(salt).toString("base64"),
+    schemaVersion: 1,
+    deleted,
+    updatedAt: item.updatedAt,
+    revision: Date.parse(item.updatedAt),
+  };
 }
 
 async function waitUntil(predicate, label) {

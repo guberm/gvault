@@ -4,8 +4,9 @@
 - The server storage layer is a synchronous whole-file JSON rewrite with no schema validation, locking, transaction isolation, or corruption recovery. Replace or explicitly harden it before multi-user/concurrent production use (#490).
 - Bearer sessions have no expiry, revocation, logout endpoint, refresh policy, or bounded retention; a server restart invalidates every session (#483).
 - The unauthenticated HTTP body reader is unbounded, and synchronous `scrypt` login/register work has no rate limiting or lockout (#485).
-- Android has a packaged preview APK with server-backed auth/vault flows and Autofill, but decrypted Autofill usernames, passwords, identity fields, card numbers, and security codes are persisted in ordinary SharedPreferences and reloaded after restart (#484). PIN/biometric unlock are also not implemented.
-- Android accepts a shorter master password than shared/Web crypto and creates Login JSON without canonical timestamps, so cross-client policy and payload interoperability are incomplete (#486, #488).
+- Android has a packaged preview APK with server-backed auth/vault flows and Keystore-encrypted, expiring Autofill cache. PIN/biometric unlock are not implemented.
+- Web and Android separate regular account login from local master-password vault unlock. A forgotten server account password still has no zero-knowledge recovery-token protocol (#501).
+- A truly recordless new vault has no ciphertext or tombstone with which clients can authenticate a master-password candidate; there is not yet an explicit encrypted key-verification marker.
 - Windows and Linux remain incomplete preview clients; Windows has a settings surface and login smoke path but not a full native vault workflow.
 - Browser extension supports manual/session fill, generator, domain rules, and save/update prompts, but it does not yet authenticate or pull encrypted vault records from the server.
 - Shared URL matching accepts lookalike sibling domains because it uses suffix matching without a dot boundary (#489).

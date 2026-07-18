@@ -66,8 +66,11 @@ if ($uiText -notmatch "Sign in or create an account to use your server-backed en
 if ($uiText -notmatch "https://gvault.guber.dev") {
   throw "Android public server default not found in device UI."
 }
-if ($uiText -notmatch "Confirm master password") {
-  throw "Android labeled confirmation field not found in device UI."
+if ($uiText -notmatch "Regular sign in uses only email and account password") {
+  throw "Android regular-login guidance not found in device UI."
+}
+if ($uiText -match "Master password" -or $uiText -match "Confirm master password") {
+  throw "Android regular-login screen must not show master-password fields."
 }
 if ($uiText -notmatch "Sign in" -or $uiText -notmatch "Create account") {
   throw "Android auth actions not found in device UI."

@@ -30,11 +30,9 @@ test("web client works against the live GVault service", async () => {
 
     await page.locator("#email").fill(email);
     await page.locator("#accountPassword").fill(accountPassword);
+    await page.getByLabel("Master password", { exact: true }).fill(masterPassword);
+    await page.getByLabel("Confirm master password").fill(masterPassword);
     await page.getByRole("button", { name: "Register" }).click();
-    await expectText(page, "#status", "Server session");
-
-    await page.getByLabel("Master password").fill(masterPassword);
-    await page.getByRole("button", { name: "Unlock vault" }).click();
     await expectText(page, "#lockState", "Unlocked");
     await expectText(page, "#status", "Server session ready");
 
@@ -63,7 +61,7 @@ test("web client works against the live GVault service", async () => {
     await page.locator("#loginButton").click();
     await expectText(page, "#status", "Server session");
 
-    await page.getByLabel("Master password").fill(masterPassword);
+    await page.getByLabel("Master password", { exact: true }).fill(masterPassword);
     await page.getByRole("button", { name: "Unlock vault" }).click();
     await page.locator("#syncButton").click();
     await expectText(page, "#status", "Sync complete");

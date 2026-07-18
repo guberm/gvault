@@ -18,6 +18,31 @@ GVault has two separate password concepts:
 Successful registration or login returns an in-memory bearer token. Protected API
 routes require that token in an HTTP authorization header using the Bearer scheme.
 
+## Client credential flow
+
+The account and vault steps are deliberately separate on every implemented
+client:
+
+| Action | Account password | Master password | Server receives master password |
+| --- | --- | --- | --- |
+| Create account/vault | Required | Required with confirmation | No |
+| Regular account login | Required | Not read or validated | No |
+| Unlock/restore encrypted vault after login | Not re-sent | Required | No |
+
+Web and Android authenticate a restore candidate by pulling the encrypted vault
+and successfully decrypting every record, including deleted-record tombstones,
+before exposing decrypted state or enabling Autofill. Restore is pull-only and
+does not push ciphertext under an unverified candidate key. A brand-new vault
+with no encrypted records or tombstones has no ciphertext with which to verify
+the candidate; adding an explicit key-verification marker remains future work.
+
+Web and Android implement this contract. Registration establishes both the
+server session and the initial local vault unlock. A later regular login creates
+only the server session; sync, decryption, and Autofill remain locked until the
+separate local vault-unlock step succeeds. Browser extension, Windows, and Linux
+do not yet implement real account authentication and must follow this contract
+when those flows are added.
+
 ## Account registration
 
 Evidence: `apps/server/src/index.ts`, `apps/server/src/auth.ts`,
@@ -109,6 +134,9 @@ The current implementation intentionally keeps the auth model small. These are
 - Rate limiting, lockout, MFA, passkeys, or email verification.
 - Device-bound session tokens or per-device authentication keys.
 - Password reset or recovery flow.
+- Master-password-based server account-password reset. A safe zero-knowledge
+  recovery-token protocol is tracked by #501; the master password must never be
+  sent to or stored by the server as a reset credential.
 - Server-side access to the vault master password or plaintext vault contents.
 
 Audit #482 tracks the session-lifecycle work in #483. Request-body limits and

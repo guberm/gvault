@@ -34,7 +34,7 @@ bearer sessions, authenticated route boundaries, and current limitations.
 - Security review of browser autofill edge cases.
 - Rate limiting and account lockout on the server.
 - Session expiry, revocation, and server-side logout (#483).
-- Encrypted/credential-bound Android Autofill cache with restart and lock expiry (#484).
+- Zero-knowledge server account-password recovery protocol (#501).
 - Bounded request parsing and authentication abuse controls (#485).
 - Versioned cross-client KDF metadata and migration (#493).
 - Production CSP and security headers (#491).

@@ -531,7 +531,7 @@ Parent issue: #34 — https://github.com/guberm/gvault/issues/34
 - [x] #385 Encryption model documented. — https://github.com/guberm/gvault/issues/385
 - [x] #386 Authentication model documented. — https://github.com/guberm/gvault/issues/386
 - [ ] #387 Zero-knowledge boundary documented. — https://github.com/guberm/gvault/issues/387
-- [ ] #388 Master password handling documented. — https://github.com/guberm/gvault/issues/388
+- [x] #388 Master password handling documented. — https://github.com/guberm/gvault/issues/388 — account login/registration/vault restoration contract implemented by #500
 - [ ] #389 Key derivation documented. — https://github.com/guberm/gvault/issues/389
 - [ ] #390 Device/session token model documented. — https://github.com/guberm/gvault/issues/390
 - [ ] #391 Secure sharing crypto documented. — https://github.com/guberm/gvault/issues/391
@@ -575,3 +575,5 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [ ] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492
 - [ ] #493 Cross-client KDF metadata drift. — https://github.com/guberm/gvault/issues/493
 - [ ] #494 Revision-first sync merge. — https://github.com/guberm/gvault/issues/494
+- [x] #500 Account login/master-password flow separation. — https://github.com/guberm/gvault/issues/500
+- [ ] #501 Zero-knowledge account-password recovery token. — https://github.com/guberm/gvault/issues/501

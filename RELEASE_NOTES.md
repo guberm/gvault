@@ -1,3 +1,21 @@
+# GVault 0.1.10
+
+Account and vault-password separation release.
+
+Changed:
+- regular Web and Android login now uses only email and the server account password;
+- account creation requires a confirmed master password without sending it to the server;
+- vault unlock/restoration is a separate client-side step after account login;
+- Web and Android authenticate restore candidates against all encrypted records, including deleted tombstones, before exposing decrypted state or enabling Autofill;
+- Web restore is pull-only, preventing ciphertext from being written under an unverified candidate key;
+- documented the same authentication contract for browser-extension and desktop clients when those surfaces gain account flows;
+- retained secure account-password recovery as follow-up #501 instead of weakening the zero-knowledge boundary.
+
+Validation:
+- full repository gate passed 138/138 tests plus server smoke 1/1;
+- independent Reviewer approval obtained after the authenticated-restore findings were fixed;
+- Android APK built and passed physical-device registration, regular login, wrong/correct master restore, encrypted Autofill, tombstone-only verification, and crash-buffer acceptance on Pixel 7 Pro `29221FDH300MLF` (Android 17/API 37).
+
 # GVault 0.1.9
 
 Android security and compatibility hotfix.

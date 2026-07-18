@@ -543,7 +543,7 @@ Last updated: 2026-07-18
 - [x] Encryption model documented. — [`docs/security/encryption-model.md`](./security/encryption-model.md)
 - [x] Authentication model documented. — [`docs/security/authentication-model.md`](./security/authentication-model.md)
 - [ ] Zero-knowledge boundary documented.
-- [ ] Master password handling documented.
+- [x] Master password handling documented. (#388, #500; regular login separated from registration and local vault restoration)
 - [ ] Key derivation documented.
 - [ ] Device/session token model documented.
 - [ ] Secure sharing crypto documented.
@@ -587,3 +587,5 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [ ] #492 Mandatory CI and deterministic cross-browser gates.
 - [ ] #493 Versioned, interoperable KDF metadata across shared, Web, and Android clients.
 - [ ] #494 Revision-first sync merge semantics.
+- [x] #500 Regular account login separated from master-password registration and local vault restoration.
+- [ ] #501 Zero-knowledge account-password recovery with a master-protected recovery token.
