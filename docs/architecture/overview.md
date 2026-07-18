@@ -28,3 +28,8 @@ The MVP sync path is revision-based encrypted record push/pull:
 - conflict detection when an incoming record does not advance the stored revision and ciphertext differs.
 
 Future production sync should add per-device vector clocks and explicit conflict records in the client UI.
+
+Audit note: the current shared merge helper can let a lower revision override a
+higher revision when the lower revision has a later timestamp. Revision-first
+merge semantics are tracked by #494. The synchronous JSON store also remains a
+single-writer prototype rather than a transactional production data layer (#490).

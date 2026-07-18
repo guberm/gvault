@@ -14,6 +14,30 @@ const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
 ]);
 
+test("web auth rejects a blank account password without sending a fallback credential", async () => {
+  const server = await startStaticServer();
+  let browser;
+  let authRequests = 0;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.route("**/api/auth/register", async (route) => {
+      authRequests += 1;
+      await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ token: "unexpected", userId: "unexpected" }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Email").fill("blank-password@example.test");
+    await page.getByLabel("Master password").fill("local-master-password");
+    await page.getByRole("button", { name: "Register" }).click();
+    await expectText(page, "#status", "Account password is required");
+    assert.equal(authRequests, 0, "blank account passwords never become a network credential");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("web create-card starts a fresh Login item editor and saves the Login record locally", async () => {
   const server = await startStaticServer();
   let browser;

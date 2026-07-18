@@ -54,6 +54,7 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Account password").fill("test-account-password");
     await page.getByRole("button", { name: "Register" }).click();
     await unlock(page);
 
@@ -90,6 +91,7 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
 
     await page.reload();
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Account password").fill("test-account-password");
     await page.getByRole("button", { name: "Login", exact: true }).click();
     await unlock(page);
     await page.getByRole("button", { name: "Sync" }).click();

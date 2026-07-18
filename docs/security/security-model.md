@@ -33,6 +33,14 @@ bearer sessions, authenticated route boundaries, and current limitations.
 - Formal attachment encryption flow.
 - Security review of browser autofill edge cases.
 - Rate limiting and account lockout on the server.
+- Session expiry, revocation, and server-side logout (#483).
+- Encrypted/credential-bound Android Autofill cache with restart and lock expiry (#484).
+- Bounded request parsing and authentication abuse controls (#485).
+- Versioned cross-client KDF metadata and migration (#493).
+- Production CSP and security headers (#491).
+
+The repository-wide security/correctness disposition is recorded in
+[`docs/repository-audit-2026-07-17.md`](../repository-audit-2026-07-17.md).
 
 ## Threat model
 

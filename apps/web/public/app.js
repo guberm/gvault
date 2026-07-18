@@ -886,7 +886,13 @@ async function api(path, body, method = "POST") {
 }
 
 async function auth(path) {
-  const result = await api(path, { email: $("email").value, password: $("accountPassword").value || "change-me-strong-password" });
+  const password = $("accountPassword").value;
+  if (!password.trim()) {
+    setStatus("Account password is required.", "warning");
+    $("accountPassword").focus();
+    return;
+  }
+  const result = await api(path, { email: $("email").value, password });
   state.token = result.token;
   state.userId = result.userId;
   localStorage.setItem("gv.token", state.token);

@@ -24,6 +24,7 @@ Run-Step "linux desktop build" { npm run build:linux }
 Run-Step "android apk build" { npm run build:android }
 Run-Step "server web chrome edge windows linux e2e" { npm run e2e }
 Run-Step "firefox extension lint" { npx -y web-ext lint --source-dir apps/browser-extension/dist/firefox }
+Run-Step "firefox packaged extension e2e" { npm run smoke:firefox-extension }
 
 if ($AndroidSerial) {
   Run-Step "android device e2e $AndroidSerial" {

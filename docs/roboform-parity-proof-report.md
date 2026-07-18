@@ -30,7 +30,7 @@ This report is the final Proof/E2E checkpoint for the current RoboForm parity pr
 These checks are useful evidence, but they should not be read as full RoboForm parity for the whole product surface:
 
 - **Web:** #398 proves live public web smoke coverage for account/session/vault-sync basics. The broader checklist still has unchecked web UX items such as repeated existing-user login after clean reload, logout/reload behavior, auth error/loading states, copy/reveal UX, full item-type creation, trash/restore, folders/tags, and deeper settings/account polish.
-- **Android:** #399 and #406 prove real-device login/autofill paths and Autofill-oriented tests. They do not by themselves prove every broader mobile security/local-unlock option such as PIN or biometrics.
+- **Android:** #399 and #406 prove real-device login/autofill paths and Autofill-oriented tests. Audit #482 later reopened #118 because decrypted Autofill values survive app/process restart in ordinary SharedPreferences (#484); the earlier functional proof must not be read as restart/lock security proof.
 - **Browser extensions:** #400 and #401 prove Chrome/Edge extension load/fill smoke paths. The broader extension checklist still has unchecked production-client work such as popup login/register, server-backed vault pull, current-domain suggestions, save/update prompts, context menus, per-site rules, and multiple-credential UX.
 - **Windows desktop:** #402 proves a Windows login smoke path, including live-service verification. It does not prove a full desktop vault GUI/client; the wider checklist still tracks vault list/detail/editor, tray UX, settings/preferences, search, copy/reveal, and create/edit/delete behavior.
 - **Linux client:** #403 proves a Linux login smoke path, including live-service verification. It does not prove a full Linux CLI/GUI vault client; the wider checklist still tracks CLI/GUI product decisions and list/get/create/edit/delete behavior.
@@ -40,11 +40,11 @@ These checks are useful evidence, but they should not be read as full RoboForm p
 
 The current Proof/E2E section is complete, but the product-level parity checklist still contains work that is explicitly not proven by these smoke checks:
 
-- **Operations persistence:** service/reverse-proxy persistence, restart survival, host reboot survival, TLS renewal, production data-directory policy, and backup/restore runbook remain unchecked in the deployment section.
+- **Operations persistence:** managed server/Web service, controlled service restart, production data directory, and unauthenticated health are now verified (#41, #42, #44, #47, #49). File-backed route reconciliation, host reboot survival, TLS renewal, and the backup/restore runbook remain unchecked.
 - **Full cross-client parity:** extension, Windows, and Linux clients still have unchecked server-backed vault UI/functionality beyond login/fill smoke coverage.
 - **Full vault taxonomy:** many RoboForm-like item types and editors remain unchecked, including bookmarks, applications, contacts, bank accounts, passports/documents, business profiles, vehicle profiles, folders/collections, tags, and TOTP/authenticator items.
 - **Advanced security and recovery:** sharing, emergency access/recovery, security center/audit features, advanced policies, and complete sensitive-field protections are outside the completed Proof/E2E issue set unless separately checked in the main checklist.
-- **Deployment durability:** `https://gvault.guber.dev` is the verified target for these checks, but this report does not claim reboot/restart persistence unless the deployment checklist items are separately verified.
+- **Deployment durability:** `https://gvault.guber.dev` is the verified target and controlled service restart now has evidence. This report still does not claim host-reboot or TLS-renewal proof.
 
 ## Current conclusion
 
@@ -54,4 +54,4 @@ The accurate product status is:
 
 - **Passed:** Proof/E2E smoke coverage for live web, Android real-device Autofill, Chrome/Edge extensions, Windows/Linux login smoke, server integration, import/export, and feasible Autofill tests.
 - **Partial:** these proofs validate specific flows, not complete RoboForm product parity for every client and feature.
-- **Blocked / not yet verified:** deployment durability, full cross-client vault UX, complete item taxonomy, and advanced security/recovery features remain tracked in the broader checklist.
+- **Blocked / not yet verified:** remaining deployment durability (host reboot/TLS/backup), full cross-client vault UX, complete item taxonomy, and advanced security/recovery features remain tracked in the broader checklist.

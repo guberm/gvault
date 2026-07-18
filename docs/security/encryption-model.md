@@ -29,6 +29,17 @@ Vault values are serialized to JSON and sealed into an `EncryptedEnvelope`:
 | `nonce` | random 96-bit (base64) | AES-GCM IV, new per encryption. |
 | `ciphertext` | base64 | AES-256-GCM output (includes GCM auth tag). |
 
+### Current cross-client compatibility gap
+
+The table above is the envelope emitted by `packages/crypto`; it is not yet a
+safe claim of cross-client interoperability. Web and Android currently derive
+their record keys with 150,000 PBKDF2 iterations, while the shared package uses
+210,000. `EncryptedVaultRecord` carries `salt` and `nonce` but not the KDF name
+or iteration count. A runtime audit round trip confirmed that a 210,000-iteration
+shared-package envelope cannot be decrypted by the current 150,000-iteration
+Web/Android path. Versioned KDF metadata, backward compatibility, and migration
+are tracked in #493.
+
 ### Key derivation
 
 - `deriveVaultKey` runs PBKDF2-SHA256 over the master password with the envelope
@@ -37,6 +48,10 @@ Vault values are serialized to JSON and sealed into an `EncryptedEnvelope`:
   scoped to `encrypt`/`decrypt` only.
 - Master passwords shorter than 12 characters are rejected before derivation.
 - Salt and nonce come from `crypto.getRandomValues`.
+
+The 12-character check is currently enforced by shared/Web code but not by the
+Android `MobileAuthState`/`MobileVaultItem` path. Cross-client enforcement and
+physical-device boundary proof are tracked in #486.
 
 ### Encrypt / decrypt
 
