@@ -39,11 +39,22 @@ public final class TestMobileVaultItem {
     String decryptedCreated = MobileVaultItem.decryptItemJson(encryptedCreated[0], encryptedCreated[1], encryptedCreated[2], "${masterPassword}");
     assertContains(decryptedCreated, "Android Created Login");
     assertContains(decryptedCreated, "created@example.com");
+    assertContains(decryptedCreated, "\\\"createdAt\\\":");
+    assertContains(decryptedCreated, "\\\"updatedAt\\\":");
+    assertContains(decryptedCreated, "\\\"urls\\\":[\\\"https://created.example/login\\\"]");
+    String createdAt = MobileVaultItem.stringFieldFromItemJson(createdJson, "createdAt");
+    assertIsoTimestamp(createdAt);
     String updatedJson = MobileVaultItem.updateLoginItemJson(createdJson, "Android Edited Login", "https://edited.example/login", "edited@example.com", "EditedPass123", "Edited from Android");
     assertContains(updatedJson, "android-created-1");
     assertContains(updatedJson, "Android Edited Login");
     assertContains(updatedJson, "edited@example.com");
     assertContains(updatedJson, "Edited from Android");
+    assertEquals(createdAt, MobileVaultItem.stringFieldFromItemJson(updatedJson, "createdAt"));
+    assertIsoTimestamp(MobileVaultItem.stringFieldFromItemJson(updatedJson, "updatedAt"));
+    if (createdAt.equals(MobileVaultItem.stringFieldFromItemJson(updatedJson, "updatedAt"))) throw new AssertionError("update must refresh updatedAt");
+    String futureCreatedAt = "2999-01-01T00:00:00.000Z";
+    String clockSkewedJson = MobileVaultItem.updateLoginItemJson(createdJson.replace(createdAt, futureCreatedAt), "Clock skew", "https://clock.example", "clock@example.com", "ClockPass123", "");
+    if (MobileVaultItem.stringFieldFromItemJson(clockSkewedJson, "updatedAt").compareTo(futureCreatedAt) <= 0) throw new AssertionError("updatedAt must advance beyond createdAt");
     assertEquals("Android Edited Login — edited@example.com", MobileVaultItem.listLineFromItemJson(updatedJson));
     assertContains(MobileVaultItem.detailTextFromItemJson(updatedJson), "Title: Android Edited Login");
     assertEquals("EditedPass123", MobileVaultItem.stringFieldFromItemJson(updatedJson, "password"));
@@ -84,6 +95,10 @@ public final class TestMobileVaultItem {
 
   private static void assertEquals(int expected, int actual) {
     if (expected != actual) throw new AssertionError("expected [" + expected + "] got [" + actual + "]");
+  }
+
+  private static void assertIsoTimestamp(String value) {
+    if (!value.matches("\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3}Z")) throw new AssertionError("not an ISO timestamp: " + value);
   }
 
   private static boolean containsUppercase(String value) {

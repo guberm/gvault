@@ -121,7 +121,7 @@ Parent issue: #6 — https://github.com/guberm/gvault/issues/6
 - [x] #115 Server-unavailable error state. — https://github.com/guberm/gvault/issues/115
 - [x] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
 - [x] #117 Logout. — https://github.com/guberm/gvault/issues/117
-- [ ] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118 — reopened after #482 found persisted decrypted Autofill data (#484)
+- [x] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118 — Keystore-backed Autofill cache clears on restart/sign-out; physical Pixel 7 Pro proof
 - [x] #119 Local token/session storage policy is implemented. — https://github.com/guberm/gvault/issues/119
 - [ ] #120 PIN unlock, if chosen. — https://github.com/guberm/gvault/issues/120
 - [ ] #121 Biometric unlock, if chosen. — https://github.com/guberm/gvault/issues/121
@@ -564,11 +564,11 @@ Parent audit: #482 — https://github.com/guberm/gvault/issues/482
 Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07-17.md)
 
 - [ ] #483 Server session expiry, revocation, and logout. — https://github.com/guberm/gvault/issues/483
-- [ ] #484 Android Autofill plaintext SharedPreferences. — https://github.com/guberm/gvault/issues/484
+- [x] #484 Android Autofill plaintext SharedPreferences. — https://github.com/guberm/gvault/issues/484 — Keystore AES-GCM plus Pixel 7 Pro restart/sign-out proof
 - [ ] #485 Request-size and authentication rate limits. — https://github.com/guberm/gvault/issues/485
-- [ ] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486
+- [x] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486 — 11-character rejection and 12-character acceptance verified on Pixel 7 Pro
 - [x] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487 — PRs #495/#496, live acceptance at `43eb1b8`
-- [ ] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488
+- [x] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488 — live device-created record accepted by shared validator
 - [ ] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489
 - [ ] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490
 - [ ] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491

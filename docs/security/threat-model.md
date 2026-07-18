@@ -34,12 +34,12 @@ parity security feature is complete.
 | Browser/client local runtime | `apps/web/public/app.js` | Master password remains client-side; vault records are encrypted before sync. | Plaintext exists in memory while unlocked; web client stores bearer token in `localStorage`. |
 | Client to server API | `apps/server/src/index.ts` | Bearer token required for sync/device/backup routes; record `ownerId` is set from session, not client input. | Server default CORS allows `*` unless `GV_ALLOWED_ORIGINS` is configured. |
 | Server auth endpoints | `apps/server/src/index.ts`, `apps/server/src/auth.ts` | Account passwords are minimum 12 characters, salted with random salt, hashed with `scrypt`, and compared with `timingSafeEqual`. | No server-side rate limiting or account lockout yet. |
-| Crypto envelope | `packages/crypto/src/index.ts` | AES-256-GCM authenticated encryption; PBKDF2-SHA256; random 128-bit salt and 96-bit nonce. | Shared crypto uses 210,000 iterations while Web/Android use 150,000 and record metadata does not carry KDF parameters (#493); Android also lacks the shared 12-character minimum (#486). |
+| Crypto envelope | `packages/crypto/src/index.ts` | AES-256-GCM authenticated encryption; PBKDF2-SHA256; random 128-bit salt and 96-bit nonce; Web and Android reject master passwords shorter than 12 characters. | Shared crypto uses 210,000 iterations while Web/Android use 150,000 and record metadata does not carry KDF parameters (#493). |
 | Sync write path | `apps/server/src/index.ts`, `packages/sync/src/index.ts` | Validates encrypted-record shape and collection; detects equal/newer revision conflicts; scopes stored records to session user. | Server cannot validate encrypted payload semantics without plaintext access. |
 | Backup export/import | `apps/server/src/index.ts` | Export is authenticated and includes only current user records; import rewrites record ownership to the authenticated user. | Import reads a server-local `path` supplied by the authenticated client; this is acceptable for current smoke tooling but should be replaced by upload/object selection before production claims. |
 | Server storage | `apps/server/src/storage.ts` | Atomic temp-file rename and `0600` writes. | JSON-file storage is not a hardened multi-user database and does not provide encryption-at-rest by itself. |
 | Deployment TLS/reverse proxy | `docs/deployment/self-hosted.md`, live service evidence in Proof/E2E docs | Public service is intended to run behind HTTPS. | TLS termination and host hardening are deployment responsibilities; the live response currently lacks CSP, HSTS, `nosniff`, Referrer-Policy, and Permissions-Policy (#491). |
-| Android Autofill cache | `MobileAutofillSessionStore.java`, `GVaultAutofillService.java` | Explicit sign-out clears the cache. | Decrypted login, identity, and card values persist in ordinary SharedPreferences and are reloaded after restart (#484). |
+| Android Autofill cache | `MobileAutofillSessionStore.java`, `MobileAutofillSessionPolicy.java`, `GVaultAutofillService.java` | Cached values are encrypted with an Android Keystore AES-256-GCM key, require an in-process unlock grant, expire after 15 minutes, and are cleared on app start, sign-out, expiry, or decryption failure. Legacy plaintext preference keys are removed before unlock/load. | Plaintext still exists in process memory while the user has an active unlock grant; a compromised unlocked device remains outside this cache-at-rest mitigation. |
 
 ## Threats and mitigations
 
@@ -71,7 +71,7 @@ parity security feature is complete.
 - [ ] Configure production `GV_ALLOWED_ORIGINS` to explicit trusted origins.
 - [ ] Add server-side login/API rate limiting and account lockout.
 - [ ] Add session expiry, revocation, and device/session management.
-- [ ] Encrypt and expire Android Autofill cache data; remove legacy plaintext values.
+- [x] Encrypt and expire Android Autofill cache data; remove legacy plaintext values. (#484; Pixel 7 Pro restart/sign-out acceptance)
 - [ ] Version and align cross-client KDF parameters.
 - [ ] Enforce dot-boundary domain matching and revision-first sync merging.
 - [ ] Add production browser security headers and mandatory CI gates.

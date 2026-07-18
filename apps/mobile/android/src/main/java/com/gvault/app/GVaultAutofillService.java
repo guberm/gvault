@@ -20,6 +20,7 @@ import java.util.List;
 public final class GVaultAutofillService extends AutofillService {
   @Override
   public void onFillRequest(FillRequest request, CancellationSignal cancellationSignal, FillCallback callback) {
+    if (!MobileAutofillSessionStore.hasActiveUnlock()) MobileAutofillVault.clear();
     FillFields fields = findFields(request.getFillContexts());
     String webDomain = findWebDomain(request.getFillContexts());
     MobileAutofillVault.LoginEntry[] loginEntries = MobileAutofillVault.matchingLoginEntries(webDomain);

@@ -727,6 +727,11 @@ For Windows desktop, and optionally Linux tray if GUI exists:
 - Backup/restore security.
 - Recovery limitations.
 - Threat model documentation.
+- Android Autofill cache-at-rest and unlock boundary:
+  - Android Keystore AES-GCM ciphertext only
+  - explicit, expiring unlock grant
+  - clear on app restart, sign-out, expiry, or decryption failure
+  - remove legacy plaintext preference values
 
 ### Required UI rules
 

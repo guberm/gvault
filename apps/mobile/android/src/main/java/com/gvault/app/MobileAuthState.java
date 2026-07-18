@@ -4,6 +4,7 @@ public final class MobileAuthState {
   public static final String DEFAULT_SERVER_URL = "https://gvault.guber.dev";
   public static final long MIN_AUTH_LOADING_MS = 1500L;
   public static final long MIN_VAULT_LOADING_MS = 2500L;
+  public static final int MIN_MASTER_PASSWORD_LENGTH = 12;
 
   private MobileAuthState() {}
 
@@ -23,6 +24,7 @@ public final class MobileAuthState {
     if (isBlank(email)) return "Email is required.";
     if (isBlank(accountPassword)) return "Account password is required.";
     if (isBlank(masterPassword)) return "Master password is required.";
+    if (masterPassword.length() < MIN_MASTER_PASSWORD_LENGTH) return "Master password must be at least 12 characters.";
     if (createAccount && !masterPassword.equals(confirmMasterPassword == null ? "" : confirmMasterPassword)) {
       return "Confirm master password does not match.";
     }

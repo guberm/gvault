@@ -36,11 +36,11 @@ This is a source/runtime audit, not an external penetration-test certification.
 | Issue | Finding | Audit disposition |
 | --- | --- | --- |
 | [#483](https://github.com/guberm/gvault/issues/483) | Server bearer sessions have no expiry, revocation, logout, or bounded lifecycle. | Open, documented in authentication/security limitations. |
-| [#484](https://github.com/guberm/gvault/issues/484) | Android Autofill persists decrypted secrets in ordinary SharedPreferences and reloads them after restart. | Open; #118 reopened and physical-device security proof required by acceptance. |
+| [#484](https://github.com/guberm/gvault/issues/484) | Android Autofill persists decrypted secrets in ordinary SharedPreferences and reloads them after restart. | Fixed: Keystore AES-GCM cache, explicit 15-minute unlock grant, legacy cleanup, and Pixel 7 Pro restart/sign-out proof. |
 | [#485](https://github.com/guberm/gvault/issues/485) | Request bodies are unbounded and unauthenticated synchronous `scrypt` work is not rate-limited. | Open. |
-| [#486](https://github.com/guberm/gvault/issues/486) | Android accepts master passwords below the shared/Web 12-character minimum. | Open; physical-device boundary proof required. |
+| [#486](https://github.com/guberm/gvault/issues/486) | Android accepts master passwords below the shared/Web 12-character minimum. | Fixed: Android auth and crypto enforce 12 characters; Pixel 7 Pro rejected 11 characters with actionable copy and accepted 12. |
 | [#487](https://github.com/guberm/gvault/issues/487) | Blank Web account password became the fixed `change-me-strong-password` credential. | Closed after strict browser TDD, PRs #495/#496, deploy, and live acceptance at `43eb1b8`. |
-| [#488](https://github.com/guberm/gvault/issues/488) | Android Login JSON omits canonical `createdAt`/`updatedAt` fields. | Open; cross-client/device compatibility proof required. |
+| [#488](https://github.com/guberm/gvault/issues/488) | Android Login JSON omits canonical `createdAt`/`updatedAt` fields. | Fixed: create/edit preserve canonical timestamps and fields; a physical-device-created record passed the shared `isVaultItem` validator after live pull/decryption. |
 | [#489](https://github.com/guberm/gvault/issues/489) | Shared URL matching accepts lookalike sibling domains. | Open; runtime proof showed `example.com` matching `notexample.com`. |
 | [#490](https://github.com/guberm/gvault/issues/490) | JSON storage lacks transactional concurrency, validation, and recovery guarantees. | Open. |
 | [#491](https://github.com/guberm/gvault/issues/491) | Live Web lacks CSP and the expected browser security headers. | Open; verified against the public response. |
@@ -56,7 +56,9 @@ acceptance criteria.
 - #41, #42, #44, #47, and #49 were revalidated against the live host and are now
   checked in parent #1 plus the checklist/index.
 - #118 was reopened because its functional restart claim hid a decrypted-secret
-  persistence boundary; parent #6 and both requirement documents are unchecked.
+  persistence boundary; the Android remediation now defines and verifies locked
+  restart behavior, so #118 and the corresponding parent #6 checklist item can
+  be completed after merge.
 - Parent #29 now reflects completed format parsers #341–#344.
 - #346, #347, #351, #352, and #392 received code-path evidence explaining why
   duplicate, validation, restore, and backup-security work remains open.
@@ -87,9 +89,20 @@ acceptance criteria.
 - Docker validation could not run because Docker CLI is not installed on the
   Windows dev station; compose/container files were reviewed statically.
 
-No Android production code changed in this audit fix. ADB had no connected
-physical device at the audit checkpoint, so #484/#486/#488 correctly remain open
-with explicit physical-device acceptance instead of being claimed complete.
+The original audit checkpoint had no connected Android device. The follow-up was
+completed with a physical Pixel 7 Pro (`29221FDH300MLF`, Android 17/API 37) and a
+signed non-debuggable `0.1.8` APK against `https://gvault.guber.dev`:
+
+- an 11-character master password was rejected with
+  `Master password must be at least 12 characters.`, while 12 characters opened
+  the newly registered live account;
+- Android created `Pixel_Canonical_Login`; after live pull and Windows-side
+  decryption, the shared `isVaultItem` validator accepted it with valid
+  `createdAt`, `updatedAt`, and `urls` fields;
+- while unlocked, Chrome received the matching Login Autofill dataset; after
+  force-stop/relaunch and after explicit sign-out, GVault returned to the locked
+  account screen and subsequent fill requests reported zero entries;
+- the Android crash buffer remained empty throughout acceptance.
 
 ## Final merged live acceptance
 

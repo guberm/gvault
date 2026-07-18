@@ -76,6 +76,8 @@ public final class MainActivity extends Activity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    MobileAutofillVault.clear();
+    MobileAutofillSessionStore.clear(this);
     prefs = getSharedPreferences("gvault", MODE_PRIVATE);
     serverUrl = prefs.getString("serverUrl", MobileAuthState.DEFAULT_SERVER_URL);
     getWindow().setStatusBarColor(MobileUiStyle.PRIMARY_DARK);
@@ -188,6 +190,7 @@ public final class MainActivity extends Activity {
           token = response.getString("token");
           email = nextEmail;
           MainActivity.this.masterPassword = masterSecret;
+          MobileAutofillSessionStore.unlock(MainActivity.this);
           prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
           finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
             showVaultScreen("Server session established.");
