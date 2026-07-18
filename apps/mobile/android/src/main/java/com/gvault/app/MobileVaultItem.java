@@ -49,6 +49,11 @@ public final class MobileVaultItem {
   }
 
   public static String loginItemJson(String id, String title, String url, String username, String password, String notes) {
+    String now = isoNow();
+    return loginItemJson(id, title, url, username, password, notes, now, now);
+  }
+
+  private static String loginItemJson(String id, String title, String url, String username, String password, String notes, String createdAt, String updatedAt) {
     return "{"
       + "\"id\":\"" + escapeJson(id) + "\"," 
       + "\"type\":\"login\"," 
@@ -58,16 +63,45 @@ public final class MobileVaultItem {
       + "\"password\":\"" + escapeJson(password) + "\"," 
       + "\"notes\":\"" + escapeJson(notes) + "\"," 
       + "\"urls\":[\"" + escapeJson(url) + "\"],"
-      + "\"tags\":[],\"favorite\":false,\"customFields\":[]"
+      + "\"tags\":[],\"favorite\":false,"
+      + "\"createdAt\":\"" + escapeJson(createdAt) + "\","
+      + "\"updatedAt\":\"" + escapeJson(updatedAt) + "\","
+      + "\"customFields\":[]"
       + "}";
   }
 
   public static String updateLoginItemJson(String existingItemJson, String title, String url, String username, String password, String notes) {
     String id = firstNonEmpty(extractString(existingItemJson, "id"), "android-login-" + System.currentTimeMillis());
-    return loginItemJson(id, title, url, username, password, notes);
+    String createdAt = firstNonEmpty(extractString(existingItemJson, "createdAt"), isoNow());
+    return loginItemJson(id, title, url, username, password, notes, createdAt, isoNowAfter(createdAt));
+  }
+
+  private static String isoNow() {
+    return isoFormat().format(new java.util.Date());
+  }
+
+  private static String isoNowAfter(String floor) {
+    java.text.SimpleDateFormat format = isoFormat();
+    long nextMs = System.currentTimeMillis();
+    try {
+      java.util.Date floorDate = format.parse(floor);
+      if (floorDate != null && floorDate.getTime() >= nextMs) nextMs = floorDate.getTime() + 1L;
+    } catch (java.text.ParseException ignored) {
+      // Invalid legacy timestamps are replaced by the current canonical timestamp.
+    }
+    return format.format(new java.util.Date(nextMs));
+  }
+
+  private static java.text.SimpleDateFormat isoFormat() {
+    java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US);
+    format.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+    return format;
   }
 
   private static SecretKeySpec deriveAesKey(String masterPassword, byte[] salt) throws Exception {
+    if (masterPassword == null || masterPassword.length() < MobileAuthState.MIN_MASTER_PASSWORD_LENGTH) {
+      throw new IllegalArgumentException("Master password must be at least 12 characters.");
+    }
     SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
     KeySpec spec = new PBEKeySpec(masterPassword.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_BITS);
     SecretKey secret = factory.generateSecret(spec);

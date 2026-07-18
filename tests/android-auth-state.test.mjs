@@ -20,6 +20,9 @@ public final class TestMobileAuthState {
     assertEquals("https://gvault.guber.dev", MobileAuthState.DEFAULT_SERVER_URL);
     assertEquals("https://gvault.guber.dev/api/auth/login", MobileAuthState.endpoint("https://gvault.guber.dev/", "/api/auth/login"));
     assertEquals("", MobileAuthState.validate("michael@example.com", "account-password", "master-password", "master-password", true));
+    assertEquals("Master password must be at least 12 characters.", MobileAuthState.validate("michael@example.com", "account-password", "12345678901", "12345678901", true));
+    assertEquals("", MobileAuthState.validate("michael@example.com", "account-password", "123456789012", "123456789012", true));
+    assertEquals("Master password must be at least 12 characters.", MobileAuthState.validate("michael@example.com", "account-password", "12345678901", "12345678901", false));
     assertEquals("Confirm master password does not match.", MobileAuthState.validate("michael@example.com", "account-password", "master-password", "different", true));
     assertEquals("Email is required.", MobileAuthState.validate("", "account-password", "master-password", "master-password", false));
     assertEquals("Signing in...", MobileAuthState.authLoadingMessage(false));

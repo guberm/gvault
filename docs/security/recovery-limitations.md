@@ -50,6 +50,20 @@ not assume any of them are available:
 - Losing the master password means losing the vault. There is no support path
   that can recover it.
 
+## Android Autofill cache lifecycle
+
+Android Autofill data is a temporary convenience cache, not a recovery source.
+After successful authentication the app grants Autofill access for at most 15
+minutes and stores the cache as Android Keystore AES-GCM ciphertext. App/process
+restart, explicit sign-out, expiry, or a cache-decryption failure clears access;
+legacy plaintext Autofill preference values are removed. Once cleared, the cache
+cannot restore credentials: the user must authenticate and decrypt the
+server-backed vault again.
+
+This behavior was accepted on a physical Pixel 7 Pro against
+`https://gvault.guber.dev`: Autofill offered the matching Login while unlocked,
+then returned zero entries after force-stop/relaunch and after explicit sign-out.
+
 ## Related documents
 
 - [security-model.md](./security-model.md) — encryption model and scope.
