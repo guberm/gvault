@@ -25,11 +25,11 @@ This is a working snapshot, not a final product claim.
 | Surface | Current status | Gap |
 |---|---|---|
 | Web | Public login/register and encrypted sync work; item editor, generator/strength, folders, nested folders, tags, and responsive vault UI are verified | Needs Web settings/account management, trash/restore, and remaining security/clipboard workflows |
-| Android | Packaged auth-first APK supports server-backed create/edit/delete/search/filter/settings plus Autofill; physical-device restart restore is verified | Needs PIN/biometric unlock, persistent session policy if chosen, and broader item-type authoring |
+| Android | Packaged auth-first APK supports server-backed create/edit/delete/search/filter/settings plus Autofill; prior physical-device functional proof remains valid | Restart/lock security is reopened because decrypted Autofill values persist in ordinary SharedPreferences (#118, #484); also needs PIN/biometric unlock and broader item-type authoring |
 | Browser extension | Manual/session fill, generator, domain rules, and save/update prompts exist; clean install now defaults to `https://gvault.guber.dev` | Needs real popup login/register, encrypted vault pull, and server-backed credential suggestions |
 | Windows desktop | Preview client has settings and a server login smoke path | Needs full login/register-first vault list/detail/editor and tray/taskbar UX |
 | Linux desktop/CLI | Stub/preview | Needs decision: CLI or GUI, then real login/register/list/get/create/edit/delete |
-| Deployment | `gvault.guber.dev` works through live route/proxy path | Needs persistence: Caddy/service setup, server/web/proxy as services, restart proof |
+| Deployment | `gvault.guber.dev` runs through managed `gvault-public.service`; controlled restart, production data directory, and local/public health were verified on 2026-07-17 | Still needs reboot/TLS-renewal proof, file-backed route reconciliation, and a complete backup/restore runbook |
 
 ## Non-negotiable product rules
 

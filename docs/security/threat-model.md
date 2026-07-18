@@ -34,11 +34,12 @@ parity security feature is complete.
 | Browser/client local runtime | `apps/web/public/app.js` | Master password remains client-side; vault records are encrypted before sync. | Plaintext exists in memory while unlocked; web client stores bearer token in `localStorage`. |
 | Client to server API | `apps/server/src/index.ts` | Bearer token required for sync/device/backup routes; record `ownerId` is set from session, not client input. | Server default CORS allows `*` unless `GV_ALLOWED_ORIGINS` is configured. |
 | Server auth endpoints | `apps/server/src/index.ts`, `apps/server/src/auth.ts` | Account passwords are minimum 12 characters, salted with random salt, hashed with `scrypt`, and compared with `timingSafeEqual`. | No server-side rate limiting or account lockout yet. |
-| Crypto envelope | `packages/crypto/src/index.ts` | AES-256-GCM authenticated encryption; PBKDF2-SHA256; random 128-bit salt and 96-bit nonce. | KDF is password-based, so weak master passwords remain brute-forceable offline. |
+| Crypto envelope | `packages/crypto/src/index.ts` | AES-256-GCM authenticated encryption; PBKDF2-SHA256; random 128-bit salt and 96-bit nonce. | Shared crypto uses 210,000 iterations while Web/Android use 150,000 and record metadata does not carry KDF parameters (#493); Android also lacks the shared 12-character minimum (#486). |
 | Sync write path | `apps/server/src/index.ts`, `packages/sync/src/index.ts` | Validates encrypted-record shape and collection; detects equal/newer revision conflicts; scopes stored records to session user. | Server cannot validate encrypted payload semantics without plaintext access. |
 | Backup export/import | `apps/server/src/index.ts` | Export is authenticated and includes only current user records; import rewrites record ownership to the authenticated user. | Import reads a server-local `path` supplied by the authenticated client; this is acceptable for current smoke tooling but should be replaced by upload/object selection before production claims. |
 | Server storage | `apps/server/src/storage.ts` | Atomic temp-file rename and `0600` writes. | JSON-file storage is not a hardened multi-user database and does not provide encryption-at-rest by itself. |
-| Deployment TLS/reverse proxy | `docs/deployment/self-hosted.md`, live service evidence in Proof/E2E docs | Public service is intended to run behind HTTPS. | TLS termination and host hardening are deployment responsibilities, not enforced by the Node server itself. |
+| Deployment TLS/reverse proxy | `docs/deployment/self-hosted.md`, live service evidence in Proof/E2E docs | Public service is intended to run behind HTTPS. | TLS termination and host hardening are deployment responsibilities; the live response currently lacks CSP, HSTS, `nosniff`, Referrer-Policy, and Permissions-Policy (#491). |
+| Android Autofill cache | `MobileAutofillSessionStore.java`, `GVaultAutofillService.java` | Explicit sign-out clears the cache. | Decrypted login, identity, and card values persist in ordinary SharedPreferences and are reloaded after restart (#484). |
 
 ## Threats and mitigations
 
@@ -50,6 +51,7 @@ parity security feature is complete.
 | High | Authenticated backup import path abuse | User supplies unexpected server-local path to `/api/backup/import` | Reads/imports records from unintended server-local JSON file if accessible | Route is authenticated; imported record ownership is rewritten to current user. | Replace path-based import with uploaded backup content or server-managed backup IDs. |
 | Medium | Cross-origin abuse in permissive deployments | `GV_ALLOWED_ORIGINS=*` accepts browser requests from any origin | Increases impact of stolen tokens / malicious pages | Authorization header is still required for protected API routes. | Configure explicit origins for public deployments. |
 | Medium | Sync conflict / replay misuse | Client pushes older or conflicting encrypted records | Data integrity loss or stale records | `detectConflicts` blocks equal/newer server revision overwrite with different ciphertext. | Add richer conflict UX, audit trail, and device/session history. |
+| Medium | Lower-revision replay wins by timestamp | A stale record has a later `updatedAt` | A lower revision replaces a higher revision in shared merge | Revisions and timestamps are both available. | Make revision authoritative and use timestamp only for equal revisions (#494). |
 | Medium | Local device compromise while unlocked | Malware/screenscraper reads client memory or DOM | Plaintext vault exposure | Lock/unlock state exists; server does not hold plaintext. | Native secure storage, biometric unlock, local encrypted cache, and OS-level hardening remain incomplete. |
 | Medium | Browser autofill field confusion | Malicious page tricks extension/autofill matching | Credential fill into wrong origin/form | Existing Autofill tests cover feasible paths; setup guidance now exists. | Dedicated browser autofill security review remains open. |
 | Low | Server data corruption | Process crash or concurrent writes affect JSON store | Availability/integrity incident | Store writes via temp file then rename. | Use a transactional database for production deployment. |
@@ -69,6 +71,10 @@ parity security feature is complete.
 - [ ] Configure production `GV_ALLOWED_ORIGINS` to explicit trusted origins.
 - [ ] Add server-side login/API rate limiting and account lockout.
 - [ ] Add session expiry, revocation, and device/session management.
+- [ ] Encrypt and expire Android Autofill cache data; remove legacy plaintext values.
+- [ ] Version and align cross-client KDF parameters.
+- [ ] Enforce dot-boundary domain matching and revision-first sync merging.
+- [ ] Add production browser security headers and mandatory CI gates.
 - [ ] Replace path-based backup import with upload content or server-managed backup IDs.
 - [ ] Complete the dedicated docs for authentication model, zero-knowledge boundary, key derivation, backup/restore security, and recovery limits.
 - [ ] Perform a dedicated browser autofill security review.

@@ -111,6 +111,9 @@ The current implementation intentionally keeps the auth model small. These are
 - Password reset or recovery flow.
 - Server-side access to the vault master password or plaintext vault contents.
 
+Audit #482 tracks the session-lifecycle work in #483. Request-body limits and
+rate limiting around synchronous authentication work are tracked in #485.
+
 See [recovery-limitations.md](./recovery-limitations.md) for the lost master
 password boundary and [threat-model.md](./threat-model.md) for residual risks.
 

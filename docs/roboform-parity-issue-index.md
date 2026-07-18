@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 268
+Total unchecked checklist task issues linked here: 276
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -19,15 +19,15 @@ Section-level issues: #1–#35. Granular task issues are linked below.
 Parent issue: #1 — https://github.com/guberm/gvault/issues/1
 
 - [ ] #40 Persist reverse-proxy route in file-backed Caddy config or equivalent. — https://github.com/guberm/gvault/issues/40
-- [ ] #41 Run GVault server as a managed service. — https://github.com/guberm/gvault/issues/41
-- [ ] #42 Run GVault web/proxy as a managed service. — https://github.com/guberm/gvault/issues/42
+- [x] #41 Run GVault server as a managed service. — https://github.com/guberm/gvault/issues/41
+- [x] #42 Run GVault web/proxy as a managed service. — https://github.com/guberm/gvault/issues/42
 - [ ] #43 Remove dependence on ad-hoc SSH tunnels for production availability. — https://github.com/guberm/gvault/issues/43
-- [ ] #44 Verify service restart survival. — https://github.com/guberm/gvault/issues/44
+- [x] #44 Verify service restart survival. — https://github.com/guberm/gvault/issues/44
 - [ ] #45 Verify host reboot survival. — https://github.com/guberm/gvault/issues/45
 - [ ] #46 Verify TLS renewal path. — https://github.com/guberm/gvault/issues/46
-- [ ] #47 Define production data directory. — https://github.com/guberm/gvault/issues/47
+- [x] #47 Define production data directory. — https://github.com/guberm/gvault/issues/47
 - [ ] #48 Implement backup/restore plan for server data. — https://github.com/guberm/gvault/issues/48
-- [ ] #49 Add unauthenticated health endpoint if monitoring requires it. — https://github.com/guberm/gvault/issues/49
+- [x] #49 Add unauthenticated health endpoint if monitoring requires it. — https://github.com/guberm/gvault/issues/49
 - [ ] #50 Add deployment/runbook documentation. — https://github.com/guberm/gvault/issues/50
 
 ## 1. Cross-client non-negotiables
@@ -121,7 +121,7 @@ Parent issue: #6 — https://github.com/guberm/gvault/issues/6
 - [x] #115 Server-unavailable error state. — https://github.com/guberm/gvault/issues/115
 - [x] #116 Loading state during login/register. — https://github.com/guberm/gvault/issues/116
 - [x] #117 Logout. — https://github.com/guberm/gvault/issues/117
-- [x] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118
+- [ ] #118 App restart behavior is defined and verified. — https://github.com/guberm/gvault/issues/118 — reopened after #482 found persisted decrypted Autofill data (#484)
 - [x] #119 Local token/session storage policy is implemented. — https://github.com/guberm/gvault/issues/119
 - [ ] #120 PIN unlock, if chosen. — https://github.com/guberm/gvault/issues/120
 - [ ] #121 Biometric unlock, if chosen. — https://github.com/guberm/gvault/issues/121
@@ -556,3 +556,22 @@ Parent issue: #35 — https://github.com/guberm/gvault/issues/35
 - [x] #405 Import/export tests. — https://github.com/guberm/gvault/issues/405
 - [x] #406 Autofill tests where feasible. — https://github.com/guberm/gvault/issues/406
 - [x] #407 Final proof report separates passed/partial/blocked. — https://github.com/guberm/gvault/issues/407 — [`docs/roboform-parity-proof-report.md`](./roboform-parity-proof-report.md)
+
+## Repository audit follow-ups
+
+Parent audit: #482 — https://github.com/guberm/gvault/issues/482
+
+Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07-17.md)
+
+- [ ] #483 Server session expiry, revocation, and logout. — https://github.com/guberm/gvault/issues/483
+- [ ] #484 Android Autofill plaintext SharedPreferences. — https://github.com/guberm/gvault/issues/484
+- [ ] #485 Request-size and authentication rate limits. — https://github.com/guberm/gvault/issues/485
+- [ ] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486
+- [ ] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487
+- [ ] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488
+- [ ] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489
+- [ ] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490
+- [ ] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491
+- [ ] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492
+- [ ] #493 Cross-client KDF metadata drift. — https://github.com/guberm/gvault/issues/493
+- [ ] #494 Revision-first sync merge. — https://github.com/guberm/gvault/issues/494

@@ -37,15 +37,15 @@ Last updated: 2026-07-17
 - [x] Public HTTPS returns GVault web UI.
 - [x] Public auth/register API works through `https://gvault.guber.dev`.
 - [ ] Persist reverse-proxy route in file-backed Caddy config or equivalent.
-- [ ] Run GVault server as a managed service.
-- [ ] Run GVault web/proxy as a managed service.
+- [x] Run GVault server as a managed service. (#41; `gvault-public.service` verified active on 2026-07-17)
+- [x] Run GVault web/proxy as a managed service. (#42; the managed public service serves API and Web assets)
 - [ ] Remove dependence on ad-hoc SSH tunnels for production availability.
-- [ ] Verify service restart survival.
+- [x] Verify service restart survival. (#44; controlled restart followed by local and public health checks)
 - [ ] Verify host reboot survival.
 - [ ] Verify TLS renewal path.
-- [ ] Define production data directory.
+- [x] Define production data directory. (#47; `/home/mg/.local/share/gvault-data`, store mode `0600`)
 - [ ] Implement backup/restore plan for server data.
-- [ ] Add unauthenticated health endpoint if monitoring requires it.
+- [x] Add unauthenticated health endpoint if monitoring requires it. (#49; local and public `/healthz` verified)
 - [ ] Add deployment/runbook documentation.
 
 ---
@@ -156,7 +156,7 @@ Last updated: 2026-07-17
 - [x] Server-unavailable error state.
 - [x] Loading state during login/register.
 - [x] Logout.
-- [x] App restart behavior is defined and verified.
+- [ ] App restart behavior is defined and verified. (#118 reopened; decrypted Autofill data persists after restart, tracked by #484)
 - [x] Local token/session storage policy is implemented.
 - [ ] PIN unlock, if chosen.
 - [ ] Biometric unlock, if chosen.
@@ -568,3 +568,22 @@ Last updated: 2026-07-17
 - [x] Import/export tests.
 - [x] Autofill tests where feasible.
 - [x] Final proof report separates passed/partial/blocked: [`docs/roboform-parity-proof-report.md`](./roboform-parity-proof-report.md).
+
+---
+
+# 16. Repository audit follow-ups
+
+Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07-17.md)
+
+- [ ] #483 Server session expiry, revocation, logout, and bounded lifecycle.
+- [ ] #484 Android encrypted Autofill storage and physical-device restart/lock proof.
+- [ ] #485 Request-size bounds and rate limiting around synchronous authentication work.
+- [ ] #486 One cross-client minimum master-password policy, including Android device proof.
+- [ ] #487 Web blank account-password validation without a fallback credential. (implemented here; closes only after deploy/live acceptance)
+- [ ] #488 Canonical Android `VaultItem` timestamps and cross-client compatibility.
+- [ ] #489 Dot-boundary-safe URL matching for lookalike domains.
+- [ ] #490 Durable, validated, concurrency-safe server storage.
+- [ ] #491 Production CSP and browser security headers.
+- [ ] #492 Mandatory CI and deterministic cross-browser gates.
+- [ ] #493 Versioned, interoperable KDF metadata across shared, Web, and Android clients.
+- [ ] #494 Revision-first sync merge semantics.
