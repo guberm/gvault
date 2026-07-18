@@ -1,6 +1,6 @@
 {
   "name": "@gvault/server",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,8 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@gvault/shared-utils": "0.1.8",
-    "@gvault/sync": "0.1.8",
-    "@gvault/vault-models": "0.1.8"
+    "@gvault/shared-utils": "0.1.9",
+    "@gvault/sync": "0.1.9",
+    "@gvault/vault-models": "0.1.9"
   }
 }
