@@ -14,7 +14,7 @@ Target public service: `https://gvault.guber.dev`
 
 ## Current verified snapshot
 
-Last updated: 2026-07-03
+Last updated: 2026-07-17
 
 - [x] `gvault.guber.dev` resolves publicly to the intended service endpoint.
 - [x] Web client can open at `https://gvault.guber.dev`.
@@ -59,7 +59,7 @@ Last updated: 2026-07-03
 - [ ] Linux client has login/register entrypoint.
 - [x] Web default/public server URL uses `https://gvault.guber.dev`.
 - [x] Android can use `https://gvault.guber.dev`.
-- [ ] Extension default server URL uses `https://gvault.guber.dev`.
+- [x] Extension default server URL uses `https://gvault.guber.dev`. (#54, #149, #480)
 - [ ] Windows desktop default server URL uses `https://gvault.guber.dev`.
 - [ ] Linux client default server URL uses `https://gvault.guber.dev`.
 - [x] Web displayed vault data can come from server-backed records.
@@ -113,8 +113,8 @@ Last updated: 2026-07-03
 - [ ] Filter by item type.
 - [ ] Real counts per category.
 - [ ] Favorites.
-- [ ] Folders/collections.
-- [ ] Tags.
+- [x] Folders/collections. (#90; implementation/live proof in #263 and #264)
+- [x] Tags. (#91; implementation/live proof in #265)
 - [ ] Empty state.
 - [ ] Loading/skeleton state.
 - [ ] Save/sync status state.
@@ -128,15 +128,15 @@ Last updated: 2026-07-03
 - [ ] Reveal/hide password.
 - [ ] Re-auth before reveal/copy if configured.
 - [ ] Auto-clear clipboard timer.
-- [ ] Password generator panel.
-- [ ] Use generated password in current item.
-- [ ] Password strength indicator.
+- [x] Password generator panel. (#102)
+- [x] Use generated password in current item. (#103, PR #460)
+- [x] Password strength indicator. (#104, PR #458)
 - [ ] Keyboard shortcut for search.
 - [ ] Keyboard shortcut for new item.
 - [ ] Keyboard shortcut for save.
 - [ ] Settings modal/page.
 - [ ] Account modal/page.
-- [ ] Responsive mobile web layout.
+- [x] Responsive mobile web layout. (#110, #480)
 - [ ] Dark/light theme consistency.
 
 ---
@@ -201,7 +201,7 @@ Last updated: 2026-07-03
 ## 4.1 Extension auth
 
 - [ ] Popup first screen is login/register.
-- [ ] Default server URL is `https://gvault.guber.dev`.
+- [x] Default server URL is `https://gvault.guber.dev`. (#149, #480)
 - [ ] Register from popup.
 - [ ] Login from popup.
 - [ ] Token/session storage in extension storage.
@@ -246,7 +246,7 @@ Last updated: 2026-07-03
 - [ ] Copy/reveal sensitive fields.
 - [ ] Logout.
 - [ ] Connected/sync/error status bar.
-- [ ] Settings/preferences.
+- [x] Settings/preferences. (#186, PR #457)
 - [ ] Tray/taskbar icon.
 - [ ] Tray quick search/recent/favorites.
 - [ ] Build `.exe`.

@@ -24,10 +24,10 @@ This is a working snapshot, not a final product claim.
 
 | Surface | Current status | Gap |
 |---|---|---|
-| Web | Login/register via `https://gvault.guber.dev` works; server-backed register/item flow was verified | Needs complete vault UI, settings, item types, edit/delete/search/filter polish, persistent deployment |
-| Android | Login-first UI exists; login through `https://gvault.guber.dev` was verified into server-backed vault state | Needs create/edit/delete/search, polished mobile UI, autofill integration, biometric/local unlock, restart/session handling |
-| Browser extension | Existing extension is mostly manual/session fill helper | Needs real login/register, vault pull, current-domain suggestions, one-click fill, save/update prompts |
-| Windows desktop | Stub/placeholder app | Needs real login/register client, vault list/detail/editor, tray/taskbar UX |
+| Web | Public login/register and encrypted sync work; item editor, generator/strength, folders, nested folders, tags, and responsive vault UI are verified | Needs Web settings/account management, trash/restore, and remaining security/clipboard workflows |
+| Android | Packaged auth-first APK supports server-backed create/edit/delete/search/filter/settings plus Autofill; physical-device restart restore is verified | Needs PIN/biometric unlock, persistent session policy if chosen, and broader item-type authoring |
+| Browser extension | Manual/session fill, generator, domain rules, and save/update prompts exist; clean install now defaults to `https://gvault.guber.dev` | Needs real popup login/register, encrypted vault pull, and server-backed credential suggestions |
+| Windows desktop | Preview client has settings and a server login smoke path | Needs full login/register-first vault list/detail/editor and tray/taskbar UX |
 | Linux desktop/CLI | Stub/preview | Needs decision: CLI or GUI, then real login/register/list/get/create/edit/delete |
 | Deployment | `gvault.guber.dev` works through live route/proxy path | Needs persistence: Caddy/service setup, server/web/proxy as services, restart proof |
 

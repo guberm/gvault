@@ -25,7 +25,8 @@ test("Chrome extension loads and fills a login form in Google Chrome", { skip: s
     ignoreDefaultArgs: ["--disable-extensions"],
     args: [
       "--no-first-run",
-      "--no-default-browser-check"
+      "--no-default-browser-check",
+      "--no-proxy-server"
     ]
   });
 
@@ -102,6 +103,7 @@ test("Chrome extension loads and fills a login form in Google Chrome", { skip: s
     await popup.locator("#dismissSaveLogin").click();
     await waitUntil(async () => !(await popup.locator("#savePrompt").isVisible()), "Chrome save-new-login prompt dismissed");
 
+    await popup.locator("#showSettings").click();
     await popup.locator("#serverUrl").fill("https://gvault.guber.dev");
     await popup.locator("#saveServer").click();
     await expectText(popup, "#status", "Server URL saved");

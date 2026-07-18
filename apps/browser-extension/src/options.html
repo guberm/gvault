@@ -11,6 +11,7 @@
         --ink: #102027;
         --border: #d8e2e6;
         --accent: #0f766e;
+        --muted: #63727a;
       }
 
       body[data-theme="dark"] {
@@ -19,30 +20,59 @@
         --surface: #102027;
         --ink: #eef7f7;
         --border: #315057;
+        --muted: #adc4c8;
       }
 
-      body { margin: 24px; max-width: 560px; background: var(--bg); color: var(--ink); font-family: system-ui, sans-serif; }
-      label { display: grid; gap: 6px; margin-bottom: 12px; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 24px; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      h1, h2, p { margin: 0; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 17px; }
+      p { color: var(--muted); line-height: 1.5; }
+      .options-shell { display: grid; gap: 16px; width: min(680px, 100%); margin: 0 auto; }
+      .options-header { display: grid; gap: 6px; margin-bottom: 4px; }
+      .card { display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+      label { display: grid; gap: 7px; font-weight: 650; }
       .check { display: flex; align-items: center; gap: 8px; }
-      .check input { min-height: auto; }
-      input { min-height: 36px; border: 1px solid var(--border); border-radius: 7px; padding: 0 10px; background: var(--surface); color: var(--ink); }
-      textarea { min-height: 90px; border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; background: var(--surface); color: var(--ink); font: inherit; }
-      button { min-height: 36px; border: 0; border-radius: 7px; padding: 0 12px; background: var(--accent); color: white; font: inherit; font-weight: 700; }
+      .check input { width: auto; min-height: auto; }
+      input, textarea { width: 100%; min-height: 40px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; background: var(--surface); color: var(--ink); font: inherit; }
+      textarea { min-height: 104px; resize: vertical; }
+      button { min-height: 40px; border: 0; border-radius: 8px; padding: 0 16px; background: var(--accent); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent); outline-offset: 2px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+      .secondary { background: var(--surface); color: var(--accent); border: 1px solid var(--border); }
+      @media (max-width: 520px) { body { padding: 20px 14px; } .card { padding: 16px; } .actions button { width: 100%; } }
     </style>
   </head>
   <body>
-    <h1>GVault Options</h1>
-    <label>Self-hosted server URL <input id="serverUrl" value="http://127.0.0.1:8080" /></label>
-    <label class="check"><input id="autofillEnabled" type="checkbox" checked /> Automatically fill matching session logins</label>
-    <label class="check"><input id="fillPromptEnabled" type="checkbox" checked /> Show fill prompts for matching logins</label>
-    <label class="check"><input id="autosaveEnabled" type="checkbox" checked /> Prompt to save or update submitted logins</label>
-    <label class="check"><input id="subdomainMatchingEnabled" type="checkbox" checked /> Match saved logins on subdomains</label>
-    <label>Per-domain disabled list <textarea id="disabledDomains" placeholder="example.com&#10;internal.test"></textarea></label>
-    <p>Domains listed here will not auto-fill or show save/update prompts. Manual fill remains available.</p>
-    <label>Equivalent domains <textarea id="equivalentDomains" placeholder="example.com, login.example.com&#10;shop.example.com, checkout.example.com"></textarea></label>
-    <p>Domains on the same line are treated as the same site for matching saved session logins.</p>
-    <button id="save">Save</button>
-    <button id="themeButton" type="button">Dark mode</button>
+    <main class="options-shell">
+      <header class="options-header">
+        <h1>GVault Options</h1>
+        <p>Configure this browser without exposing vault secrets to the extension settings page.</p>
+      </header>
+      <section class="card" aria-labelledby="connectionHeading">
+        <h2 id="connectionHeading">Connection</h2>
+        <label>Self-hosted server URL <input id="serverUrl" value="https://gvault.guber.dev" /></label>
+      </section>
+      <section class="card" aria-labelledby="behaviorHeading">
+        <h2 id="behaviorHeading">Fill and save behavior</h2>
+        <label class="check"><input id="autofillEnabled" type="checkbox" checked /> Automatically fill matching session logins</label>
+        <label class="check"><input id="fillPromptEnabled" type="checkbox" checked /> Show fill prompts for matching logins</label>
+        <label class="check"><input id="autosaveEnabled" type="checkbox" checked /> Prompt to save or update submitted logins</label>
+        <label class="check"><input id="subdomainMatchingEnabled" type="checkbox" checked /> Match saved logins on subdomains</label>
+      </section>
+      <section class="card" aria-labelledby="domainHeading">
+        <h2 id="domainHeading">Domain rules</h2>
+        <label>Per-domain disabled list <textarea id="disabledDomains" placeholder="example.com&#10;internal.test"></textarea></label>
+        <p>Domains listed here will not auto-fill or show save/update prompts. Manual fill remains available.</p>
+        <label>Equivalent domains <textarea id="equivalentDomains" placeholder="example.com, login.example.com&#10;shop.example.com, checkout.example.com"></textarea></label>
+        <p>Domains on the same line are treated as the same site for matching saved session logins.</p>
+      </section>
+      <div class="actions">
+        <button id="save">Save settings</button>
+        <button id="themeButton" class="secondary" type="button">Dark mode</button>
+      </div>
+    </main>
     <script src="options.js"></script>
   </body>
 </html>
