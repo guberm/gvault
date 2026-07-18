@@ -39,7 +39,7 @@ This is a source/runtime audit, not an external penetration-test certification.
 | [#484](https://github.com/guberm/gvault/issues/484) | Android Autofill persists decrypted secrets in ordinary SharedPreferences and reloads them after restart. | Open; #118 reopened and physical-device security proof required by acceptance. |
 | [#485](https://github.com/guberm/gvault/issues/485) | Request bodies are unbounded and unauthenticated synchronous `scrypt` work is not rate-limited. | Open. |
 | [#486](https://github.com/guberm/gvault/issues/486) | Android accepts master passwords below the shared/Web 12-character minimum. | Open; physical-device boundary proof required. |
-| [#487](https://github.com/guberm/gvault/issues/487) | Blank Web account password became the fixed `change-me-strong-password` credential. | Fixed with strict browser TDD; closes only after merged live acceptance. |
+| [#487](https://github.com/guberm/gvault/issues/487) | Blank Web account password became the fixed `change-me-strong-password` credential. | Closed after strict browser TDD, PRs #495/#496, deploy, and live acceptance at `43eb1b8`. |
 | [#488](https://github.com/guberm/gvault/issues/488) | Android Login JSON omits canonical `createdAt`/`updatedAt` fields. | Open; cross-client/device compatibility proof required. |
 | [#489](https://github.com/guberm/gvault/issues/489) | Shared URL matching accepts lookalike sibling domains. | Open; runtime proof showed `example.com` matching `notexample.com`. |
 | [#490](https://github.com/guberm/gvault/issues/490) | JSON storage lacks transactional concurrency, validation, and recovery guarantees. | Open. |
@@ -90,6 +90,26 @@ acceptance criteria.
 No Android production code changed in this audit fix. ADB had no connected
 physical device at the audit checkpoint, so #484/#486/#488 correctly remain open
 with explicit physical-device acceptance instead of being claimed complete.
+
+## Final merged live acceptance
+
+Production was updated to merge commit `43eb1b8` and
+`gvault-public.service` restarted successfully. Final evidence:
+
+- local and public `/healthz` returned `ok: true`, product `GVault`;
+- the public browser loaded `./app.js?v=487` from
+  `https://gvault.guber.dev/app.js?v=487`;
+- public `app.js` SHA-256
+  `756025cfd0a6be3903576913c9b2dc63783b11b7ae2c576d19110e64d35dc5b5`
+  exactly matched the server build;
+- a real headless Google Chrome click on Register with a blank account password
+  displayed `Account password is required.`, focused the account-password input,
+  and emitted **zero** `/api/auth/*` requests.
+
+The first deploy attempt exposed a stale `app.js?v=480` browser cache entry even
+though the server asset was current. PR #496 added a TDD-protected `v=487` cache
+key; the final evidence above was collected only after that follow-up merge and
+redeploy.
 
 ## Current product truth
 
