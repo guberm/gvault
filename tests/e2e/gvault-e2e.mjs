@@ -63,7 +63,7 @@ async function webClientE2e(webPort, serverPort) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 980 } });
   try {
     await page.goto(`http://127.0.0.1:${webPort}/`);
-    await expectText(page, "body", "Unlock GVault");
+    await expectText(page, "body", "Connect to GVault");
     await expectText(page, "#status", "Connect a server");
     await page.getByRole("button", { name: "Dark mode" }).click();
     await expectText(page, "#themeButton", "Light mode");
@@ -72,11 +72,10 @@ async function webClientE2e(webPort, serverPort) {
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${serverPort}`);
     await page.locator("#email").fill(`e2e-${Date.now()}@example.local`);
     await page.locator("#accountPassword").fill("change-me-strong-password");
+    await page.getByLabel("Master password", { exact: true }).fill("correct horse battery staple");
+    await page.getByLabel("Confirm master password").fill("correct horse battery staple");
     await page.getByRole("button", { name: "Register" }).click();
     await expectText(page, "#status", "Server session");
-
-    await page.getByLabel("Master password").fill("correct horse battery staple");
-    await page.getByRole("button", { name: "Unlock vault" }).click();
     await expectText(page, "#lockState", "Unlocked");
 
     await page.locator("[name=title]").fill("Example Login");

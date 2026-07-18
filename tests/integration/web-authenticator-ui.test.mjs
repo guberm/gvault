@@ -269,7 +269,7 @@ test("unsupported browsers keep manual TOTP entry without a misleading QR contro
 });
 
 async function unlock(page) {
-  await page.getByLabel("Master password").fill("local-master-password");
+  await page.getByLabel("Master password", { exact: true }).fill("local-master-password");
   await page.getByRole("button", { name: "Unlock vault" }).click();
 }
 

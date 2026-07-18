@@ -885,16 +885,42 @@ async function api(path, body, method = "POST") {
   return payload;
 }
 
-async function auth(path) {
+async function auth(path, createAccount = false) {
   const password = $("accountPassword").value;
   if (!password.trim()) {
     setStatus("Account password is required.", "warning");
     $("accountPassword").focus();
     return;
   }
+  let registrationMaster = "";
+  if (createAccount) {
+    registrationMaster = $("masterPassword").value;
+    if (!registrationMaster) {
+      setStatus("Master password is required.", "warning");
+      $("masterPassword").focus();
+      return;
+    }
+    if (registrationMaster.length < 12) {
+      setStatus("Use at least 12 characters for the master password.", "warning");
+      $("masterPassword").focus();
+      return;
+    }
+    if (registrationMaster !== $("confirmMasterPassword").value) {
+      setStatus("Confirm master password does not match.", "warning");
+      $("confirmMasterPassword").focus();
+      return;
+    }
+  }
   const result = await api(path, { email: $("email").value, password });
   state.token = result.token;
   state.userId = result.userId;
+  if (createAccount) {
+    state.masterPassword = registrationMaster;
+    $("masterPassword").value = "";
+    $("confirmMasterPassword").value = "";
+  } else {
+    clearLocalVault();
+  }
   localStorage.setItem("gv.token", state.token);
   localStorage.setItem("gv.userId", state.userId);
   $("emailLabel").textContent = $("email").value.split("@")[0] || "admin";
@@ -949,8 +975,8 @@ async function encryptedRecordToItem(record) {
   return decryptJson({ ciphertext: record.ciphertext, nonce: record.nonce, salt: record.salt });
 }
 
-async function deriveKey(salt) {
-  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(state.masterPassword), "PBKDF2", false, ["deriveKey"]);
+async function deriveKey(salt, masterPassword = state.masterPassword) {
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(masterPassword), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
     material,
@@ -968,10 +994,10 @@ async function encryptJson(value) {
   return { ciphertext: toBase64(ciphertext), nonce: toBase64(iv), salt: toBase64(salt) };
 }
 
-async function decryptJson(record) {
+async function decryptJson(record, masterPassword = state.masterPassword) {
   const salt = fromBase64(record.salt);
   const iv = fromBase64(record.nonce);
-  const key = await deriveKey(salt);
+  const key = await deriveKey(salt, masterPassword);
   const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, fromBase64(record.ciphertext));
   return JSON.parse(new TextDecoder().decode(plaintext));
 }
@@ -984,26 +1010,68 @@ function fromBase64(value = "") {
   return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 }
 
-$("unlockButton").addEventListener("click", () => {
+async function restoreVault(masterPassword) {
+  const pulled = await api("/api/sync/pull", { deviceId });
+  const records = pulled.records || [];
+  let decrypted;
+  try {
+    decrypted = await Promise.all(records.map(async (record) => ({
+      record,
+      item: await decryptJson(record, masterPassword),
+    })));
+  } catch {
+    throw new Error("Master password could not decrypt this vault.");
+  }
+  state.masterPassword = masterPassword;
+  state.encryptedRecords = new Map(records.map((record) => [record.id, record]));
+  state.items = decrypted
+    .filter(({ record }) => !record.deleted)
+    .map(({ item }) => item)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  state.selectedId = state.items[0]?.id || "";
+}
+
+$("unlockButton").addEventListener("click", async () => {
   const master = $("masterPassword").value;
   if (master.length < 12) {
     setStatus("Use at least 12 characters for the master password.", "warning");
     return;
   }
-  state.masterPassword = master;
-  $("masterPassword").value = "";
-  fillForm();
-  setStatus("Vault unlocked.", "success");
-  render();
+  $("unlockButton").disabled = true;
+  setStatus(state.token ? "Checking master password and restoring encrypted vault..." : "Unlocking local vault...", "neutral");
+  try {
+    if (state.token) {
+      await restoreVault(master);
+    } else {
+      state.masterPassword = master;
+    }
+    $("masterPassword").value = "";
+    fillForm(state.items.find((item) => item.id === state.selectedId));
+    render();
+    setStatus(state.token ? "Vault restored and unlocked." : "Vault unlocked.", "success");
+  } catch (error) {
+    clearLocalVault();
+    render();
+    setStatus(error instanceof Error ? error.message : "Vault could not be restored.", "warning");
+  } finally {
+    $("unlockButton").disabled = false;
+  }
 });
 
-$("lockButton").addEventListener("click", () => {
+function clearLocalVault() {
   state.masterPassword = "";
   state.items = [];
+  state.encryptedRecords = new Map();
   state.selectedId = "";
   state.editingId = "";
+  $("masterPassword").value = "";
+  $("confirmMasterPassword").value = "";
   clearTotpDisplay();
   fillForm();
+}
+
+$("lockButton").addEventListener("click", () => {
+  clearLocalVault();
   render();
   setStatus("Vault locked. Decrypted session data cleared.", "success");
 });
@@ -1122,7 +1190,7 @@ $("items").addEventListener("click", (event) => {
   render();
 });
 
-$("registerButton").addEventListener("click", () => auth("/api/auth/register").catch((error) => setStatus(error.message, "warning")));
+$("registerButton").addEventListener("click", () => auth("/api/auth/register", true).catch((error) => setStatus(error.message, "warning")));
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
 $("generatorNavButton").addEventListener("click", () => {

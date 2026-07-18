@@ -23,11 +23,19 @@ public final class MobileAuthState {
   public static String validate(String email, String accountPassword, String masterPassword, String confirmMasterPassword, boolean createAccount) {
     if (isBlank(email)) return "Email is required.";
     if (isBlank(accountPassword)) return "Account password is required.";
+    if (createAccount) {
+      String masterValidation = validateMasterPassword(masterPassword);
+      if (!masterValidation.isEmpty()) return masterValidation;
+      if (!masterPassword.equals(confirmMasterPassword == null ? "" : confirmMasterPassword)) {
+        return "Confirm master password does not match.";
+      }
+    }
+    return "";
+  }
+
+  public static String validateMasterPassword(String masterPassword) {
     if (isBlank(masterPassword)) return "Master password is required.";
     if (masterPassword.length() < MIN_MASTER_PASSWORD_LENGTH) return "Master password must be at least 12 characters.";
-    if (createAccount && !masterPassword.equals(confirmMasterPassword == null ? "" : confirmMasterPassword)) {
-      return "Confirm master password does not match.";
-    }
     return "";
   }
 

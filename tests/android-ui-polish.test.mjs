@@ -10,6 +10,21 @@ test("Android auth-first UI uses density-safe spacing, visible labels, and curre
   assert.match(main, /root\.setPadding\(dp\(20\), dp\(24\), dp\(20\), dp\(24\)\)/, "screen gutters are density independent");
   assert.match(main, /addLabeledField\(authCard, "Server URL", server\)/);
   assert.match(main, /addLabeledField\(authCard, "Confirm master password", confirmMaster\)/);
+  assert.match(main, /masterGroup\.setVisibility\(View\.GONE\)/, "regular sign in hides master-password fields");
+  assert.match(main, /showVaultUnlockScreen\(\)/, "account login and local vault unlock are separate screens");
+  assert.match(main, /Account login succeeded\. Enter the master password only to decrypt this vault on this device\./);
+  assert.match(main, /restoreVault\(secret, master, unlock\)/, "restore verifies encrypted records before exposing the unlocked vault");
+  assert.match(
+    main,
+    /MobileVaultItem\.decryptItemJson\(record\.optString\("ciphertext"\), record\.optString\("nonce"\), record\.optString\("salt"\), secret\)[\s\S]*?if \(!MobileVaultItem\.shouldRenderRecord\(record\.optBoolean\("deleted", false\)\)\) continue/,
+    "restore authenticates deleted-record ciphertext before excluding tombstones from the visible vault",
+  );
+  assert.match(
+    main,
+    /final String masterSecret;\s*final String confirmSecret;\s*if \(create\) \{\s*masterSecret = masterPassword\.getText\(\)\.toString\(\);\s*confirmSecret = confirmMaster\.getText\(\)\.toString\(\);\s*\} else \{\s*masterSecret = "";\s*confirmSecret = "";\s*\}/,
+    "regular login never reads hidden master-password fields",
+  );
+  assert.doesNotMatch(main, /master\.setText\(""\);\s*MobileAutofillSessionStore\.unlock\(MainActivity\.this\);\s*showVaultScreen\("Vault unlocked after account login\."\);\s*syncPull\(\);/, "unlock UI must not enable Autofill before restore verification");
   assert.match(main, /addLabeledField\(editorCard, "Login title", editTitle\)/, "vault editor fields keep labels after auth");
   assert.match(main, /editorCard\.setBackground\(rounded\(MobileUiStyle\.SURFACE/, "vault editor is grouped as a coherent surface");
   assert.match(main, /field\.setMinHeight\(dp\(48\)\)/, "editable controls meet the mobile touch-height baseline");
@@ -25,6 +40,6 @@ test("Android auth-first UI uses density-safe spacing, visible labels, and curre
 
   assert.match(deviceE2e, /Sign in or create an account to use your server-backed encrypted vault/);
   assert.match(deviceE2e, /https:\/\/gvault\.guber\.dev/);
-  assert.match(deviceE2e, /Confirm master password/);
+  assert.match(deviceE2e, /Regular sign in uses only email and account password/);
   assert.doesNotMatch(deviceE2e, /Self-hosted password and identity vault|Open Web Vault/, "device smoke does not assert legacy placeholder copy");
 });

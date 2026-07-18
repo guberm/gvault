@@ -134,19 +134,8 @@ public final class MainActivity extends Activity {
 
     final Button signIn = actionButton("Sign in");
     final Button createAccount = secondaryButton("Create account");
-    signIn.setOnClickListener(new View.OnClickListener() {
-      @Override public void onClick(View view) {
-        submitAuth(false, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
-      }
-    });
 
-    createAccount.setOnClickListener(new View.OnClickListener() {
-      @Override public void onClick(View view) {
-        submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
-      }
-    });
-
-    status = body("Ready. Registration is available from this screen.\n" + MobileAuthState.sessionStoragePolicyMessage());
+    status = body("Regular sign in uses only email and account password.\n" + MobileAuthState.sessionStoragePolicyMessage());
     status.setTextSize(14);
     status.setBackground(rounded(MobileUiStyle.SURFACE_MUTED, 0, MobileUiStyle.BUTTON_RADIUS_DP));
     status.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -156,11 +145,33 @@ public final class MainActivity extends Activity {
     addLabeledField(authCard, "Server URL", server);
     addLabeledField(authCard, "Email", emailField);
     addLabeledField(authCard, "Account password", accountPassword);
-    addLabeledField(authCard, "Master password", masterPassword);
-    addLabeledField(authCard, "Confirm master password", confirmMaster);
+    final LinearLayout masterGroup = addLabeledField(authCard, "Master password", masterPassword);
+    final LinearLayout confirmMasterGroup = addLabeledField(authCard, "Confirm master password", confirmMaster);
+    masterGroup.setVisibility(View.GONE);
+    confirmMasterGroup.setVisibility(View.GONE);
     authCard.addView(signIn, spaced());
     authCard.addView(createAccount, spaced());
     authCard.addView(status, spaced());
+    final boolean[] creatingAccount = new boolean[] { false };
+    signIn.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        submitAuth(false, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
+      }
+    });
+    createAccount.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        if (!creatingAccount[0]) {
+          creatingAccount[0] = true;
+          masterGroup.setVisibility(View.VISIBLE);
+          confirmMasterGroup.setVisibility(View.VISIBLE);
+          createAccount.setText("Finish creating account");
+          setStatus("Account creation requires a new master password and confirmation.", false);
+          masterPassword.requestFocus();
+          return;
+        }
+        submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
+      }
+    });
     root.addView(authCard, fullWidth());
     setScrollable(root);
   }
@@ -169,8 +180,15 @@ public final class MainActivity extends Activity {
     final String nextServerUrl = server.getText().toString().trim();
     final String nextEmail = emailField.getText().toString().trim();
     final String accountSecret = accountPassword.getText().toString();
-    final String masterSecret = masterPassword.getText().toString();
-    final String confirmSecret = confirmMaster.getText().toString();
+    final String masterSecret;
+    final String confirmSecret;
+    if (create) {
+      masterSecret = masterPassword.getText().toString();
+      confirmSecret = confirmMaster.getText().toString();
+    } else {
+      masterSecret = "";
+      confirmSecret = "";
+    }
     String validation = MobileAuthState.validate(nextEmail, accountSecret, masterSecret, confirmSecret, create);
     if (!validation.isEmpty()) {
       setStatus(validation, true);
@@ -189,17 +207,131 @@ public final class MainActivity extends Activity {
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, create ? "/api/auth/register" : "/api/auth/login"), body, "");
           token = response.getString("token");
           email = nextEmail;
-          MainActivity.this.masterPassword = masterSecret;
-          MobileAutofillSessionStore.unlock(MainActivity.this);
           prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
           finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
-            showVaultScreen("Server session established.");
-            syncPull();
+            if (create) {
+              MainActivity.this.masterPassword = masterSecret;
+              MobileAutofillSessionStore.unlock(MainActivity.this);
+              showVaultScreen("Account created and vault unlocked.");
+              syncPull();
+            } else {
+              MainActivity.this.masterPassword = "";
+              MobileAutofillVault.clear();
+              MobileAutofillSessionStore.clear(MainActivity.this);
+              showVaultUnlockScreen();
+            }
           } });
         } catch (Exception error) {
           final String message = friendlyError(error);
           finishAuthAfterLoading(authStartedAt, new Runnable() { @Override public void run() {
             setAuthControlsEnabled(true, signIn, createAccount);
+            setStatus(message, true);
+          } });
+        }
+      }
+    }).start();
+  }
+
+  private void showVaultUnlockScreen() {
+    settingsVisible = false;
+    root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
+    root.setGravity(Gravity.CENTER_VERTICAL);
+
+    LinearLayout unlockCard = new LinearLayout(this);
+    unlockCard.setOrientation(LinearLayout.VERTICAL);
+    unlockCard.setPadding(dp(20), dp(22), dp(20), dp(20));
+    unlockCard.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.CORNER_RADIUS_DP));
+    unlockCard.setElevation(dp(2));
+
+    TextView unlockTitle = title("Unlock or restore vault");
+    TextView unlockCopy = body("Account login succeeded. Enter the master password only to decrypt this vault on this device.");
+    final EditText master = field("Enter master password", true);
+    final Button unlock = actionButton("Unlock vault");
+    final Button signOut = secondaryButton("Sign out");
+    status = body("Server session established. Vault remains locked.");
+    status.setTextSize(14);
+    status.setBackground(rounded(MobileUiStyle.SURFACE_MUTED, 0, MobileUiStyle.BUTTON_RADIUS_DP));
+    status.setPadding(dp(14), dp(12), dp(14), dp(12));
+
+    unlock.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        String secret = master.getText().toString();
+        String validation = MobileAuthState.validateMasterPassword(secret);
+        if (!validation.isEmpty()) {
+          setStatus(validation, true);
+          return;
+        }
+        restoreVault(secret, master, unlock);
+      }
+    });
+    signOut.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { signOutToAccountScreen(); }
+    });
+
+    unlockCard.addView(unlockTitle, fullWidth());
+    unlockCard.addView(unlockCopy, spaced());
+    addLabeledField(unlockCard, "Master password", master);
+    unlockCard.addView(unlock, spaced());
+    unlockCard.addView(signOut, spaced());
+    unlockCard.addView(status, spaced());
+    root.addView(unlockCard, fullWidth());
+    setScrollable(root);
+  }
+
+  private void restoreVault(final String secret, final EditText master, final Button unlock) {
+    final String restoreToken = token;
+    unlock.setEnabled(false);
+    setStatus("Checking master password and restoring encrypted vault...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, "/api/sync/pull"), new JSONObject(), restoreToken);
+          JSONArray records = response.optJSONArray("records");
+          int total = records == null ? 0 : records.length();
+          int count = 0;
+          for (int index = 0; index < total; index++) {
+            if (MobileVaultItem.shouldRenderRecord(records.getJSONObject(index).optBoolean("deleted", false))) count++;
+          }
+          final String[] itemJsons = new String[count];
+          final int[] revisions = new int[count];
+          int visibleIndex = 0;
+          for (int index = 0; index < total; index++) {
+            JSONObject record = records.getJSONObject(index);
+            String itemJson;
+            try {
+              itemJson = MobileVaultItem.decryptItemJson(record.optString("ciphertext"), record.optString("nonce"), record.optString("salt"), secret);
+            } catch (Exception decryptError) {
+              throw new Exception("Master password could not decrypt this vault.");
+            }
+            if (!MobileVaultItem.shouldRenderRecord(record.optBoolean("deleted", false))) continue;
+            revisions[visibleIndex] = record.optInt("revision", 1);
+            itemJsons[visibleIndex] = itemJson;
+            visibleIndex++;
+          }
+          runOnMain(new Runnable() { @Override public void run() {
+            if (!restoreToken.equals(token)) return;
+            MainActivity.this.masterPassword = secret;
+            master.setText("");
+            MobileAutofillSessionStore.unlock(MainActivity.this);
+            showVaultScreen("Vault unlocked after account login.");
+            allItemJsons = itemJsons;
+            allItemRevisions = revisions;
+            MobileAutofillVault.setServerBackedItems(itemJsons);
+            MobileAutofillSessionStore.save(MainActivity.this, itemJsons);
+            renderFilteredVaultList("");
+          } });
+        } catch (Exception error) {
+          final String message = friendlyError(error);
+          runOnMain(new Runnable() { @Override public void run() {
+            if (!restoreToken.equals(token)) return;
+            MainActivity.this.masterPassword = "";
+            master.setText("");
+            MobileAutofillVault.clear();
+            MobileAutofillSessionStore.clear(MainActivity.this);
+            unlock.setEnabled(true);
             setStatus(message, true);
           } });
         }
@@ -858,7 +990,7 @@ public final class MainActivity extends Activity {
     return field;
   }
 
-  private void addLabeledField(LinearLayout parent, String labelText, EditText field) {
+  private LinearLayout addLabeledField(LinearLayout parent, String labelText, EditText field) {
     LinearLayout group = new LinearLayout(this);
     group.setOrientation(LinearLayout.VERTICAL);
     TextView label = body(labelText);
@@ -869,6 +1001,7 @@ public final class MainActivity extends Activity {
     group.addView(label, fullWidth());
     group.addView(field, fullWidth());
     parent.addView(group, spaced());
+    return group;
   }
 
   private Button actionButton(String text) {

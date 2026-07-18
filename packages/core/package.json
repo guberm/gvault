@@ -1,6 +1,6 @@
 {
   "name": "@gvault/core",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@gvault/shared-utils": "0.1.9",
-    "@gvault/vault-models": "0.1.9"
+    "@gvault/shared-utils": "0.1.10",
+    "@gvault/vault-models": "0.1.10"
   }
 }

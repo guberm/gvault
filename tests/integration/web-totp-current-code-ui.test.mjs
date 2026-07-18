@@ -55,8 +55,10 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
     await page.getByLabel("Account password").fill("test-account-password");
+    await page.getByLabel("Master password", { exact: true }).fill("correct horse battery staple");
+    await page.getByLabel("Confirm master password").fill("correct horse battery staple");
     await page.getByRole("button", { name: "Register" }).click();
-    await unlock(page);
+    await assertText(page.locator("#lockState"), "Unlocked");
 
     await page.locator("[name=title]").fill("Existing login");
     await page.locator("[name=username]").fill("existing@example.local");
@@ -93,9 +95,9 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
     await page.getByLabel("Account password").fill("test-account-password");
     await page.getByRole("button", { name: "Login", exact: true }).click();
-    await unlock(page);
-    await page.getByRole("button", { name: "Sync" }).click();
-    await assertText(page.locator("#status"), "Sync complete: 0 pushed, 2 imported", 5_000);
+    await assertText(page.locator("#status"), "Server session established");
+    await unlock(page, "correct horse battery staple");
+    await assertText(page.locator("#status"), "Vault restored and unlocked.", 5_000);
     await page.locator(".item-row").filter({ hasText: "Primary authenticator" }).click();
     assert.equal(await page.getByLabel("TOTP secret").inputValue(), rfcSecret, "the manually entered secret survives encrypted sync and unlock");
     const code = page.getByLabel("Current TOTP code");
@@ -291,8 +293,8 @@ test("linked authenticator relationships fail closed when stale or ambiguous and
   }
 });
 
-async function unlock(page) {
-  await page.getByLabel("Master password").fill("local-master-password");
+async function unlock(page, masterPassword = "local-master-password") {
+  await page.getByLabel("Master password", { exact: true }).fill(masterPassword);
   await page.getByRole("button", { name: "Unlock vault" }).click();
 }
 
