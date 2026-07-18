@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 276
+Total unchecked checklist task issues linked here: 275
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -567,7 +567,7 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [ ] #484 Android Autofill plaintext SharedPreferences. — https://github.com/guberm/gvault/issues/484
 - [ ] #485 Request-size and authentication rate limits. — https://github.com/guberm/gvault/issues/485
 - [ ] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486
-- [ ] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487
+- [x] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487 — PRs #495/#496, live acceptance at `43eb1b8`
 - [ ] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488
 - [ ] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489
 - [ ] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490

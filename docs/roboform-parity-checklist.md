@@ -579,7 +579,7 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [ ] #484 Android encrypted Autofill storage and physical-device restart/lock proof.
 - [ ] #485 Request-size bounds and rate limiting around synchronous authentication work.
 - [ ] #486 One cross-client minimum master-password policy, including Android device proof.
-- [ ] #487 Web blank account-password validation without a fallback credential. (implemented here; closes only after deploy/live acceptance)
+- [x] #487 Web blank account-password validation without a fallback credential. (PRs #495/#496; live commit `43eb1b8` verified with zero auth requests)
 - [ ] #488 Canonical Android `VaultItem` timestamps and cross-client compatibility.
 - [ ] #489 Dot-boundary-safe URL matching for lookalike domains.
 - [ ] #490 Durable, validated, concurrency-safe server storage.
