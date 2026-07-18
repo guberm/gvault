@@ -26,16 +26,19 @@
       }
 
       body {
-        width: 340px;
+        width: 360px;
+        max-width: 100vw;
         margin: 0;
         background: var(--bg);
+        overflow-x: hidden;
       }
 
       button,
-      input {
+      input,
+      select {
         box-sizing: border-box;
         width: 100%;
-        min-height: 36px;
+        min-height: 40px;
         font: inherit;
       }
 
@@ -48,7 +51,13 @@
         cursor: pointer;
       }
 
-      input {
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      input,
+      select {
         border: 1px solid var(--border);
         border-radius: 7px;
         padding: 8px 10px;
@@ -56,10 +65,17 @@
         color: var(--ink);
       }
 
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--accent) 30%, transparent);
+        outline-offset: 2px;
+      }
+
       .popup {
         display: grid;
         gap: 12px;
-        padding: 14px;
+        padding: 16px;
       }
 
       .brand,
@@ -74,6 +90,10 @@
         justify-content: space-between;
       }
 
+      .brand .link-button {
+        margin-left: auto;
+      }
+
       .mark {
         display: grid;
         width: 36px;
@@ -86,12 +106,18 @@
       }
 
       h1,
+      h2,
       p {
         margin: 0;
       }
 
       h1 {
         font-size: 18px;
+      }
+
+      h2 {
+        font-size: 15px;
+        line-height: 1.3;
       }
 
       .muted,
@@ -103,7 +129,7 @@
       .status,
       .card {
         border: 1px solid var(--border);
-        border-radius: 8px;
+        border-radius: 12px;
         background: var(--surface);
       }
 
@@ -119,6 +145,7 @@
       }
 
       label {
+        gap: 6px;
         font-weight: 720;
       }
 
@@ -144,6 +171,12 @@
       .check input {
         width: auto;
         min-height: auto;
+      }
+
+      #contentSurface,
+      #settingsSurface {
+        display: grid;
+        gap: 12px;
       }
 
       [hidden] {
@@ -188,7 +221,7 @@
         </label>
         <button id="generatePassword" type="button">Generate password</button>
         <button id="fillGeneratedPassword" type="button" disabled>Fill generated password</button>
-        <p>Click directly in one visible password field on the page before filling. Repeat for a confirmation field.</p>
+        <p class="muted">Click directly in one visible password field on the page before filling. Repeat for a confirmation field.</p>
       </section>
 
       <section class="card" aria-label="Manual fill">
@@ -254,7 +287,7 @@
       <section class="card" aria-label="Server connection">
         <label>
           <span>Server URL</span>
-          <input id="serverUrl" value="http://127.0.0.1:8080" />
+          <input id="serverUrl" value="https://gvault.guber.dev" />
         </label>
         <div class="links">
           <button id="saveServer" class="link-button" type="button">Save server</button>

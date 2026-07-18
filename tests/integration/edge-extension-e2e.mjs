@@ -26,7 +26,8 @@ test("Edge extension loads and fills a login form in Microsoft Edge", { skip: !e
       `--disable-extensions-except=${edgeExtensionPath}`,
       `--load-extension=${edgeExtensionPath}`,
       "--no-first-run",
-      "--no-default-browser-check"
+      "--no-default-browser-check",
+      "--no-proxy-server"
     ]
   });
 
@@ -100,6 +101,7 @@ test("Edge extension loads and fills a login form in Microsoft Edge", { skip: !e
     assert.equal(await popup.locator("#password").inputValue(), "captured-edge-pass");
     await popup.locator("#dismissSaveLogin").click();
     await waitUntil(async () => !(await popup.locator("#savePrompt").isVisible()), "Edge save-new-login prompt dismissed");
+    await popup.locator("#showSettings").click();
     await popup.locator("#serverUrl").fill("https://gvault.guber.dev");
     await popup.locator("#saveServer").click();
     await expectText(popup, "#status", "Server URL saved");

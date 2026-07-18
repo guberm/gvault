@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GVault</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=480" />
   </head>
   <body>
     <main class="app-shell">
@@ -25,33 +25,34 @@
           <button id="lockButton" class="secondary-button" type="button">Lock now</button>
         </section>
 
-        <div class="nav-section">Vault</div>
-        <nav class="nav-list" aria-label="Vault categories">
-          <button data-filter="all" class="active" type="button">All items <span id="countAll">0</span></button>
-          <button data-filter="login" type="button">Logins <span id="countLogin">0</span></button>
-          <button data-filter="secure-note" type="button">Secure notes <span id="countNote">0</span></button>
-          <button data-filter="identity" type="button">Identities <span id="countIdentity">0</span></button>
-          <button data-filter="payment-card" type="button">Payment cards <span id="countCard">0</span></button>
-          <button data-filter="address" type="button">Addresses <span id="countAddress">0</span></button>
-          <button data-filter="authenticator" type="button">Authenticators <span id="countAuthenticator">0</span></button>
-          <button data-filter="favorite" type="button">Favorites <span id="countFavorite">0</span></button>
-        </nav>
+        <div id="vaultNavigation" class="vault-navigation hidden">
+          <div class="nav-section">Vault</div>
+          <nav class="nav-list" aria-label="Vault categories">
+            <button data-filter="all" class="active" type="button">All items <span id="countAll">0</span></button>
+            <button data-filter="login" type="button">Logins <span id="countLogin">0</span></button>
+            <button data-filter="secure-note" type="button">Secure notes <span id="countNote">0</span></button>
+            <button data-filter="identity" type="button">Identities <span id="countIdentity">0</span></button>
+            <button data-filter="payment-card" type="button">Payment cards <span id="countCard">0</span></button>
+            <button data-filter="address" type="button">Addresses <span id="countAddress">0</span></button>
+            <button data-filter="authenticator" type="button">Authenticators <span id="countAuthenticator">0</span></button>
+            <button data-filter="favorite" type="button">Favorites <span id="countFavorite">0</span></button>
+          </nav>
 
-        <div class="nav-divider"></div>
-        <div class="nav-section">Folders</div>
-        <nav id="folderList" class="nav-list" aria-label="Vault folders"></nav>
+          <div class="nav-divider"></div>
+          <div class="nav-section">Folders</div>
+          <nav id="folderList" class="nav-list" aria-label="Vault folders"></nav>
 
-        <div class="nav-divider"></div>
-        <div class="nav-section">Tags</div>
-        <nav id="tagList" class="nav-list" aria-label="Vault tags"></nav>
+          <div class="nav-divider"></div>
+          <div class="nav-section">Tags</div>
+          <nav id="tagList" class="nav-list" aria-label="Vault tags"></nav>
 
-        <div class="nav-divider"></div>
-        <div class="nav-section">Tools</div>
-        <button class="tool-row" type="button">Password generator</button>
-        <button class="tool-row" type="button">Health check <span>Beta</span></button>
-        <button id="importRoboFormButton" class="tool-row" type="button">Import CSV</button>
-        <input id="roboFormImportFile" class="visually-hidden" type="file" accept=".csv,text/csv" />
-        <button class="tool-row" type="button">Export vault</button>
+          <div class="nav-divider"></div>
+          <div class="nav-section">Tools</div>
+          <button id="generatorNavButton" class="tool-row" type="button">Password generator</button>
+          <button id="healthCheckButton" class="tool-row" type="button">Health check</button>
+          <button id="importRoboFormButton" class="tool-row" type="button">Import CSV</button>
+          <input id="roboFormImportFile" class="visually-hidden" type="file" accept=".csv,text/csv" />
+        </div>
 
         <div class="sidebar-footer">
           <button id="themeButton" class="tool-row" type="button">Dark mode</button>
@@ -100,7 +101,6 @@
                 <span aria-hidden="true">⌕</span>
                 <input id="search" type="search" placeholder="Search vault" aria-label="Search vault" />
               </label>
-              <button class="secondary-button square-button" type="button">⚱</button>
               <button id="newItemButton" class="square-button" type="button" title="New item">+</button>
             </div>
             <div class="list-meta">
@@ -119,7 +119,6 @@
                 <p id="detailSubtitle">Create or select a vault item.</p>
               </div>
               <button id="favoriteButton" class="secondary-button" type="button">Favorite</button>
-              <button class="secondary-button" type="button">More</button>
             </header>
 
             <section class="detail-grid">
@@ -214,6 +213,6 @@
         </footer>
       </section>
     </main>
-    <script src="./app.js?v=265" type="module"></script>
+    <script src="./app.js?v=480" type="module"></script>
   </body>
 </html>

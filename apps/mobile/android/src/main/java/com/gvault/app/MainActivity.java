@@ -20,6 +20,7 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -103,24 +104,31 @@ public final class MainActivity extends Activity {
     settingsVisible = false;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(40, 48, 40, 40);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
     root.setBackgroundColor(MobileUiStyle.BACKGROUND);
+    root.setGravity(Gravity.CENTER_VERTICAL);
+
+    LinearLayout authCard = new LinearLayout(this);
+    authCard.setOrientation(LinearLayout.VERTICAL);
+    authCard.setPadding(dp(20), dp(22), dp(20), dp(20));
+    authCard.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.CORNER_RADIUS_DP));
+    authCard.setElevation(dp(2));
 
     TextView title = title("GVault");
     TextView subtitle = body("Sign in or create an account to use your server-backed encrypted vault.");
     subtitle.setGravity(Gravity.CENTER);
-    subtitle.setPadding(0, 8, 0, 24);
+    subtitle.setPadding(0, dp(8), 0, dp(20));
 
-    final EditText server = field("Server URL", false);
+    final EditText server = field("https://gvault.guber.dev", false);
     server.setText(serverUrl);
     server.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
-    final EditText emailField = field("Email", false);
+    final EditText emailField = field("name@example.com", false);
     emailField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
-    final EditText accountPassword = field("Account password", true);
-    final EditText masterPassword = field("Master password", true);
-    final EditText confirmMaster = field("Confirm master password (create account)", true);
+    final EditText accountPassword = field("Enter account password", true);
+    final EditText masterPassword = field("Enter master password", true);
+    final EditText confirmMaster = field("Repeat master password", true);
 
     final Button signIn = actionButton("Sign in");
     final Button createAccount = secondaryButton("Create account");
@@ -137,18 +145,21 @@ public final class MainActivity extends Activity {
     });
 
     status = body("Ready. Registration is available from this screen.\n" + MobileAuthState.sessionStoragePolicyMessage());
-    status.setPadding(0, 18, 0, 0);
+    status.setTextSize(14);
+    status.setBackground(rounded(MobileUiStyle.SURFACE_MUTED, 0, MobileUiStyle.BUTTON_RADIUS_DP));
+    status.setPadding(dp(14), dp(12), dp(14), dp(12));
 
-    root.addView(title, fullWidth());
-    root.addView(subtitle, fullWidth());
-    root.addView(server, spaced());
-    root.addView(emailField, spaced());
-    root.addView(accountPassword, spaced());
-    root.addView(masterPassword, spaced());
-    root.addView(confirmMaster, spaced());
-    root.addView(signIn, spaced());
-    root.addView(createAccount, spaced());
-    root.addView(status, fullWidth());
+    authCard.addView(title, fullWidth());
+    authCard.addView(subtitle, fullWidth());
+    addLabeledField(authCard, "Server URL", server);
+    addLabeledField(authCard, "Email", emailField);
+    addLabeledField(authCard, "Account password", accountPassword);
+    addLabeledField(authCard, "Master password", masterPassword);
+    addLabeledField(authCard, "Confirm master password", confirmMaster);
+    authCard.addView(signIn, spaced());
+    authCard.addView(createAccount, spaced());
+    authCard.addView(status, spaced());
+    root.addView(authCard, fullWidth());
     setScrollable(root);
   }
 
@@ -197,11 +208,11 @@ public final class MainActivity extends Activity {
     settingsVisible = false;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(40, 48, 40, 40);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
     root.setBackgroundColor(MobileUiStyle.BACKGROUND);
     root.addView(title("GVault"), fullWidth());
     TextView account = body("Signed in as " + email + "\nServer: " + serverUrl);
-    account.setPadding(0, 12, 0, 20);
+    account.setPadding(0, dp(12), 0, dp(20));
     root.addView(account, fullWidth());
 
     status = card("Vault", message + "\nSyncing server-backed encrypted records...");
@@ -265,7 +276,7 @@ public final class MainActivity extends Activity {
 
     itemList = new LinearLayout(this);
     itemList.setOrientation(LinearLayout.VERTICAL);
-    itemList.setPadding(0, 12, 0, 8);
+    itemList.setPadding(0, dp(12), 0, dp(8));
     root.addView(itemList, fullWidth());
     itemDetail = card("Item detail", "Select a vault item to view details.");
     root.addView(itemDetail, spaced());
@@ -286,16 +297,22 @@ public final class MainActivity extends Activity {
     root.addView(copyActions, spaced());
     renderVaultLoading();
 
+    LinearLayout editorCard = new LinearLayout(this);
+    editorCard.setOrientation(LinearLayout.VERTICAL);
+    editorCard.setPadding(dp(18), dp(16), dp(18), dp(18));
+    editorCard.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.CORNER_RADIUS_DP));
+    editorCard.setElevation(dp(2));
+
     TextView addLoginTitle = body("Add Login");
     addLoginTitle.setTypeface(null, 1);
-    addLoginTitle.setPadding(0, 18, 0, 0);
-    root.addView(addLoginTitle, fullWidth());
-    editTitle = field("Login title", false);
-    editUrl = field("URL", false);
+    addLoginTitle.setTextColor(MobileUiStyle.TEXT);
+    editorCard.addView(addLoginTitle, fullWidth());
+    editTitle = field("Give this Login a name", false);
+    editUrl = field("https://example.com/login", false);
     editUrl.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-    editUsername = field("Username", false);
+    editUsername = field("name@example.com", false);
     editUsername.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-    editPassword = field("Password", true);
+    editPassword = field("Enter or generate a password", true);
     revealPasswordButton = secondaryButton(MobileAuthState.passwordRevealButtonLabel(false));
     revealPasswordButton.setEnabled(false);
     revealPasswordButton.setOnClickListener(new View.OnClickListener() {
@@ -305,25 +322,26 @@ public final class MainActivity extends Activity {
     generatePasswordButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { generatePasswordForEditor(); }
     });
-    editNotes = field("Notes", false);
-    root.addView(editTitle, spaced());
-    root.addView(editUrl, spaced());
-    root.addView(editUsername, spaced());
-    root.addView(editPassword, spaced());
-    root.addView(revealPasswordButton, spaced());
-    root.addView(generatePasswordButton, spaced());
-    root.addView(editNotes, spaced());
+    editNotes = field("Optional notes", false);
+    addLabeledField(editorCard, "Login title", editTitle);
+    addLabeledField(editorCard, "Website URL", editUrl);
+    addLabeledField(editorCard, "Username", editUsername);
+    addLabeledField(editorCard, "Password", editPassword);
+    editorCard.addView(revealPasswordButton, spaced());
+    editorCard.addView(generatePasswordButton, spaced());
+    addLabeledField(editorCard, "Notes", editNotes);
     saveLoginButton = actionButton("Save Login");
     saveLoginButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { submitSaveLogin(); }
     });
-    root.addView(saveLoginButton, spaced());
+    editorCard.addView(saveLoginButton, spaced());
     deleteLoginButton = secondaryButton("Delete Login");
     deleteLoginButton.setEnabled(false);
     deleteLoginButton.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) { submitDeleteSelectedLogin(); }
     });
-    root.addView(deleteLoginButton, spaced());
+    editorCard.addView(deleteLoginButton, spaced());
+    root.addView(editorCard, spaced());
 
     Button sync = actionButton("Sync now");
     sync.setOnClickListener(new View.OnClickListener() {
@@ -343,7 +361,7 @@ public final class MainActivity extends Activity {
     settingsVisible = true;
     root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(40, 48, 40, 40);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
     root.setBackgroundColor(MobileUiStyle.BACKGROUND);
     root.addView(title("GVault " + MobileAuthState.settingsTitle()), fullWidth());
     root.addView(card(MobileAuthState.settingsTitle(), MobileAuthState.settingsAccountLine(email) + "\n" + MobileAuthState.settingsServerLine(serverUrl) + "\n" + MobileAuthState.sessionStoragePolicyMessage()), fullWidth());
@@ -760,6 +778,19 @@ public final class MainActivity extends Activity {
 
   private void setScrollable(LinearLayout content) {
     final ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(true);
+    scroll.setClipToPadding(true);
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+      scroll.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+        @Override public WindowInsets onApplyWindowInsets(View view, WindowInsets insets) {
+          android.graphics.Insets systemBars = insets.getInsets(WindowInsets.Type.systemBars());
+          view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+          return insets;
+        }
+      });
+    } else {
+      scroll.setFitsSystemWindows(true);
+    }
     final float[] pullStartY = new float[] { -1f };
     scroll.setOnTouchListener(new View.OnTouchListener() {
       @Override public boolean onTouch(View view, MotionEvent event) {
@@ -815,12 +846,26 @@ public final class MainActivity extends Activity {
     field.setHint(hint);
     field.setSingleLine(true);
     field.setTextSize(16);
+    field.setMinHeight(dp(48));
     field.setTextColor(MobileUiStyle.TEXT);
     field.setHintTextColor(MobileUiStyle.MUTED_TEXT);
     field.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.BUTTON_RADIUS_DP));
     field.setPadding(dp(16), 0, dp(16), 0);
     field.setInputType(secret ? (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD) : (InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS));
     return field;
+  }
+
+  private void addLabeledField(LinearLayout parent, String labelText, EditText field) {
+    LinearLayout group = new LinearLayout(this);
+    group.setOrientation(LinearLayout.VERTICAL);
+    TextView label = body(labelText);
+    label.setTextSize(13);
+    label.setTextColor(MobileUiStyle.TEXT);
+    label.setTypeface(null, 1);
+    label.setPadding(dp(2), 0, 0, dp(6));
+    group.addView(label, fullWidth());
+    group.addView(field, fullWidth());
+    parent.addView(group, spaced());
   }
 
   private Button actionButton(String text) {
@@ -859,9 +904,9 @@ public final class MainActivity extends Activity {
     return new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
   }
 
-  private static LinearLayout.LayoutParams spaced() {
+  private LinearLayout.LayoutParams spaced() {
     LinearLayout.LayoutParams params = fullWidth();
-    params.setMargins(0, 12, 0, 0);
+    params.setMargins(0, dp(12), 0, 0);
     return params;
   }
 }

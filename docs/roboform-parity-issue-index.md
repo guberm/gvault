@@ -2,12 +2,12 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 335
+Total unchecked checklist task issues linked here: 268
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
 
-##  — Current verified snapshot
+## Current verified snapshot
 
 - [ ] #36 Deployment is persistent across reboot/Caddy/service restart. — https://github.com/guberm/gvault/issues/36
 - [ ] #37 Browser extension is a real server-backed login/fill client. — https://github.com/guberm/gvault/issues/37
@@ -37,7 +37,7 @@ Parent issue: #2 — https://github.com/guberm/gvault/issues/2
 - [ ] #51 Browser extension first screen is login/register. — https://github.com/guberm/gvault/issues/51
 - [ ] #52 Windows desktop first screen is login/register. — https://github.com/guberm/gvault/issues/52
 - [ ] #53 Linux client has login/register entrypoint. — https://github.com/guberm/gvault/issues/53
-- [ ] #54 Extension default server URL uses `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/54
+- [x] #54 Extension default server URL uses `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/54
 - [ ] #55 Windows desktop default server URL uses `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/55
 - [ ] #56 Linux client default server URL uses `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/56
 - [ ] #57 Extension displayed/fill data comes from server-backed records. — https://github.com/guberm/gvault/issues/57
@@ -83,8 +83,8 @@ Parent issue: #4 — https://github.com/guberm/gvault/issues/4
 - [ ] #87 Filter by item type. — https://github.com/guberm/gvault/issues/87
 - [ ] #88 Real counts per category. — https://github.com/guberm/gvault/issues/88
 - [ ] #89 Favorites. — https://github.com/guberm/gvault/issues/89
-- [ ] #90 Folders/collections. — https://github.com/guberm/gvault/issues/90
-- [ ] #91 Tags. — https://github.com/guberm/gvault/issues/91
+- [x] #90 Folders/collections. — https://github.com/guberm/gvault/issues/90
+- [x] #91 Tags. — https://github.com/guberm/gvault/issues/91
 - [ ] #92 Empty state. — https://github.com/guberm/gvault/issues/92
 - [ ] #93 Loading/skeleton state. — https://github.com/guberm/gvault/issues/93
 - [ ] #94 Save/sync status state. — https://github.com/guberm/gvault/issues/94
@@ -100,15 +100,15 @@ Parent issue: #5 — https://github.com/guberm/gvault/issues/5
 - [ ] #99 Reveal/hide password. — https://github.com/guberm/gvault/issues/99
 - [ ] #100 Re-auth before reveal/copy if configured. — https://github.com/guberm/gvault/issues/100
 - [ ] #101 Auto-clear clipboard timer. — https://github.com/guberm/gvault/issues/101
-- [ ] #102 Password generator panel. — https://github.com/guberm/gvault/issues/102
-- [ ] #103 Use generated password in current item. — https://github.com/guberm/gvault/issues/103
-- [ ] #104 Password strength indicator. — https://github.com/guberm/gvault/issues/104
+- [x] #102 Password generator panel. — https://github.com/guberm/gvault/issues/102
+- [x] #103 Use generated password in current item. — https://github.com/guberm/gvault/issues/103
+- [x] #104 Password strength indicator. — https://github.com/guberm/gvault/issues/104
 - [ ] #105 Keyboard shortcut for search. — https://github.com/guberm/gvault/issues/105
 - [ ] #106 Keyboard shortcut for new item. — https://github.com/guberm/gvault/issues/106
 - [ ] #107 Keyboard shortcut for save. — https://github.com/guberm/gvault/issues/107
 - [ ] #108 Settings modal/page. — https://github.com/guberm/gvault/issues/108
 - [ ] #109 Account modal/page. — https://github.com/guberm/gvault/issues/109
-- [ ] #110 Responsive mobile web layout. — https://github.com/guberm/gvault/issues/110
+- [x] #110 Responsive mobile web layout. — https://github.com/guberm/gvault/issues/110
 - [ ] #111 Dark/light theme consistency. — https://github.com/guberm/gvault/issues/111
 
 ## 3. Android client — 3.1 Auth and session
@@ -167,7 +167,7 @@ Parent issue: #8 — https://github.com/guberm/gvault/issues/8
 Parent issue: #9 — https://github.com/guberm/gvault/issues/9
 
 - [ ] #148 Popup first screen is login/register. — https://github.com/guberm/gvault/issues/148
-- [ ] #149 Default server URL is `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/149
+- [x] #149 Default server URL is `https://gvault.guber.dev`. — https://github.com/guberm/gvault/issues/149
 - [ ] #150 Register from popup. — https://github.com/guberm/gvault/issues/150
 - [ ] #151 Login from popup. — https://github.com/guberm/gvault/issues/151
 - [ ] #152 Token/session storage in extension storage. — https://github.com/guberm/gvault/issues/152
@@ -214,7 +214,7 @@ Parent issue: #11 — https://github.com/guberm/gvault/issues/11
 - [ ] #183 Copy/reveal sensitive fields. — https://github.com/guberm/gvault/issues/183
 - [ ] #184 Logout. — https://github.com/guberm/gvault/issues/184
 - [ ] #185 Connected/sync/error status bar. — https://github.com/guberm/gvault/issues/185
-- [ ] #186 Settings/preferences. — https://github.com/guberm/gvault/issues/186
+- [x] #186 Settings/preferences. — https://github.com/guberm/gvault/issues/186
 - [ ] #187 Tray/taskbar icon. — https://github.com/guberm/gvault/issues/187
 - [ ] #188 Tray quick search/recent/favorites. — https://github.com/guberm/gvault/issues/188
 - [ ] #189 Build `.exe`. — https://github.com/guberm/gvault/issues/189

@@ -529,6 +529,7 @@ function render() {
   const unlocked = Boolean(state.masterPassword);
   $("unlockPanel").classList.toggle("hidden", unlocked);
   $("vaultPanel").classList.toggle("hidden", !unlocked);
+  $("vaultNavigation").classList.toggle("hidden", !unlocked);
   $("lockState").textContent = unlocked ? "Unlocked" : "Locked";
   $("lockState").nextElementSibling.textContent = unlocked ? "Vault is unlocked" : "Vault is locked";
   $("lockButton").disabled = !unlocked;
@@ -1118,6 +1119,21 @@ $("items").addEventListener("click", (event) => {
 $("registerButton").addEventListener("click", () => auth("/api/auth/register").catch((error) => setStatus(error.message, "warning")));
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
+$("generatorNavButton").addEventListener("click", () => {
+  document.querySelector(".generator").scrollIntoView({ block: "start", behavior: "smooth" });
+  $("generateButton").focus({ preventScroll: true });
+});
+$("healthCheckButton").addEventListener("click", async () => {
+  try {
+    setStatus("Checking server health...", "neutral");
+    const response = await fetch(new URL("/healthz", $("serverUrl").value));
+    const health = await response.json();
+    if (!response.ok || health?.ok !== true) throw new Error("Server health check failed.");
+    setStatus(`Server healthy${health.product ? `: ${health.product}` : ""}.`, "success");
+  } catch {
+    setStatus("Server health check failed.", "warning");
+  }
+});
 $("importRoboFormButton").addEventListener("click", () => {
   if (!requireUnlocked()) return;
   $("roboFormImportFile").click();

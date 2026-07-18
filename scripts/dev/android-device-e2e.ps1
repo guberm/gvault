@@ -60,14 +60,17 @@ $uiText = $ui -join "`n"
 if ($uiText -notmatch "GVault") {
   throw "GVault text not found in device UI."
 }
-if ($uiText -notmatch "Self-hosted password and identity vault") {
-  throw "Android client subtitle not found in device UI."
+if ($uiText -notmatch "Sign in or create an account to use your server-backed encrypted vault") {
+  throw "Android auth-first subtitle not found in device UI."
 }
-if ($uiText -notmatch "Open Web Vault") {
-  throw "Android client action not found in device UI."
+if ($uiText -notmatch "https://gvault.guber.dev") {
+  throw "Android public server default not found in device UI."
 }
-if ($uiText -notmatch "Dark mode") {
-  throw "Android theme toggle not found in device UI."
+if ($uiText -notmatch "Confirm master password") {
+  throw "Android labeled confirmation field not found in device UI."
+}
+if ($uiText -notmatch "Sign in" -or $uiText -notmatch "Create account") {
+  throw "Android auth actions not found in device UI."
 }
 
 "GVault Android device e2e ok on $Serial"
