@@ -53,7 +53,7 @@ test("web regular login uses account credentials without a master password", asy
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.getByLabel("Email").fill("login-only@example.test");
-    await page.getByLabel("Account password").fill("account-password-only");
+    await page.getByLabel("Account password", { exact: true }).fill("account-password-only");
     await page.getByLabel("Master password", { exact: true }).fill("previous-local-master");
     await page.getByRole("button", { name: "Unlock vault" }).click();
     await expectText(page, "#lockState", "Unlocked");
@@ -89,7 +89,7 @@ test("web registration requires a confirmed master password without sending it t
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.getByLabel("Email").fill("register-master@example.test");
-    await page.getByLabel("Account password").fill("account-password-only");
+    await page.getByLabel("Account password", { exact: true }).fill("account-password-only");
     await page.getByRole("button", { name: "Register" }).click();
     await expectText(page, "#status", "Master password is required");
     assert.equal(registerRequests, 0);
@@ -105,7 +105,14 @@ test("web registration requires a confirmed master password without sending it t
     await page.getByRole("button", { name: "Register" }).click();
     await expectText(page, "#status", "Server session ready");
     assert.equal(registerRequests, 1);
-    assert.deepEqual(registerBody, { email: "register-master@example.test", password: "account-password-only" });
+    assert.equal(registerBody.email, "register-master@example.test");
+    assert.equal(registerBody.password, "account-password-only");
+    assert.equal(registerBody.masterPassword, undefined, "the master password is never sent as a registration credential");
+    assert.equal(JSON.stringify(registerBody).includes("registration-master-password"), false, "the master password is absent from the complete request body");
+    assert.equal(registerBody.recovery?.version, 1, "registration includes a versioned recovery enrollment");
+    assert.equal(registerBody.recovery?.envelope?.kdf, "PBKDF2-SHA256");
+    assert.equal(registerBody.recovery?.envelope?.iterations, 210000);
+    assert.equal(typeof registerBody.recovery?.verifier, "string");
   } finally {
     await browser?.close();
     await new Promise((resolve) => server.close(resolve));

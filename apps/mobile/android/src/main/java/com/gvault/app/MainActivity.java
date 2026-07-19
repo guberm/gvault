@@ -127,6 +127,7 @@ public final class MainActivity extends Activity {
 
     final EditText emailField = field("name@example.com", false);
     emailField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    emailField.setText(prefs.getString("email", ""));
 
     final EditText accountPassword = field("Enter account password", true);
     final EditText masterPassword = field("Enter master password", true);
@@ -134,6 +135,7 @@ public final class MainActivity extends Activity {
 
     final Button signIn = actionButton("Sign in");
     final Button createAccount = secondaryButton("Create account");
+    final Button recoverAccount = secondaryButton("Forgot account password?");
 
     status = body("Regular sign in uses only email and account password.\n" + MobileAuthState.sessionStoragePolicyMessage());
     status.setTextSize(14);
@@ -151,6 +153,7 @@ public final class MainActivity extends Activity {
     confirmMasterGroup.setVisibility(View.GONE);
     authCard.addView(signIn, spaced());
     authCard.addView(createAccount, spaced());
+    authCard.addView(recoverAccount, spaced());
     authCard.addView(status, spaced());
     final boolean[] creatingAccount = new boolean[] { false };
     signIn.setOnClickListener(new View.OnClickListener() {
@@ -170,6 +173,12 @@ public final class MainActivity extends Activity {
           return;
         }
         submitAuth(true, server, emailField, accountPassword, masterPassword, confirmMaster, signIn, createAccount);
+      }
+    });
+    recoverAccount.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        serverUrl = server.getText().toString().trim().isEmpty() ? MobileAuthState.DEFAULT_SERVER_URL : server.getText().toString().trim();
+        showAccountRecoveryScreen(emailField.getText().toString().trim());
       }
     });
     root.addView(authCard, fullWidth());
@@ -204,6 +213,10 @@ public final class MainActivity extends Activity {
           JSONObject body = new JSONObject();
           body.put("email", nextEmail);
           body.put("password", accountSecret);
+          if (create) {
+            MobileRecoveryCrypto.RecoveryMaterial recovery = MobileRecoveryCrypto.create(masterSecret);
+            body.put("recovery", recoveryJson(recovery));
+          }
           JSONObject response = postJson(MobileAuthState.endpoint(serverUrl, create ? "/api/auth/register" : "/api/auth/login"), body, "");
           token = response.getString("token");
           email = nextEmail;
@@ -230,6 +243,157 @@ public final class MainActivity extends Activity {
         }
       }
     }).start();
+  }
+
+  private void showAccountRecoveryScreen(String suggestedEmail) {
+    settingsVisible = false;
+    root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
+    root.setGravity(Gravity.CENTER_VERTICAL);
+
+    LinearLayout card = new LinearLayout(this);
+    card.setOrientation(LinearLayout.VERTICAL);
+    card.setPadding(dp(20), dp(22), dp(20), dp(20));
+    card.setBackground(rounded(MobileUiStyle.SURFACE, 0xFFD3E1E4, MobileUiStyle.CORNER_RADIUS_DP));
+    card.setElevation(dp(2));
+
+    TextView heading = title("Recover account access");
+    TextView copy = body("The master password decrypts your recovery key only on this device. Choose a new server account password.");
+    final EditText server = field("https://gvault.guber.dev", false);
+    server.setText(serverUrl);
+    server.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    final EditText emailField = field("name@example.com", false);
+    emailField.setText(suggestedEmail == null || suggestedEmail.isEmpty() ? prefs.getString("email", "") : suggestedEmail);
+    emailField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    final EditText master = field("Enter master password", true);
+    final EditText newPassword = field("Enter new account password", true);
+    final EditText confirmPassword = field("Repeat new account password", true);
+    final Button recover = actionButton("Recover account");
+    Button back = secondaryButton("Back to sign in");
+    status = body("Recovery failures use the same message for unknown accounts, wrong master passwords, and invalid proofs.");
+    status.setTextSize(14);
+    status.setBackground(rounded(MobileUiStyle.SURFACE_MUTED, 0, MobileUiStyle.BUTTON_RADIUS_DP));
+    status.setPadding(dp(14), dp(12), dp(14), dp(12));
+
+    recover.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        submitAccountRecovery(server, emailField, master, newPassword, confirmPassword, recover);
+      }
+    });
+    back.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { showAccountScreen(); }
+    });
+
+    card.addView(heading, fullWidth());
+    card.addView(copy, spaced());
+    addLabeledField(card, "Server URL", server);
+    addLabeledField(card, "Email", emailField);
+    addLabeledField(card, "Master password", master);
+    addLabeledField(card, "New account password", newPassword);
+    addLabeledField(card, "Confirm new account password", confirmPassword);
+    card.addView(recover, spaced());
+    card.addView(back, spaced());
+    card.addView(status, spaced());
+    root.addView(card, fullWidth());
+    setScrollable(root);
+  }
+
+  private void submitAccountRecovery(EditText server, EditText emailField, final EditText master, EditText newPassword, EditText confirmPassword, final Button recover) {
+    final String nextServerUrl = server.getText().toString().trim().isEmpty() ? MobileAuthState.DEFAULT_SERVER_URL : server.getText().toString().trim();
+    final String nextEmail = emailField.getText().toString().trim();
+    final String masterSecret = master.getText().toString();
+    final String nextPassword = newPassword.getText().toString();
+    if (nextEmail.isEmpty()) {
+      setStatus("Email is required.", true);
+      return;
+    }
+    String masterValidation = MobileAuthState.validateMasterPassword(masterSecret);
+    if (!masterValidation.isEmpty()) {
+      setStatus(masterValidation, true);
+      return;
+    }
+    if (nextPassword.length() < 12) {
+      setStatus("New account password must be at least 12 characters.", true);
+      return;
+    }
+    if (!nextPassword.equals(confirmPassword.getText().toString())) {
+      setStatus("Confirm new account password does not match.", true);
+      return;
+    }
+    recover.setEnabled(false);
+    setStatus("Verifying master-protected recovery key locally...", false);
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          JSONObject challengeBody = new JSONObject();
+          challengeBody.put("email", nextEmail);
+          JSONObject challenge = postJson(MobileAuthState.endpoint(nextServerUrl, "/api/auth/recovery/challenge"), challengeBody, "");
+          if (!MobileRecoveryCrypto.PROTOCOL.equals(challenge.optString("protocol"))) throw new Exception("Recovery protocol is unsupported.");
+          MobileRecoveryCrypto.RecoveryEnvelope envelope = recoveryEnvelopeFromJson(challenge.getJSONObject("envelope"));
+          String proof = MobileRecoveryCrypto.sign(
+            envelope,
+            masterSecret,
+            challenge.getString("challengeId"),
+            challenge.getString("challenge")
+          );
+          MobileRecoveryCrypto.RecoveryMaterial replacement = MobileRecoveryCrypto.create(masterSecret);
+          JSONObject completeBody = new JSONObject();
+          completeBody.put("challengeId", challenge.getString("challengeId"));
+          completeBody.put("proof", proof);
+          completeBody.put("password", nextPassword);
+          completeBody.put("recovery", recoveryJson(replacement));
+          JSONObject response = postJson(MobileAuthState.endpoint(nextServerUrl, "/api/auth/recovery/complete"), completeBody, "");
+          token = response.getString("token");
+          email = nextEmail;
+          serverUrl = nextServerUrl;
+          prefs.edit().putString("serverUrl", serverUrl).putString("email", email).apply();
+          runOnMain(new Runnable() { @Override public void run() {
+            MainActivity.this.masterPassword = masterSecret;
+            master.setText("");
+            MobileAutofillSessionStore.unlock(MainActivity.this);
+            showVaultScreen("Account password reset and vault restored.");
+            syncPull();
+          } });
+        } catch (Exception error) {
+          final String message = "Recovery temporarily unavailable.".equals(error.getMessage())
+            ? error.getMessage()
+            : "Recovery could not be completed.";
+          runOnMain(new Runnable() { @Override public void run() {
+            master.setText("");
+            recover.setEnabled(true);
+            setStatus(message, true);
+          } });
+        }
+      }
+    }).start();
+  }
+
+  private static JSONObject recoveryJson(MobileRecoveryCrypto.RecoveryMaterial recovery) throws Exception {
+    JSONObject envelope = new JSONObject();
+    envelope.put("version", recovery.envelope.version);
+    envelope.put("kdf", recovery.envelope.kdf);
+    envelope.put("iterations", recovery.envelope.iterations);
+    envelope.put("salt", recovery.envelope.salt);
+    envelope.put("nonce", recovery.envelope.nonce);
+    envelope.put("ciphertext", recovery.envelope.ciphertext);
+    JSONObject result = new JSONObject();
+    result.put("version", recovery.version);
+    result.put("verifier", recovery.verifier);
+    result.put("envelope", envelope);
+    return result;
+  }
+
+  private static MobileRecoveryCrypto.RecoveryEnvelope recoveryEnvelopeFromJson(JSONObject envelope) throws Exception {
+    return new MobileRecoveryCrypto.RecoveryEnvelope(
+      envelope.getInt("version"),
+      envelope.getString("kdf"),
+      envelope.getInt("iterations"),
+      envelope.getString("salt"),
+      envelope.getString("nonce"),
+      envelope.getString("ciphertext")
+    );
   }
 
   private void showVaultUnlockScreen() {
@@ -517,6 +681,12 @@ public final class MainActivity extends Activity {
       root.addView(enableAutofill, spaced());
     }
 
+    Button recovery = secondaryButton("Enable / rotate recovery");
+    recovery.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { showRecoverySetupScreen(); }
+    });
+    root.addView(recovery, spaced());
+
     Button back = actionButton("Back to vault");
     back.setOnClickListener(new View.OnClickListener() {
       @Override public void onClick(View view) {
@@ -530,6 +700,65 @@ public final class MainActivity extends Activity {
       @Override public void onClick(View view) { signOutToAccountScreen(); }
     });
     root.addView(signOut, spaced());
+    setScrollable(root);
+  }
+
+  private void showRecoverySetupScreen() {
+    settingsVisible = true;
+    root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(dp(20), dp(24), dp(20), dp(24));
+    root.setBackgroundColor(MobileUiStyle.BACKGROUND);
+    root.addView(title("Account recovery"), fullWidth());
+    root.addView(body("Existing accounts opt in explicitly. Re-enter the current account password; the master password stays in this app and protects newly rotated recovery material."), spaced());
+    final EditText accountPassword = field("Enter current account password", true);
+    addLabeledField(root, "Current account password", accountPassword);
+    final Button enableRecovery = actionButton("Enable / rotate recovery");
+    status = body("No master password or private recovery key is sent to the server.");
+    status.setTextSize(14);
+    status.setBackground(rounded(MobileUiStyle.SURFACE_MUTED, 0, MobileUiStyle.BUTTON_RADIUS_DP));
+    status.setPadding(dp(14), dp(12), dp(14), dp(12));
+    enableRecovery.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) {
+        final String password = accountPassword.getText().toString();
+        if (password.isEmpty()) {
+          setStatus("Current account password is required.", true);
+          return;
+        }
+        enableRecovery.setEnabled(false);
+        setStatus("Rotating master-protected recovery material...", false);
+        new Thread(new Runnable() {
+          @Override public void run() {
+            try {
+              MobileRecoveryCrypto.RecoveryMaterial recovery = MobileRecoveryCrypto.create(masterPassword);
+              JSONObject body = new JSONObject();
+              body.put("password", password);
+              body.put("recovery", recoveryJson(recovery));
+              postJson(MobileAuthState.endpoint(serverUrl, "/api/auth/recovery/setup"), body, token);
+              runOnMain(new Runnable() { @Override public void run() {
+                accountPassword.setText("");
+                enableRecovery.setEnabled(true);
+                setStatus("Account recovery is enabled with newly rotated material.", false);
+              } });
+            } catch (Exception error) {
+              final String message = friendlyError(error);
+              runOnMain(new Runnable() { @Override public void run() {
+                accountPassword.setText("");
+                enableRecovery.setEnabled(true);
+                setStatus(message, true);
+              } });
+            }
+          }
+        }).start();
+      }
+    });
+    root.addView(enableRecovery, spaced());
+    root.addView(status, spaced());
+    Button back = secondaryButton("Back to settings");
+    back.setOnClickListener(new View.OnClickListener() {
+      @Override public void onClick(View view) { showSettingsScreen(); }
+    });
+    root.addView(back, spaced());
     setScrollable(root);
   }
 
@@ -864,6 +1093,12 @@ public final class MainActivity extends Activity {
     String raw = readAll(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
     JSONObject parsed = raw.isEmpty() ? new JSONObject() : new JSONObject(raw);
     if (code < 200 || code >= 300) {
+      if (target.contains("/api/auth/recovery/") && code == 401) {
+        throw new Exception("Recovery could not be completed.");
+      }
+      if (target.contains("/api/auth/recovery/") && code == 429) {
+        throw new Exception("Recovery temporarily unavailable.");
+      }
       throw new Exception(MobileAuthState.authErrorMessage(code, parsed.optString("error", "HTTP " + code)));
     }
     return parsed;

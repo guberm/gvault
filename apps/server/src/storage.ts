@@ -8,6 +8,22 @@ export interface UserRow {
   passwordSalt: string;
   passwordHash: string;
   createdAt: string;
+  recovery?: RecoveryRegistration & { updatedAt: string };
+}
+
+export interface RecoveryEnvelope {
+  version: 1;
+  kdf: "PBKDF2-SHA256";
+  iterations: 210000;
+  salt: string;
+  nonce: string;
+  ciphertext: string;
+}
+
+export interface RecoveryRegistration {
+  version: 1;
+  verifier: string;
+  envelope: RecoveryEnvelope;
 }
 
 export interface DeviceRow {
@@ -21,6 +37,7 @@ export interface DeviceRow {
 
 export interface StoreState {
   schemaVersion: 1;
+  recoveryDummySecret?: string;
   users: UserRow[];
   devices: DeviceRow[];
   records: EncryptedVaultRecord[];

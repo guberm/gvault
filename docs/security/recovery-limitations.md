@@ -31,16 +31,16 @@ not assume any of them are available:
 - Emergency access (trusted contact) workflow.
 - Key escrow or operator-side key recovery.
 - Server-side re-encryption of vault records without the master password.
-- Reset of a forgotten server account password using the master password. That
-  requires a reviewed master-protected recovery-token protocol (#501); a raw
-  master-password verifier is intentionally not stored by the server.
 
 ## What CAN be recovered
 
-- **Server account password** (separate from the master password) is verified by
-  a server-side `scrypt` hash (`apps/server/src/auth.ts`). It authenticates to
-  the API only; recovering or changing it does **not** grant access to encrypted
-  vault contents without the master password.
+- **Server account password** can be reset on enrolled accounts in Web and
+  Android. The client uses the master password to decrypt a recovery signing key
+  locally, proves possession with a one-time challenge, chooses a new account
+  password, and rotates the recovery key. The server stores only the public
+  verifier and encrypted key envelope; it never receives the master password or
+  private recovery key. See
+  [account-password-recovery.md](./account-password-recovery.md).
 - **Encrypted vault records** can be restored from a backup export/import
   (`apps/server/src/index.ts`), but the restored records are still encrypted
   under the original master password. Restoring a backup does not bypass the
@@ -54,8 +54,9 @@ not assume any of them are available:
 
 - Store the master password where it cannot be lost (e.g. a securely kept written
   copy or a separate trusted password manager).
-- Losing the master password means losing the vault. There is no support path
-  that can recover it.
+- Losing the master password means losing the vault and also makes the
+  master-protected account recovery key unusable. There is no operator support
+  path that can recover either.
 
 ## Android Autofill cache lifecycle
 
@@ -75,3 +76,5 @@ then returned zero entries after force-stop/relaunch and after explicit sign-out
 
 - [security-model.md](./security-model.md) — encryption model and scope.
 - [threat-model.md](./threat-model.md) — assets, trust boundaries, and residual risks.
+- [account-password-recovery.md](./account-password-recovery.md) — implemented
+  account-password recovery protocol and its limits.

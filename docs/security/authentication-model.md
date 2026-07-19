@@ -28,6 +28,8 @@ client:
 | Create account/vault | Required | Required with confirmation | No |
 | Regular account login | Required | Not read or validated | No |
 | Unlock/restore encrypted vault after login | Not re-sent | Required | No |
+| Recover forgotten account password | New password chosen | Required locally to sign one-time challenge | No |
+| Existing-account recovery opt-in/rotation | Re-entered for authorization | Already unlocked locally | No |
 
 Web and Android authenticate a restore candidate by pulling the encrypted vault
 and successfully decrypting every record, including deleted-record tombstones,
@@ -50,7 +52,7 @@ Evidence: `apps/server/src/index.ts`, `apps/server/src/auth.ts`,
 
 `POST /api/auth/register`:
 
-1. Reads `email` and `password` from the JSON body.
+1. Reads `email`, `password`, and recovery public verifier/envelope from the JSON body.
 2. Lowercases the email for lookup/storage.
 3. Rejects duplicate emails with `409 Account already exists`.
 4. Creates a `UserRow` with:
@@ -59,10 +61,40 @@ Evidence: `apps/server/src/index.ts`, `apps/server/src/auth.ts`,
    - `createdAt`: server timestamp;
    - `passwordSalt`: random 16-byte base64url salt;
    - `passwordHash`: `scrypt` output for the server account password.
+   - `recovery.verifier`: P-256 public signing key;
+   - `recovery.envelope`: fixed-size PKCS#8 private-key ciphertext protected by
+     the client-side master password.
 5. Stores the user row in `GV_DATA_DIR/gvault-store.json`.
 6. Creates and returns a bearer session token plus `userId`.
 
 Passwords shorter than 12 characters are rejected by `hashPassword`.
+New registrations without valid version-1 recovery material are rejected.
+Pre-version-1 accounts remain readable and require an explicit authenticated
+opt-in action before recovery becomes available.
+
+## Account-password recovery
+
+Evidence: `apps/server/src/auth.ts`, `apps/server/src/index.ts`,
+`apps/web/public/app.js`, `apps/mobile/android/src/main/java/com/gvault/app/MobileRecoveryCrypto.java`.
+
+`POST /api/auth/recovery/challenge` is public and always returns the same shape.
+Enrolled accounts receive their master-protected envelope; unknown and
+unenrolled legacy accounts receive a fixed-size, per-identifier HMAC-derived
+dummy. The response contains no account-existence or enrollment flag.
+
+The client decrypts the recovery private key locally and signs the exact
+versioned challenge. `POST /api/auth/recovery/complete` consumes the challenge
+before verification, validates the P-256 DER signature, hashes the new account
+password with `scrypt`, atomically replaces the recovery verifier/envelope, and
+returns a session. Wrong, expired, replayed, unknown, and stale-key proofs share
+the generic `401 Recovery could not be completed` response. Challenge and
+completion attempts have separate fixed-window limits and redacted audit events.
+
+`POST /api/auth/recovery/setup` requires a bearer session and correct current
+account password. It is the explicit opt-in path for pre-version-1 accounts and
+also rotates recovery for enrolled accounts. Full primitive, message, envelope,
+and reuse details are in
+[account-password-recovery.md](./account-password-recovery.md).
 
 ## Password verification
 
@@ -103,6 +135,7 @@ tokens receive `401 Unauthorized`.
 The following routes require a valid bearer session:
 
 - `POST /api/devices/register`
+- `POST /api/auth/recovery/setup`
 - `POST /api/sync/pull`
 - `POST /api/sync/push`
 - `POST /api/backup/export`
@@ -131,12 +164,9 @@ The current implementation intentionally keeps the auth model small. These are
 
 - Persistent server sessions across process restarts.
 - Token expiry, refresh tokens, revocation, or logout endpoint.
-- Rate limiting, lockout, MFA, passkeys, or email verification.
+- General login/API rate limiting, lockout, MFA, passkeys, or email verification.
 - Device-bound session tokens or per-device authentication keys.
-- Password reset or recovery flow.
-- Master-password-based server account-password reset. A safe zero-knowledge
-  recovery-token protocol is tracked by #501; the master password must never be
-  sent to or stored by the server as a reset credential.
+- Recovery of a forgotten master password or encrypted vault contents without it.
 - Server-side access to the vault master password or plaintext vault contents.
 
 Audit #482 tracks the session-lifecycle work in #483. Request-body limits and
@@ -148,7 +178,8 @@ password boundary and [threat-model.md](./threat-model.md) for residual risks.
 ## What was checked
 
 - `apps/server/src/auth.ts` — server account password hashing, verification,
-  bearer-token generation, and in-memory session lookup.
+  bearer-token generation, recovery validation/proofs/challenges/limits, and
+  in-memory session lookup.
 - `apps/server/src/index.ts` — register/login handlers, `requireSession`,
   protected route boundary, and authenticated owner scoping.
 - `apps/server/src/storage.ts` — stored user/device/session-adjacent data shapes.

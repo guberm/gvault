@@ -576,4 +576,4 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [ ] #493 Cross-client KDF metadata drift. — https://github.com/guberm/gvault/issues/493
 - [ ] #494 Revision-first sync merge. — https://github.com/guberm/gvault/issues/494
 - [x] #500 Account login/master-password flow separation. — https://github.com/guberm/gvault/issues/500
-- [ ] #501 Zero-knowledge account-password recovery token. — https://github.com/guberm/gvault/issues/501
+- [x] #501 Zero-knowledge account-password recovery token. — https://github.com/guberm/gvault/issues/501

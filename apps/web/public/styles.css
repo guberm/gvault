@@ -134,6 +134,17 @@ h2 { font-size: 16px; line-height: 1.25; }
 .empty-state { display: grid; place-content: center; min-height: 250px; color: var(--muted); text-align: center; }
 .empty-state strong { color: var(--ink); }
 .hidden { display: none !important; }
+
+.recovery-fields {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+}
+
+.recovery-fields p { margin: 0.35rem 0 0; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 @media (max-width: 1380px) {

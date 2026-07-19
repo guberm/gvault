@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { detectConflicts, mergeEncryptedRecords } from "../packages/sync/dist/index.js";
 import { SessionStore, hashPassword, makeUser, verifyPassword } from "../apps/server/dist/auth.js";
+import { createRecoveryMaterial } from "./helpers/recovery-material.mjs";
 
 function rec(overrides) {
   return {
@@ -72,7 +73,7 @@ test("hashPassword rejects passwords shorter than 12 characters", () => {
 });
 
 test("verifyPassword accepts the correct password and rejects a wrong one", () => {
-  const user = makeUser("User@Example.com", "correct-horse-battery");
+  const user = makeUser("User@Example.com", "correct-horse-battery", createRecoveryMaterial("test-master-password").recovery);
   assert.equal(user.email, "user@example.com", "email is normalized at the boundary");
   assert.equal(verifyPassword("correct-horse-battery", user), true);
   assert.equal(verifyPassword("correct-horse-batteru", user), false);
@@ -101,8 +102,8 @@ test("sync endpoints isolate records per user and ignore client-supplied ownerId
   const base = `http://127.0.0.1:${port}`;
   await waitForServer(port, child);
   try {
-    const alice = await post(base, "/api/auth/register", { email: "alice@example.local", password: "alice-strong-password" });
-    const bob = await post(base, "/api/auth/register", { email: "bob@example.local", password: "bob-strong-password" });
+    const alice = await post(base, "/api/auth/register", { email: "alice@example.local", password: "alice-strong-password", recovery: createRecoveryMaterial("alice-master-password").recovery });
+    const bob = await post(base, "/api/auth/register", { email: "bob@example.local", password: "bob-strong-password", recovery: createRecoveryMaterial("bob-master-password").recovery });
 
     // Bob pushes a record that lies about its owner, claiming it belongs to Alice.
     const spoofed = { id: "rec_spoof", ownerId: alice.userId, deviceId: "dev_bob", collection: "vault-items", ciphertext: "bob-secret", nonce: "n", schemaVersion: 1, deleted: false, updatedAt: new Date().toISOString(), revision: 1 };

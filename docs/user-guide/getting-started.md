@@ -8,7 +8,10 @@
 6. Run sync to verify the self-hosted API is reachable.
 
 Regular login uses only the email and account password. The master password is
-not sent to the server; it is requested separately only when creating or
-unlocking/restoring the encrypted vault on a device. A forgotten server account
-password cannot currently be reset with the master password; secure recovery is
-tracked by #501.
+not sent to the server; it is requested separately only when creating,
+unlocking/restoring, or recovering account access on a device. Use **Forgot
+account password?** in Web or Android to choose a new account password. The
+master password decrypts a recovery signing key locally, and successful
+recovery rotates that key. Accounts created before v0.1.11 must first use
+**Enable / rotate recovery** while signed in and unlocked. A forgotten master
+password remains unrecoverable.

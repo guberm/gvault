@@ -26,6 +26,16 @@ Server account authentication is separate from the vault master password. See
 [authentication-model.md](./authentication-model.md) for account-password hashing,
 bearer sessions, authenticated route boundaries, and current limitations.
 
+## Account-password recovery
+
+Web and Android can reset a forgotten server account password by decrypting a
+client-generated recovery signing key with the master password and signing an
+expiring one-time challenge. The master password and private recovery key never
+reach the server; every successful reset rotates the key. See
+[account-password-recovery.md](./account-password-recovery.md) for the protocol,
+enumeration resistance, recovery-specific rate limits, audit boundary, and
+cross-client reuse contract.
+
 ## Not yet production complete
 
 - Native secure storage and biometric unlock.
@@ -34,7 +44,6 @@ bearer sessions, authenticated route boundaries, and current limitations.
 - Security review of browser autofill edge cases.
 - Rate limiting and account lockout on the server.
 - Session expiry, revocation, and server-side logout (#483).
-- Zero-knowledge server account-password recovery protocol (#501).
 - Bounded request parsing and authentication abuse controls (#485).
 - Versioned cross-client KDF metadata and migration (#493).
 - Production CSP and security headers (#491).

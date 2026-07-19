@@ -1,11 +1,24 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectConflicts } from "@gvault/sync";
 import { nowIso, requireNonEmpty, uid } from "@gvault/shared-utils";
 import type { EncryptedVaultRecord } from "@gvault/vault-models";
-import { makeUser, SessionStore, verifyPassword } from "./auth.js";
+import {
+  dummyRecoveryEnvelope,
+  FixedWindowRateLimiter,
+  hashPassword,
+  makeUser,
+  RECOVERY_PROTOCOL,
+  RecoveryChallengeStore,
+  redactForAudit,
+  SessionStore,
+  validateRecoveryRegistration,
+  verifyPassword,
+  verifyRecoveryProof,
+} from "./auth.js";
 import { JsonStore } from "./storage.js";
 
 const product = "GVault";
@@ -13,6 +26,21 @@ const dataDir = process.env.GV_DATA_DIR ?? "./data";
 const allowedOrigins = new Set((process.env.GV_ALLOWED_ORIGINS ?? "*").split(",").map((origin) => origin.trim()));
 const store = new JsonStore(dataDir);
 const sessions = new SessionStore();
+const recoveryChallenges = new RecoveryChallengeStore();
+const recoveryWindowMs = positiveInteger(process.env.GV_RECOVERY_WINDOW_MS, 15 * 60 * 1000);
+const recoveryChallengeLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_RECOVERY_CHALLENGE_LIMIT, 5), recoveryWindowMs);
+const recoveryCompleteLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_RECOVERY_COMPLETE_LIMIT, 5), recoveryWindowMs);
+const recoveryState = store.read();
+if (!recoveryState.recoveryDummySecret) {
+  recoveryState.recoveryDummySecret = randomBytes(32).toString("base64url");
+  store.write(recoveryState);
+}
+const recoveryDummySecret = recoveryState.recoveryDummySecret;
+
+function positiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 function sendJson(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -21,6 +49,20 @@ function sendJson(res: ServerResponse, status: number, value: unknown): void {
 
 function sendError(res: ServerResponse, status: number, message: string): void {
   sendJson(res, status, { error: message });
+}
+
+function recoveryAudit(req: IncomingMessage, event: string, outcome: string, subject = "unknown"): void {
+  console.info(`[recovery-audit] ${JSON.stringify({
+    at: nowIso(),
+    event,
+    outcome,
+    subject: redactForAudit(subject),
+    source: redactForAudit(req.socket.remoteAddress ?? "unknown"),
+  })}`);
+}
+
+function recoveryLimitKey(req: IncomingMessage, subject = ""): string {
+  return `${redactForAudit(subject)}:${redactForAudit(req.socket.remoteAddress ?? "unknown")}`;
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -89,14 +131,29 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
 
   if (req.method === "POST" && url.pathname === "/api/auth/register") {
     const body = await readJson(req);
-    const email = requireNonEmpty(body.email, "email").toLowerCase();
-    const password = requireNonEmpty(body.password, "password");
+    let email: string;
+    let password: string;
+    let recovery;
+    try {
+      email = requireNonEmpty(body.email, "email").toLowerCase();
+      password = requireNonEmpty(body.password, "password");
+      recovery = validateRecoveryRegistration(body.recovery);
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : "Registration is invalid");
+      return;
+    }
     const state = store.read();
     if (state.users.some((user) => user.email === email)) {
       sendError(res, 409, "Account already exists");
       return;
     }
-    const user = makeUser(email, password);
+    let user;
+    try {
+      user = makeUser(email, password, recovery);
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : "Registration is invalid");
+      return;
+    }
     state.users.push(user);
     store.write(state);
     const session = sessions.create(user.id);
@@ -118,8 +175,94 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
     return;
   }
 
+  if (req.method === "POST" && url.pathname === "/api/auth/recovery/challenge") {
+    const body = await readJson(req);
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!recoveryChallengeLimiter.allow(recoveryLimitKey(req, email))) {
+      recoveryAudit(req, "challenge", "limited", email);
+      sendError(res, 429, "Recovery temporarily unavailable");
+      return;
+    }
+    const state = store.read();
+    const user = state.users.find((candidate) => candidate.email === email);
+    const challenge = recoveryChallenges.create(user?.recovery ? user.id : undefined);
+    recoveryAudit(req, "challenge", "issued", email);
+    sendJson(res, 200, {
+      protocol: RECOVERY_PROTOCOL,
+      challengeId: challenge.id,
+      challenge: challenge.challenge,
+      expiresAt: new Date(challenge.expiresAtMs).toISOString(),
+      envelope: user?.recovery?.envelope ?? dummyRecoveryEnvelope(recoveryDummySecret, email),
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/recovery/complete") {
+    const body = await readJson(req);
+    if (!recoveryCompleteLimiter.allow(recoveryLimitKey(req))) {
+      recoveryAudit(req, "complete", "limited");
+      sendError(res, 429, "Recovery temporarily unavailable");
+      return;
+    }
+    const challengeId = typeof body.challengeId === "string" ? body.challengeId : "";
+    const proof = typeof body.proof === "string" ? body.proof : "";
+    const challenge = recoveryChallenges.consume(challengeId);
+    const state = store.read();
+    const user = challenge?.userId ? state.users.find((candidate) => candidate.id === challenge.userId) : undefined;
+    const validProof = Boolean(
+      challenge && user?.recovery && verifyRecoveryProof(user.recovery.verifier, challenge.id, challenge.challenge, proof),
+    );
+    if (!validProof || !user || !challenge) {
+      recoveryAudit(req, "complete", "denied", user?.email);
+      sendError(res, 401, "Recovery could not be completed");
+      return;
+    }
+    let password: string;
+    let recovery;
+    try {
+      password = requireNonEmpty(body.password, "password");
+      recovery = validateRecoveryRegistration(body.recovery);
+      if (recovery.verifier === user.recovery?.verifier) throw new Error("Recovery material must rotate");
+      Object.assign(user, hashPassword(password), { recovery: { ...recovery, updatedAt: nowIso() } });
+    } catch (error) {
+      recoveryAudit(req, "complete", "invalid-rotation", user.email);
+      sendError(res, 400, error instanceof Error ? error.message : "Recovery material is invalid");
+      return;
+    }
+    store.write(state);
+    const session = sessions.create(user.id);
+    recoveryAudit(req, "complete", "succeeded", user.email);
+    sendJson(res, 200, { token: session.token, userId: user.id });
+    return;
+  }
+
   const userId = requireSession(req, res);
   if (!userId) return;
+
+  if (req.method === "POST" && url.pathname === "/api/auth/recovery/setup") {
+    const body = await readJson(req);
+    const state = store.read();
+    const user = state.users.find((candidate) => candidate.id === userId);
+    const password = typeof body.password === "string" ? body.password : "";
+    if (!user || !verifyPassword(password, user)) {
+      recoveryAudit(req, "setup", "denied", user?.email);
+      sendError(res, 401, "Invalid credentials");
+      return;
+    }
+    let recovery;
+    try {
+      recovery = validateRecoveryRegistration(body.recovery);
+      if (recovery.verifier === user.recovery?.verifier) throw new Error("Recovery material must rotate");
+    } catch (error) {
+      sendError(res, 400, error instanceof Error ? error.message : "Recovery material is invalid");
+      return;
+    }
+    user.recovery = { ...recovery, updatedAt: nowIso() };
+    store.write(state);
+    recoveryAudit(req, "setup", "succeeded", user.email);
+    sendJson(res, 200, { recoveryEnabled: true });
+    return;
+  }
 
   if (req.method === "POST" && url.pathname === "/api/devices/register") {
     const body = await readJson(req);
