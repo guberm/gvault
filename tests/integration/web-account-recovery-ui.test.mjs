@@ -107,6 +107,7 @@ test("web forgot-password flow keeps recovery token client-side, rejects wrong m
     assert.equal(completeBody.masterPassword, undefined);
     assert.equal(JSON.stringify(completeBody).includes(master), false);
     assert.equal(completeBody.challengeId, challengeId);
+    assert.equal(completeBody.deviceName, "Web browser");
     assert.notEqual(completeBody.recovery.verifier, initial.recovery.verifier);
     assert.doesNotMatch(JSON.stringify(completeBody), new RegExp(escapeRegex(initial.privateKey.toString("base64"))));
     const publicKey = createPublicKey({ key: Buffer.from(initial.recovery.verifier, "base64"), type: "spki", format: "der" });

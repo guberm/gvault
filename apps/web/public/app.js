@@ -536,6 +536,7 @@ function render() {
   $("lockState").textContent = unlocked ? "Unlocked" : "Locked";
   $("lockState").nextElementSibling.textContent = unlocked ? "Vault is unlocked" : "Vault is locked";
   $("lockButton").disabled = !unlocked;
+  $("logoutButton").disabled = !state.token;
   $("recoverySetupButton").disabled = !unlocked || !state.token;
   renderCounts();
   renderFolders();
@@ -885,6 +886,12 @@ async function api(path, body, method = "POST") {
     body: body ? JSON.stringify(body) : undefined,
   });
   const payload = await response.json().catch(() => ({}));
+  if (response.status === 401 && payload.error === "Unauthorized" && state.token) {
+    clearServerSession();
+    clearLocalVault();
+    render();
+    throw new Error("Session expired or revoked. Sign in again.");
+  }
   if (!response.ok) throw new Error(payload.error || `API ${response.status}`);
   return payload;
 }
@@ -926,7 +933,7 @@ async function auth(path, createAccount = false) {
       return;
     }
   }
-  const body = { email: $("email").value, password };
+  const body = { email: $("email").value, password, deviceName: "Web browser" };
   if (createAccount) {
     setStatus("Creating master-protected recovery material...", "neutral");
     body.recovery = await createRecoveryMaterial(registrationMaster);
@@ -1195,6 +1202,7 @@ async function recoverAccount() {
       proof,
       password,
       recovery,
+      deviceName: "Web browser",
     });
     state.token = result.token;
     state.userId = result.userId;
@@ -1276,6 +1284,33 @@ function clearLocalVault() {
   $("confirmMasterPassword").value = "";
   clearTotpDisplay();
   fillForm();
+}
+
+function clearServerSession() {
+  state.token = "";
+  state.userId = "";
+  localStorage.removeItem("gv.token");
+  localStorage.removeItem("gv.userId");
+  $("emailLabel").textContent = "not signed in";
+}
+
+async function signOut() {
+  const token = state.token;
+  clearServerSession();
+  clearLocalVault();
+  render();
+  try {
+    const response = await fetch(new URL("/api/auth/logout", $("serverUrl").value), {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: "{}",
+    });
+    if (!response.ok) throw new Error(`API ${response.status}`);
+  } catch (error) {
+    setStatus("Signed out locally. Server session revocation could not be confirmed.", "warning");
+    return;
+  }
+  setStatus("Signed out. Server session revoked.", "success");
 }
 
 $("lockButton").addEventListener("click", () => {
@@ -1400,6 +1435,7 @@ $("items").addEventListener("click", (event) => {
 
 $("registerButton").addEventListener("click", () => auth("/api/auth/register", true).catch((error) => setStatus(error.message, "warning")));
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
+$("logoutButton").addEventListener("click", () => signOut());
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
 $("recoveryToggleButton").addEventListener("click", () => setRecoveryMode(true));
 $("recoveryCancelButton").addEventListener("click", () => setRecoveryMode(false));

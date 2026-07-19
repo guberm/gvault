@@ -14,6 +14,10 @@ import {
   RECOVERY_PROTOCOL,
   RecoveryChallengeStore,
   redactForAudit,
+  SESSION_MAX_PER_USER,
+  SESSION_MAX_TOTAL,
+  SESSION_TTL_MS,
+  type Session,
   SessionStore,
   validateRecoveryRegistration,
   verifyPassword,
@@ -25,7 +29,11 @@ const product = "GVault";
 const dataDir = process.env.GV_DATA_DIR ?? "./data";
 const allowedOrigins = new Set((process.env.GV_ALLOWED_ORIGINS ?? "*").split(",").map((origin) => origin.trim()));
 const store = new JsonStore(dataDir);
-const sessions = new SessionStore();
+const sessions = new SessionStore({
+  ttlMs: positiveInteger(process.env.GV_SESSION_TTL_MS, SESSION_TTL_MS),
+  maxPerUser: positiveInteger(process.env.GV_SESSION_MAX_PER_USER, SESSION_MAX_PER_USER),
+  maxTotal: positiveInteger(process.env.GV_SESSION_MAX_TOTAL, SESSION_MAX_TOTAL),
+});
 const recoveryChallenges = new RecoveryChallengeStore();
 const recoveryWindowMs = positiveInteger(process.env.GV_RECOVERY_WINDOW_MS, 15 * 60 * 1000);
 const recoveryChallengeLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_RECOVERY_CHALLENGE_LIMIT, 5), recoveryWindowMs);
@@ -77,17 +85,27 @@ function setCors(req: IncomingMessage, res: ServerResponse): void {
   if (allowedOrigins.has("*") || (origin && allowedOrigins.has(origin))) {
     res.setHeader("access-control-allow-origin", origin ?? "*");
   }
-  res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+  res.setHeader("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type,authorization");
 }
 
-function requireSession(req: IncomingMessage, res: ServerResponse): string | undefined {
+function requireSession(req: IncomingMessage, res: ServerResponse): Session | undefined {
   const session = sessions.get(req.headers.authorization);
   if (!session) {
     sendError(res, 401, "Unauthorized");
     return undefined;
   }
-  return session.userId;
+  return session;
+}
+
+function sessionDeviceName(value: unknown): string {
+  if (typeof value !== "string") return "Unknown device";
+  const normalized = value.trim().replace(/[\r\n\t]+/g, " ");
+  return normalized ? normalized.slice(0, 128) : "Unknown device";
+}
+
+function sessionResponse(session: Session, userId: string): Record<string, string> {
+  return { token: session.token, userId, sessionId: session.id, expiresAt: session.expiresAt };
 }
 
 function assertEncryptedRecord(value: unknown, ownerId: string): EncryptedVaultRecord {
@@ -156,8 +174,8 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
     }
     state.users.push(user);
     store.write(state);
-    const session = sessions.create(user.id);
-    sendJson(res, 201, { token: session.token, userId: user.id });
+    const session = sessions.create(user.id, sessionDeviceName(body.deviceName));
+    sendJson(res, 201, sessionResponse(session, user.id));
     return;
   }
 
@@ -170,8 +188,8 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 401, "Invalid credentials");
       return;
     }
-    const session = sessions.create(user.id);
-    sendJson(res, 200, { token: session.token, userId: user.id });
+    const session = sessions.create(user.id, sessionDeviceName(body.deviceName));
+    sendJson(res, 200, sessionResponse(session, user.id));
     return;
   }
 
@@ -230,14 +248,36 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       return;
     }
     store.write(state);
-    const session = sessions.create(user.id);
+    const session = sessions.create(user.id, sessionDeviceName(body.deviceName));
     recoveryAudit(req, "complete", "succeeded", user.email);
-    sendJson(res, 200, { token: session.token, userId: user.id });
+    sendJson(res, 200, sessionResponse(session, user.id));
     return;
   }
 
-  const userId = requireSession(req, res);
-  if (!userId) return;
+  const session = requireSession(req, res);
+  if (!session) return;
+  const userId = session.userId;
+
+  if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+    sessions.revoke(userId, session.id);
+    sendJson(res, 200, { loggedOut: true });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/auth/sessions") {
+    sendJson(res, 200, { sessions: sessions.list(userId, session.id) });
+    return;
+  }
+
+  if (req.method === "DELETE" && url.pathname.startsWith("/api/auth/sessions/")) {
+    const sessionId = url.pathname.slice("/api/auth/sessions/".length);
+    if (!sessionId || !sessions.revoke(userId, sessionId)) {
+      sendError(res, 404, "Session not found");
+      return;
+    }
+    sendJson(res, 200, { revoked: true, sessionId });
+    return;
+  }
 
   if (req.method === "POST" && url.pathname === "/api/auth/recovery/setup") {
     const body = await readJson(req);

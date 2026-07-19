@@ -14,6 +14,13 @@
 | `GV_SERVER_PORT` | `8080` | Server port |
 | `GV_DATA_DIR` | `./data` | Persistent storage directory |
 | `GV_ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist |
+| `GV_SESSION_TTL_MS` | `86400000` | Fixed bearer-session lifetime in milliseconds |
+| `GV_SESSION_MAX_PER_USER` | `10` | Newest active sessions retained per user |
+| `GV_SESSION_MAX_TOTAL` | `10000` | Active-session capacity for one server process |
+
+Session settings must be positive integers. Expired and capacity-evicted tokens
+are rejected with `401 Unauthorized`. Sessions are held in memory, so every
+server restart invalidates all active tokens.
 
 ## Backup
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GVault</title>
-    <link rel="stylesheet" href="./styles.css?v=501" />
+    <link rel="stylesheet" href="./styles.css?v=0.1.12" />
   </head>
   <body>
     <main class="app-shell">
@@ -56,7 +56,7 @@
 
         <div class="sidebar-footer">
           <button id="themeButton" class="tool-row" type="button">Dark mode</button>
-          <span>v1.2.0</span>
+          <span>v0.1.12</span>
         </div>
       </aside>
 
@@ -70,6 +70,7 @@
           <div class="account-pill">Account <strong id="emailLabel">not signed in</strong></div>
           <button id="registerButton" class="plain-button" type="button">Register</button>
           <button id="loginButton" class="plain-button" type="button">Login</button>
+          <button id="logoutButton" class="plain-button" type="button" disabled>Sign out</button>
           <button id="syncButton" class="plain-button" type="button">Sync</button>
           <button id="recoverySetupButton" class="plain-button" type="button" disabled>Enable / rotate recovery</button>
           <div id="status" class="sync-status" role="status">Connect a server and unlock the vault.</div>
@@ -239,6 +240,6 @@
         </footer>
       </section>
     </main>
-    <script src="./app.js?v=501" type="module"></script>
+    <script src="./app.js?v=0.1.12" type="module"></script>
   </body>
 </html>

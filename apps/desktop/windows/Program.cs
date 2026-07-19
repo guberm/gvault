@@ -251,7 +251,7 @@ static async Task RunLoginSmokeAsync(List<string> args)
 
     var endpoint = new Uri(NormalizeServerUrl(server), "api/auth/login");
     using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-    var payload = JsonSerializer.Serialize(new { email, password });
+    var payload = JsonSerializer.Serialize(new { email, password, deviceName = "Windows desktop" });
     using var response = await client.PostAsync(endpoint, new StringContent(payload, Encoding.UTF8, "application/json"));
     var body = await response.Content.ReadAsStringAsync();
 

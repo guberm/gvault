@@ -86,14 +86,14 @@ Last updated: 2026-07-18
 - [x] Login UI points to `https://gvault.guber.dev`.
 - [x] Register request works through public DNS.
 - [ ] Existing-user login through UI is repeatedly verified after clean reload.
-- [ ] Logout returns to login/register screen.
-- [ ] Reload after logout stays on login/register screen.
+- [x] Logout returns to login/register screen. (#483; server token is revoked before Web credentials are cleared)
+- [x] Reload after logout stays on login/register screen. (#483)
 - [ ] Auth loading state.
 - [ ] Auth error state for wrong password.
 - [ ] Auth error state for server unavailable.
 - [ ] Password visibility toggle.
 - [ ] Password requirements messaging.
-- [ ] Session expired handling.
+- [x] Session expired handling. (#483; rejected protected requests clear local session and vault state)
 
 ## 2.2 Core vault UI
 
@@ -155,7 +155,7 @@ Last updated: 2026-07-18
 - [x] Wrong-password error state.
 - [x] Server-unavailable error state.
 - [x] Loading state during login/register.
-- [x] Logout.
+- [x] Logout. (#483; physical-device flow also revokes the current server token)
 - [x] App restart behavior is defined and verified. (#118; Keystore-backed Autofill cache clears on restart/sign-out and was verified on Pixel 7 Pro)
 - [x] Local token/session storage policy is implemented.
 - [ ] PIN unlock, if chosen.
@@ -514,8 +514,8 @@ Last updated: 2026-07-18
 - [ ] Require re-auth for sensitive actions.
 - [ ] PIN unlock setting.
 - [ ] Biometric unlock setting.
-- [ ] Device/session management.
-- [ ] Revoke device/session.
+- [x] Device/session management. (#483; bounded list/revoke/logout APIs and shared API client)
+- [x] Revoke device/session. (#371, #483)
 
 ## 13.3 Browser/autofill/autosave
 
@@ -545,7 +545,7 @@ Last updated: 2026-07-18
 - [ ] Zero-knowledge boundary documented.
 - [x] Master password handling documented. (#388, #500; regular login separated from registration and local vault restoration)
 - [ ] Key derivation documented.
-- [ ] Device/session token model documented.
+- [x] Device/session token model documented. (#390, #483; [`docs/security/authentication-model.md`](./security/authentication-model.md))
 - [ ] Secure sharing crypto documented.
 - [ ] Backup/restore security documented.
 - [x] Recovery limitations documented.
@@ -575,7 +575,7 @@ Last updated: 2026-07-18
 
 Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07-17.md)
 
-- [ ] #483 Server session expiry, revocation, logout, and bounded lifecycle.
+- [x] #483 Server session expiry, revocation, logout, and bounded lifecycle.
 - [x] #484 Android encrypted Autofill storage and physical-device restart/lock proof. (Pixel 7 Pro, Android 17/API 37)
 - [ ] #485 Request-size bounds and rate limiting around synchronous authentication work.
 - [x] #486 One cross-client minimum master-password policy, including Android device proof. (11 rejected, 12 accepted on Pixel 7 Pro)
