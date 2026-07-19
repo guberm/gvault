@@ -89,3 +89,22 @@ test("Android exposes registration, explicit migration, and forgot-account-passw
   assert.doesNotMatch(source, /body\.put\("recoveryToken"/);
   assert.doesNotMatch(source, /masterPassword(Hash|Verifier)/i);
 });
+
+test("Android identifies, revokes, and expires real server sessions", async () => {
+  const source = await readFile(activitySource, "utf8");
+  assert.equal(
+    [...source.matchAll(/put\("deviceName", MobileAuthState\.deviceName\(Build\.MODEL\)\)/g)].length,
+    2,
+    "login/register and recovery completion both identify the Android device",
+  );
+  assert.match(
+    source,
+    /final String sessionToken = token;[\s\S]*?postJson\([\s\S]*?\/api\/auth\/logout[\s\S]*?sessionToken\)/,
+    "sign out sends the current bearer token to the server logout endpoint",
+  );
+  assert.match(
+    source,
+    /code == 401[\s\S]*?"Unauthorized"\.equals\(parsed\.optString\("error"\)\)[\s\S]*?expireSessionToAccountScreen/,
+    "a rejected protected request clears the expired or revoked Android session",
+  );
+});

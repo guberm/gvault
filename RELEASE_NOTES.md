@@ -1,3 +1,19 @@
+# GVault 0.1.12
+
+Bounded server-session lifecycle release.
+
+Changed:
+- bearer sessions now have a fixed 24-hour expiry, safe public session ids, device labels, last-seen metadata, and prune-on-use behavior;
+- the in-memory store retains only the newest 10 sessions per user and 10,000 sessions per process, with environment overrides for all three limits;
+- authenticated APIs now list safe session metadata, revoke an owned session, and log out the current session without exposing bearer tokens;
+- Web and Android Sign out now revoke the server token, identify their device when creating sessions, and clear local secret state on expired/revoked-token responses;
+- the shared TypeScript API client and Windows/Linux login smoke clients follow the same session contract;
+- the browser extension remains sessionless until its server-account flow is implemented.
+
+Validation:
+- strict RED/GREEN coverage for expiry boundaries, per-user/global capacity, cross-user revoke isolation, logout, revoked/expired bearer rejection, API-client token clearing, and Web/Android client behavior;
+- full repository gate, independent Reviewer approval, production Web lifecycle acceptance, and physical Pixel 7 Pro Android logout/revocation acceptance.
+
 # GVault 0.1.11
 
 Zero-knowledge account-password recovery release.

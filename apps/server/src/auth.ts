@@ -5,27 +5,84 @@ import type { RecoveryEnvelope, RecoveryRegistration, UserRow } from "./storage.
 export const RECOVERY_PROTOCOL = "gvault-recovery-v1";
 export const RECOVERY_ITERATIONS = 210_000;
 export const RECOVERY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+export const SESSION_MAX_PER_USER = 10;
+export const SESSION_MAX_TOTAL = 10_000;
 const RECOVERY_CIPHERTEXT_BYTES = 256 + 16;
 
 export interface Session {
+  id: string;
   token: string;
   userId: string;
+  deviceName: string;
   createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
 }
 
 export class SessionStore {
   private readonly sessions = new Map<string, Session>();
 
-  create(userId: string): Session {
+  constructor(private readonly options: { ttlMs?: number; maxPerUser?: number; maxTotal?: number } = {}) {}
+
+  create(userId: string, deviceName = "Unknown device", now = Date.now()): Session {
+    this.prune(now);
     const token = `gv_${randomBytes(32).toString("base64url")}`;
-    const session = { token, userId, createdAt: new Date().toISOString() };
+    const createdAt = new Date(now).toISOString();
+    const session = {
+      id: `ses_${randomBytes(18).toString("base64url")}`,
+      token,
+      userId,
+      deviceName,
+      createdAt,
+      lastSeenAt: createdAt,
+      expiresAt: new Date(now + (this.options.ttlMs ?? SESSION_TTL_MS)).toISOString(),
+    };
     this.sessions.set(token, session);
+    const userTokens = [...this.sessions]
+      .filter(([, candidate]) => candidate.userId === userId)
+      .map(([candidateToken]) => candidateToken);
+    while (userTokens.length > (this.options.maxPerUser ?? SESSION_MAX_PER_USER)) {
+      this.sessions.delete(userTokens.shift()!);
+    }
+    while (this.sessions.size > (this.options.maxTotal ?? SESSION_MAX_TOTAL)) {
+      const oldestToken = this.sessions.keys().next().value;
+      if (!oldestToken) break;
+      this.sessions.delete(oldestToken);
+    }
     return session;
   }
 
-  get(token?: string): Session | undefined {
+  get(token?: string, now = Date.now()): Session | undefined {
+    this.prune(now);
     if (!token?.startsWith("Bearer ")) return undefined;
-    return this.sessions.get(token.slice("Bearer ".length));
+    const session = this.sessions.get(token.slice("Bearer ".length));
+    if (session) session.lastSeenAt = new Date(now).toISOString();
+    return session;
+  }
+
+  list(userId: string, currentSessionId?: string, now = Date.now()): Array<Omit<Session, "token" | "userId"> & { current: boolean }> {
+    this.prune(now);
+    return [...this.sessions.values()]
+      .filter((session) => session.userId === userId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map(({ token: _token, userId: _userId, ...session }) => ({ ...session, current: session.id === currentSessionId }));
+  }
+
+  revoke(userId: string, sessionId: string, now = Date.now()): boolean {
+    this.prune(now);
+    for (const [token, session] of this.sessions) {
+      if (session.id !== sessionId || session.userId !== userId) continue;
+      this.sessions.delete(token);
+      return true;
+    }
+    return false;
+  }
+
+  private prune(now: number): void {
+    for (const [token, session] of this.sessions) {
+      if (Date.parse(session.expiresAt) <= now) this.sessions.delete(token);
+    }
   }
 }
 

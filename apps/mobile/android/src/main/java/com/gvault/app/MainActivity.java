@@ -213,6 +213,7 @@ public final class MainActivity extends Activity {
           JSONObject body = new JSONObject();
           body.put("email", nextEmail);
           body.put("password", accountSecret);
+          body.put("deviceName", MobileAuthState.deviceName(Build.MODEL));
           if (create) {
             MobileRecoveryCrypto.RecoveryMaterial recovery = MobileRecoveryCrypto.create(masterSecret);
             body.put("recovery", recoveryJson(recovery));
@@ -344,6 +345,7 @@ public final class MainActivity extends Activity {
           completeBody.put("proof", proof);
           completeBody.put("password", nextPassword);
           completeBody.put("recovery", recoveryJson(replacement));
+          completeBody.put("deviceName", MobileAuthState.deviceName(Build.MODEL));
           JSONObject response = postJson(MobileAuthState.endpoint(nextServerUrl, "/api/auth/recovery/complete"), completeBody, "");
           token = response.getString("token");
           email = nextEmail;
@@ -778,12 +780,32 @@ public final class MainActivity extends Activity {
   }
 
   private void signOutToAccountScreen() {
+    final String sessionToken = token;
+    clearSessionToAccountScreen(null, false);
+    if (sessionToken.isEmpty()) return;
+    new Thread(new Runnable() {
+      @Override public void run() {
+        try {
+          postJson(MobileAuthState.endpoint(serverUrl, "/api/auth/logout"), new JSONObject(), sessionToken);
+        } catch (Exception ignored) {
+          // Local secrets are already cleared; the bounded server session will expire if offline.
+        }
+      }
+    }).start();
+  }
+
+  private void expireSessionToAccountScreen() {
+    clearSessionToAccountScreen(MobileAuthState.sessionExpiredMessage(), true);
+  }
+
+  private void clearSessionToAccountScreen(String message, boolean warning) {
     token = "";
     email = "";
     masterPassword = "";
     MobileAutofillVault.clear();
     MobileAutofillSessionStore.clear(this);
     showAccountScreen();
+    if (message != null) setStatus(message, warning);
   }
 
   private void generatePasswordForEditor() {
@@ -1093,6 +1115,10 @@ public final class MainActivity extends Activity {
     String raw = readAll(code >= 200 && code < 300 ? connection.getInputStream() : connection.getErrorStream());
     JSONObject parsed = raw.isEmpty() ? new JSONObject() : new JSONObject(raw);
     if (code < 200 || code >= 300) {
+      if (code == 401 && bearerToken != null && !bearerToken.isEmpty() && "Unauthorized".equals(parsed.optString("error"))) {
+        runOnMain(new Runnable() { @Override public void run() { expireSessionToAccountScreen(); } });
+        throw new Exception(MobileAuthState.sessionExpiredMessage());
+      }
       if (target.contains("/api/auth/recovery/") && code == 401) {
         throw new Exception("Recovery could not be completed.");
       }

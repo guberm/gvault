@@ -90,6 +90,61 @@ test("SessionStore only resolves a properly-formed Bearer token", () => {
   assert.equal(store.get(undefined), undefined);
 });
 
+test("SessionStore expires a session at its fixed lifetime boundary", () => {
+  const store = new SessionStore({ ttlMs: 1_000 });
+  const session = store.create("user_x", "Web browser", 10_000);
+
+  assert.equal(session.deviceName, "Web browser");
+  assert.equal(session.createdAt, "1970-01-01T00:00:10.000Z");
+  assert.equal(session.expiresAt, "1970-01-01T00:00:11.000Z");
+  assert.equal(store.get(`Bearer ${session.token}`, 10_999)?.id, session.id);
+  assert.equal(store.get(`Bearer ${session.token}`, 11_000), undefined);
+  assert.deepEqual(store.list("user_x", session.id, 11_000), []);
+});
+
+test("SessionStore keeps only the newest bounded sessions for one user", () => {
+  const store = new SessionStore({ maxPerUser: 2, maxTotal: 10 });
+  const oldest = store.create("user_x", "Old phone", 1_000);
+  const middle = store.create("user_x", "Web browser", 2_000);
+  const newest = store.create("user_x", "New phone", 3_000);
+
+  assert.equal(store.get(`Bearer ${oldest.token}`, 3_001), undefined);
+  assert.equal(store.get(`Bearer ${middle.token}`, 3_001)?.id, middle.id);
+  assert.equal(store.get(`Bearer ${newest.token}`, 3_001)?.id, newest.id);
+  assert.deepEqual(store.list("user_x", newest.id, 3_001).map((session) => session.id), [newest.id, middle.id]);
+});
+
+test("SessionStore enforces a global active-session capacity", () => {
+  const store = new SessionStore({ maxPerUser: 10, maxTotal: 2 });
+  const oldest = store.create("user_a", "Phone A", 1_000);
+  const middle = store.create("user_b", "Phone B", 2_000);
+  const newest = store.create("user_c", "Phone C", 3_000);
+
+  assert.equal(store.get(`Bearer ${oldest.token}`, 3_001), undefined);
+  assert.equal(store.get(`Bearer ${middle.token}`, 3_001)?.id, middle.id);
+  assert.equal(store.get(`Bearer ${newest.token}`, 3_001)?.id, newest.id);
+});
+
+test("SessionStore lists safe metadata and revokes only an owning user's session", () => {
+  const store = new SessionStore();
+  const web = store.create("user_x", "Web browser", 1_000);
+  const android = store.create("user_x", "Android Pixel 7 Pro", 2_000);
+  const other = store.create("user_y", "Other device", 3_000);
+
+  const listed = store.list("user_x", android.id, 3_001);
+  assert.deepEqual(listed.map(({ id, deviceName, current }) => ({ id, deviceName, current })), [
+    { id: android.id, deviceName: "Android Pixel 7 Pro", current: true },
+    { id: web.id, deviceName: "Web browser", current: false },
+  ]);
+  assert.equal("token" in listed[0], false, "bearer tokens are never returned by session listing");
+  assert.equal("userId" in listed[0], false, "internal owner ids are not returned by session listing");
+  assert.equal(store.revoke("user_x", other.id, 3_001), false, "one user cannot revoke another user's session");
+  assert.equal(store.revoke("user_x", web.id, 3_001), true);
+  assert.equal(store.get(`Bearer ${web.token}`, 3_001), undefined);
+  assert.equal(store.get(`Bearer ${android.token}`, 3_001)?.id, android.id);
+  assert.equal(store.get(`Bearer ${other.token}`, 3_001)?.id, other.id);
+});
+
 // --- server-enforced tenant boundary (cross-user isolation + ownerId spoofing) ---
 
 test("sync endpoints isolate records per user and ignore client-supplied ownerId", async () => {

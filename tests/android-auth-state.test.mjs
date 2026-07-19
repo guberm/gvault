@@ -52,12 +52,15 @@ public final class TestMobileAuthState {
     assertEquals("Settings", MobileAuthState.settingsTitle());
     assertEquals("Account: michael@example.com", MobileAuthState.settingsAccountLine("michael@example.com"));
     assertEquals("Server: https://gvault.guber.dev", MobileAuthState.settingsServerLine("https://gvault.guber.dev"));
+    assertEquals("Android Pixel 7 Pro", MobileAuthState.deviceName("Pixel 7 Pro"));
+    assertEquals("Android device", MobileAuthState.deviceName(""));
+    assertEquals("Session expired or revoked. Sign in again.", MobileAuthState.sessionExpiredMessage());
     assertEquals("Material-style polish", MobileUiStyle.POLISH_NAME);
     assertIntEquals(0xFF0F766E, MobileUiStyle.PRIMARY);
     assertIntEquals(0xFFFFFFFF, MobileUiStyle.SURFACE);
     assertIntEquals(24, MobileUiStyle.CORNER_RADIUS_DP);
     assertEquals("Rounded cards, elevated actions, and calm vault colors.", MobileUiStyle.polishSummary());
-    assertEquals("Session tokens are kept in memory only; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
+    assertEquals("Session tokens stay in memory only and expire on the server after 24 hours; sign in again after app restart.", MobileAuthState.sessionStoragePolicyMessage());
   }
 
   private static void assertEquals(String expected, String actual) {

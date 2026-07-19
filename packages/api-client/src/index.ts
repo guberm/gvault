@@ -13,6 +13,22 @@ export interface AccountRecoveryMaterial {
   };
 }
 
+export interface AccountSession {
+  token: string;
+  userId: string;
+  sessionId: string;
+  expiresAt: string;
+}
+
+export interface DeviceSession {
+  id: string;
+  deviceName: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
 export class GVaultApiClient {
   constructor(private readonly baseUrl: string, private token?: string) {}
 
@@ -24,12 +40,29 @@ export class GVaultApiClient {
     return this.request("/healthz");
   }
 
-  async register(email: string, password: string, recovery: AccountRecoveryMaterial): Promise<{ token: string; userId: string }> {
-    return this.request("/api/auth/register", { method: "POST", body: { email, password, recovery } });
+  async register(email: string, password: string, recovery: AccountRecoveryMaterial, deviceName = "API client"): Promise<AccountSession> {
+    return this.request("/api/auth/register", { method: "POST", body: { email, password, recovery, deviceName } });
   }
 
-  async login(email: string, password: string): Promise<{ token: string; userId: string }> {
-    return this.request("/api/auth/login", { method: "POST", body: { email, password } });
+  async login(email: string, password: string, deviceName = "API client"): Promise<AccountSession> {
+    return this.request("/api/auth/login", { method: "POST", body: { email, password, deviceName } });
+  }
+
+  async listSessions(): Promise<DeviceSession[]> {
+    const response = await this.request<{ sessions: DeviceSession[] }>("/api/auth/sessions");
+    return response.sessions;
+  }
+
+  async revokeSession(sessionId: string): Promise<void> {
+    await this.request(`/api/auth/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.request("/api/auth/logout", { method: "POST", body: {} });
+    } finally {
+      this.token = undefined;
+    }
   }
 
   async pullSync(request: SyncPullRequest): Promise<SyncResponse> {

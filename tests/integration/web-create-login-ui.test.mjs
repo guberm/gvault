@@ -66,7 +66,122 @@ test("web regular login uses account credentials without a master password", asy
     await expectText(page, "#lockState", "Locked");
     assert.equal(await page.getByLabel("Master password", { exact: true }).inputValue(), "", "regular login clears the previous local master password input");
     assert.equal(await page.getByLabel("Confirm master password").inputValue(), "", "regular login clears any master-password confirmation input");
-    assert.deepEqual(loginBody, { email: "login-only@example.test", password: "account-password-only" });
+    assert.deepEqual(loginBody, { email: "login-only@example.test", password: "account-password-only", deviceName: "Web browser" });
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web sign out revokes the server session and clears local credentials", async () => {
+  const server = await startStaticServer();
+  let browser;
+  let logoutAuthorization;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("gv.testSessionSeeded")) return;
+      sessionStorage.setItem("gv.testSessionSeeded", "true");
+      localStorage.setItem("gv.token", "web-session-token");
+      localStorage.setItem("gv.userId", "web-session-user");
+    });
+    await page.route("**/api/auth/logout", async (route) => {
+      logoutAuthorization = route.request().headers().authorization;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ loggedOut: true }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+
+    const signOut = page.getByRole("button", { name: "Sign out" });
+    assert.equal(await signOut.count(), 1, "signed-in web UI exposes one server sign-out action");
+    await signOut.click();
+
+    await expectText(page, "#status", "Signed out. Server session revoked");
+    assert.equal(logoutAuthorization, "Bearer web-session-token");
+    assert.deepEqual(await page.evaluate(() => ({ token: localStorage.getItem("gv.token"), userId: localStorage.getItem("gv.userId") })), {
+      token: null,
+      userId: null,
+    });
+    await expectText(page, "#lockState", "Locked");
+    await expectText(page, "#emailLabel", "not signed in");
+    await page.reload();
+    assert.equal(await page.getByRole("button", { name: "Sign out" }).isDisabled(), true, "reload stays signed out");
+    assert.equal(await page.evaluate(() => localStorage.getItem("gv.token")), null);
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web sign out clears local secrets even when server revocation fails", async () => {
+  const server = await startStaticServer();
+  let browser;
+  let logoutAuthorization;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      localStorage.setItem("gv.token", "offline-web-token");
+      localStorage.setItem("gv.userId", "offline-web-user");
+    });
+    await page.route("**/api/sync/pull", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ records: [], conflicts: [], serverTime: new Date().toISOString() }),
+    }));
+    await page.route("**/api/auth/logout", async (route) => {
+      logoutAuthorization = route.request().headers().authorization;
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "Unavailable" }) });
+    });
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password", { exact: true }).fill("offline-session-master");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+    await expectText(page, "#lockState", "Unlocked");
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+
+    await expectText(page, "#status", "Signed out locally. Server session revocation could not be confirmed");
+    assert.equal(logoutAuthorization, "Bearer offline-web-token");
+    assert.deepEqual(await page.evaluate(() => ({ token: localStorage.getItem("gv.token"), userId: localStorage.getItem("gv.userId") })), {
+      token: null,
+      userId: null,
+    });
+    await expectText(page, "#lockState", "Locked");
+    await expectText(page, "#emailLabel", "not signed in");
+  } finally {
+    await browser?.close();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("web clears an expired server session after a protected request is rejected", async () => {
+  const server = await startStaticServer();
+  let browser;
+
+  try {
+    browser = await chromium.launch(chromeLaunchOptions());
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await page.addInitScript(() => {
+      localStorage.setItem("gv.token", "expired-web-token");
+      localStorage.setItem("gv.userId", "expired-web-user");
+    });
+    await page.route("**/api/sync/pull", (route) => route.fulfill({
+      status: 401,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Unauthorized" }),
+    }));
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.getByLabel("Master password", { exact: true }).fill("expired-session-master");
+    await page.getByRole("button", { name: "Unlock vault" }).click();
+
+    await expectText(page, "#status", "Session expired or revoked. Sign in again");
+    assert.deepEqual(await page.evaluate(() => ({ token: localStorage.getItem("gv.token"), userId: localStorage.getItem("gv.userId") })), {
+      token: null,
+      userId: null,
+    });
+    assert.equal(await page.getByRole("button", { name: "Sign out" }).isDisabled(), true);
   } finally {
     await browser?.close();
     await new Promise((resolve) => server.close(resolve));

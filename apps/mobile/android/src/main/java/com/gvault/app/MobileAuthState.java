@@ -107,8 +107,16 @@ public final class MobileAuthState {
     return "Server: " + (isBlank(serverUrl) ? DEFAULT_SERVER_URL : serverUrl.trim());
   }
 
+  public static String deviceName(String model) {
+    return isBlank(model) ? "Android device" : "Android " + model.trim();
+  }
+
+  public static String sessionExpiredMessage() {
+    return "Session expired or revoked. Sign in again.";
+  }
+
   public static String sessionStoragePolicyMessage() {
-    return "Session tokens are kept in memory only; sign in again after app restart.";
+    return "Session tokens stay in memory only and expire on the server after 24 hours; sign in again after app restart.";
   }
 
   private static boolean isBlank(String value) {

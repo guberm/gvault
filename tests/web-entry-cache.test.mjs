@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 test("web entry loads the current app asset instead of a stale CDN object", async () => {
   const html = await readFile("apps/web/public/index.html", "utf8");
-  assert.match(html, /<link rel="stylesheet" href="\.\/styles\.css\?v=501" \/>/);
-  assert.match(html, /<script src="\.\/app\.js\?v=501" type="module"><\/script>/);
+  assert.match(html, /<link rel="stylesheet" href="\.\/styles\.css\?v=0\.1\.12" \/>/);
+  assert.match(html, /<script src="\.\/app\.js\?v=0\.1\.12" type="module"><\/script>/);
+  assert.match(html, /<span>v0\.1\.12<\/span>/);
 });

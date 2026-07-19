@@ -2,8 +2,9 @@
 
 Scope: the current GVault implementation in this repository. This document is
 repo-grounded and describes only the authentication behavior implemented today.
-It does **not** claim production hardening, device/session-token lifecycle
-features, secure sharing, or master-password recovery beyond what the code does.
+It does **not** claim persistent sessions across server restarts, refresh tokens,
+device-bound authentication keys, secure sharing, or master-password recovery
+beyond what the code does.
 
 ## Summary
 
@@ -121,20 +122,54 @@ Evidence: `apps/server/src/index.ts`, `apps/server/src/auth.ts`.
 3. Rejects missing users or wrong passwords with `401 Invalid credentials`.
 4. Creates and returns a bearer session token plus `userId`.
 
-`SessionStore.create` creates tokens as `gv_` plus 32 random bytes encoded with
-base64url. Sessions are held in an in-memory `Map<string, Session>` with
-`token`, `userId`, and `createdAt`.
+`SessionStore.create` creates bearer tokens as `gv_` plus 32 random bytes and a
+separate public session id as `ses_` plus 18 random bytes, both base64url encoded.
+The in-memory session row stores the token, owner, normalized client-provided
+device label, `createdAt`, `lastSeenAt`, and a fixed `expiresAt`.
+
+The default lifetime is 24 hours from creation. It is fixed rather than sliding:
+authenticated use updates `lastSeenAt` but never extends `expiresAt`. Expired
+rows are pruned before create, lookup, list, and revoke operations. A process
+restart still invalidates all sessions because the store is intentionally
+in-memory.
+
+Retention is bounded to the newest 10 active sessions per user and 10,000 active
+sessions per server process. Creating a session above either limit evicts the
+oldest applicable session immediately. Operators can lower or raise these
+positive limits with `GV_SESSION_MAX_PER_USER` and `GV_SESSION_MAX_TOTAL`, and
+can set the fixed lifetime in milliseconds with `GV_SESSION_TTL_MS`.
 
 Protected routes call `requireSession`, which accepts only an
 `Authorization` header starting with `Bearer ` and looks up the token in that
-in-memory session map. Missing, malformed, unknown, or expired-by-process-restart
-tokens receive `401 Unauthorized`.
+in-memory session map. Missing, malformed, unknown, expired, explicitly revoked,
+capacity-evicted, or invalidated-by-process-restart tokens receive
+`401 Unauthorized`.
+
+Authenticated lifecycle endpoints are:
+
+- `GET /api/auth/sessions` — returns only safe metadata for the current user's
+  active sessions (`id`, device label, timestamps, expiry, and `current`); it
+  never returns any bearer token or internal user id.
+- `DELETE /api/auth/sessions/{sessionId}` — revokes one active session owned by
+  the caller; other users' ids and unknown ids return `404 Session not found`.
+- `POST /api/auth/logout` — revokes the bearer token used for that request.
+
+Registration, login, and recovery-completion responses include `sessionId` and
+`expiresAt` alongside `token` and `userId`. Web, Android, Windows smoke, Linux
+smoke, and the shared API client attach a non-secret device label. Web and Android
+Sign out call the server logout endpoint; both clear local secret state, and both
+return to sign-in when a protected route reports an expired or revoked token.
+The browser extension still has no server-account flow, so it owns no server
+session yet.
 
 ## Authenticated API boundary
 
 The following routes require a valid bearer session:
 
 - `POST /api/devices/register`
+- `GET /api/auth/sessions`
+- `DELETE /api/auth/sessions/{sessionId}`
+- `POST /api/auth/logout`
 - `POST /api/auth/recovery/setup`
 - `POST /api/sync/pull`
 - `POST /api/sync/push`
@@ -152,10 +187,9 @@ records to another account by posting a different owner id.
 authenticated `userId`, device `name`, optional `publicKey`, `createdAt`, and
 `lastSeenAt`.
 
-Current implementation note: device registration records device metadata, but it
-is not a separate authentication factor and does not implement a device-token
-lifecycle. Device/session token lifecycle is tracked separately in the parity
-checklist.
+Current implementation note: device registration records device metadata but is
+not a separate authentication factor. Session device labels are descriptive and
+revocable; tokens are not cryptographically bound to a device key.
 
 ## Current limitations
 
@@ -163,14 +197,14 @@ The current implementation intentionally keeps the auth model small. These are
 **not** implemented here:
 
 - Persistent server sessions across process restarts.
-- Token expiry, refresh tokens, revocation, or logout endpoint.
+- Refresh tokens or sliding renewal.
 - General login/API rate limiting, lockout, MFA, passkeys, or email verification.
 - Device-bound session tokens or per-device authentication keys.
 - Recovery of a forgotten master password or encrypted vault contents without it.
 - Server-side access to the vault master password or plaintext vault contents.
 
-Audit #482 tracks the session-lifecycle work in #483. Request-body limits and
-rate limiting around synchronous authentication work are tracked in #485.
+Request-body limits and rate limiting around synchronous authentication work are
+tracked in #485.
 
 See [recovery-limitations.md](./recovery-limitations.md) for the lost master
 password boundary and [threat-model.md](./threat-model.md) for residual risks.
@@ -178,8 +212,8 @@ password boundary and [threat-model.md](./threat-model.md) for residual risks.
 ## What was checked
 
 - `apps/server/src/auth.ts` — server account password hashing, verification,
-  bearer-token generation, recovery validation/proofs/challenges/limits, and
-  in-memory session lookup.
+  bearer/session-id generation, expiry, bounded retention, revocation, recovery
+  validation/proofs/challenges/limits, and in-memory session lookup.
 - `apps/server/src/index.ts` — register/login handlers, `requireSession`,
   protected route boundary, and authenticated owner scoping.
 - `apps/server/src/storage.ts` — stored user/device/session-adjacent data shapes.
