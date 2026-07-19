@@ -1,5 +1,18 @@
 import type { SyncPullRequest, SyncPushRequest, SyncResponse } from "@gvault/sync";
 
+export interface AccountRecoveryMaterial {
+  version: 1;
+  verifier: string;
+  envelope: {
+    version: 1;
+    kdf: "PBKDF2-SHA256";
+    iterations: 210000;
+    salt: string;
+    nonce: string;
+    ciphertext: string;
+  };
+}
+
 export class GVaultApiClient {
   constructor(private readonly baseUrl: string, private token?: string) {}
 
@@ -11,8 +24,8 @@ export class GVaultApiClient {
     return this.request("/healthz");
   }
 
-  async register(email: string, password: string): Promise<{ token: string; userId: string }> {
-    return this.request("/api/auth/register", { method: "POST", body: { email, password } });
+  async register(email: string, password: string, recovery: AccountRecoveryMaterial): Promise<{ token: string; userId: string }> {
+    return this.request("/api/auth/register", { method: "POST", body: { email, password, recovery } });
   }
 
   async login(email: string, password: string): Promise<{ token: string; userId: string }> {

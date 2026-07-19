@@ -4,6 +4,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { createRecoveryMaterial } from "../helpers/recovery-material.mjs";
 
 test("server health, auth, sync, and backup smoke", async () => {
   const dataDir = await mkdtemp(join(tmpdir(), "gvault-"));
@@ -18,7 +19,7 @@ test("server health, auth, sync, and backup smoke", async () => {
     const health = await (await fetch(`${base}/healthz`)).json();
     assert.equal(health.product, "GVault");
 
-    const register = await post(base, "/api/auth/register", { email: "smoke@example.local", password: "change-me-strong-password" });
+    const register = await post(base, "/api/auth/register", { email: "smoke@example.local", password: "change-me-strong-password", recovery: createRecoveryMaterial("smoke-master-password").recovery });
     assert.ok(register.token);
 
     const record = {
@@ -39,7 +40,7 @@ test("server health, auth, sync, and backup smoke", async () => {
     assert.equal(backup.records[0].ciphertext, "encrypted-only");
     assert.ok(backup.path, "export returns a backup file path");
 
-    const importer = await post(base, "/api/auth/register", { email: "importer@example.local", password: "change-me-strong-password" });
+    const importer = await post(base, "/api/auth/register", { email: "importer@example.local", password: "change-me-strong-password", recovery: createRecoveryMaterial("importer-master-password").recovery });
     const restore = await post(base, "/api/backup/import", { path: backup.path }, importer.token);
     assert.equal(restore.importedRecords, 1);
     const afterImport = await post(base, "/api/sync/pull", {}, importer.token);

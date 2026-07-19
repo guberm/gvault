@@ -1,3 +1,27 @@
+# GVault 0.1.11
+
+Zero-knowledge account-password recovery release.
+
+Changed:
+- Web and Android account creation now generate a P-256 recovery signing key client-side and store it only in a fixed-size AES-256-GCM envelope protected by the master password;
+- the server stores only the public recovery verifier and encrypted envelope—never the master password, private recovery key, or a reusable master-password verifier;
+- forgotten server account passwords can be reset from Web and Android by signing an expiring one-time challenge, followed by mandatory recovery-key rotation;
+- unknown, unenrolled, wrong-master, expired, replayed, and stale-key attempts use enumeration-resistant public responses and generic failures;
+- recovery challenge and completion paths have separate fixed-window limits and secret-free audit events;
+- pre-v0.1.11 accounts remain unchanged until the user explicitly enables recovery while authenticated and locally unlocked;
+- browser-extension, Windows, and Linux clients have a documented versioned reuse contract for future account flows.
+
+Security boundary:
+- this recovers only the server account password;
+- a forgotten master password remains unrecoverable and encrypted vault data cannot be decrypted without it;
+- recovery does not yet revoke existing bearer sessions; session lifecycle remains tracked by #483.
+
+Validation:
+- protocol, replay, rotation, enumeration, rate-limit, audit-redaction, Web UI, and Android crypto tests;
+- full repository build/lint/test/server-smoke gate;
+- independent Reviewer approval;
+- production Web recovery acceptance and exact release-asset physical Pixel 7 Pro acceptance.
+
 # GVault 0.1.10
 
 Account and vault-password separation release.

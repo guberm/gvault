@@ -588,4 +588,4 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [ ] #493 Versioned, interoperable KDF metadata across shared, Web, and Android clients.
 - [ ] #494 Revision-first sync merge semantics.
 - [x] #500 Regular account login separated from master-password registration and local vault restoration.
-- [ ] #501 Zero-knowledge account-password recovery with a master-protected recovery token.
+- [x] #501 Zero-knowledge account-password recovery with a master-protected recovery token.

@@ -26,8 +26,8 @@ test("web shell exposes only usable controls and keeps the unlocked workspace in
 
     assert.equal(await page.locator("#vaultNavigation").count(), 1, "vault-only navigation has an explicit visibility boundary");
     assert.equal(await page.locator("#vaultNavigation").isHidden(), true, "locked users see the auth-first surface, not vault tools");
-    assert.equal(await page.locator('link[rel="stylesheet"]').getAttribute("href"), "./styles.css?v=480", "UI polish stylesheet bypasses stale CDN assets");
-    assert.equal(await page.locator('script[type="module"]').getAttribute("src"), "./app.js?v=500", "UI behavior bypasses stale CDN assets");
+    assert.equal(await page.locator('link[rel="stylesheet"]').getAttribute("href"), "./styles.css?v=501", "UI polish stylesheet bypasses stale CDN assets");
+    assert.equal(await page.locator('script[type="module"]').getAttribute("src"), "./app.js?v=501", "UI behavior bypasses stale CDN assets");
     assert.equal(await page.getByRole("button", { name: "Export vault" }).count(), 0, "unfinished export is not presented as a working action");
     assert.equal(await page.getByRole("button", { name: "More" }).count(), 0, "unfinished item menu is not presented as a working action");
 

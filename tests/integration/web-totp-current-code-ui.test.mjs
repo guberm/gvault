@@ -54,7 +54,7 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
     });
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Account password").fill("test-account-password");
+    await page.getByLabel("Account password", { exact: true }).fill("test-account-password");
     await page.getByLabel("Master password", { exact: true }).fill("correct horse battery staple");
     await page.getByLabel("Confirm master password").fill("correct horse battery staple");
     await page.getByRole("button", { name: "Register" }).click();
@@ -93,7 +93,7 @@ test("manually entered TOTP secret creates an encrypted authenticator and displa
 
     await page.reload();
     await page.locator("#serverUrl").fill(`http://127.0.0.1:${server.address().port}`);
-    await page.getByLabel("Account password").fill("test-account-password");
+    await page.getByLabel("Account password", { exact: true }).fill("test-account-password");
     await page.getByRole("button", { name: "Login", exact: true }).click();
     await assertText(page.locator("#status"), "Server session established");
     await unlock(page, "correct horse battery staple");

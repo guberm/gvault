@@ -3,6 +3,9 @@ import { currentTotpCode, totpSecondsRemaining } from "./totp.js";
 const deviceId = localStorage.getItem("gv.deviceId") || crypto.randomUUID();
 localStorage.setItem("gv.deviceId", deviceId);
 const savedTheme = localStorage.getItem("gv.theme") || "light";
+const recoveryProtocol = "gvault-recovery-v1";
+const recoveryIterations = 210000;
+const recoveryPlaintextBytes = 256;
 
 const state = {
   token: localStorage.getItem("gv.token") || "",
@@ -533,6 +536,7 @@ function render() {
   $("lockState").textContent = unlocked ? "Unlocked" : "Locked";
   $("lockState").nextElementSibling.textContent = unlocked ? "Vault is unlocked" : "Vault is locked";
   $("lockButton").disabled = !unlocked;
+  $("recoverySetupButton").disabled = !unlocked || !state.token;
   renderCounts();
   renderFolders();
   renderTags();
@@ -885,6 +889,17 @@ async function api(path, body, method = "POST") {
   return payload;
 }
 
+async function publicApi(path, body) {
+  const response = await fetch(new URL(path, $("serverUrl").value), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `API ${response.status}`);
+  return payload;
+}
+
 async function auth(path, createAccount = false) {
   const password = $("accountPassword").value;
   if (!password.trim()) {
@@ -911,7 +926,12 @@ async function auth(path, createAccount = false) {
       return;
     }
   }
-  const result = await api(path, { email: $("email").value, password });
+  const body = { email: $("email").value, password };
+  if (createAccount) {
+    setStatus("Creating master-protected recovery material...", "neutral");
+    body.recovery = await createRecoveryMaterial(registrationMaster);
+  }
+  const result = await api(path, body);
   state.token = result.token;
   state.userId = result.userId;
   if (createAccount) {
@@ -923,6 +943,7 @@ async function auth(path, createAccount = false) {
   }
   localStorage.setItem("gv.token", state.token);
   localStorage.setItem("gv.userId", state.userId);
+  $("accountPassword").value = "";
   $("emailLabel").textContent = $("email").value.split("@")[0] || "admin";
   setStatus("Server session established.", "success");
   render();
@@ -986,6 +1007,106 @@ async function deriveKey(salt, masterPassword = state.masterPassword) {
   );
 }
 
+async function deriveRecoveryKey(salt, masterPassword) {
+  const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(masterPassword), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: recoveryIterations, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+async function createRecoveryMaterial(masterPassword) {
+  const keyPair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const privateKey = new Uint8Array(await crypto.subtle.exportKey("pkcs8", keyPair.privateKey));
+  if (privateKey.length < 1 || privateKey.length > recoveryPlaintextBytes - 2) throw new Error("Recovery key could not be encoded.");
+  const verifier = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+  const plaintext = crypto.getRandomValues(new Uint8Array(recoveryPlaintextBytes));
+  new DataView(plaintext.buffer).setUint16(0, privateKey.length, false);
+  plaintext.set(privateKey, 2);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const nonce = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveRecoveryKey(salt, masterPassword);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: new TextEncoder().encode(recoveryProtocol) },
+    key,
+    plaintext,
+  );
+  privateKey.fill(0);
+  plaintext.fill(0);
+  return {
+    version: 1,
+    verifier: toBase64(verifier),
+    envelope: {
+      version: 1,
+      kdf: "PBKDF2-SHA256",
+      iterations: recoveryIterations,
+      salt: toBase64(salt),
+      nonce: toBase64(nonce),
+      ciphertext: toBase64(ciphertext),
+    },
+  };
+}
+
+async function decryptRecoveryPrivateKey(envelope, masterPassword) {
+  if (envelope?.version !== 1 || envelope?.kdf !== "PBKDF2-SHA256" || envelope?.iterations !== recoveryIterations) {
+    throw new Error("Recovery envelope is unsupported.");
+  }
+  const salt = fromBase64(envelope.salt);
+  const nonce = fromBase64(envelope.nonce);
+  const ciphertext = fromBase64(envelope.ciphertext);
+  if (salt.length !== 16 || nonce.length !== 12 || ciphertext.length !== recoveryPlaintextBytes + 16) throw new Error("Recovery envelope is invalid.");
+  const key = await deriveRecoveryKey(salt, masterPassword);
+  const decrypted = new Uint8Array(await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: nonce, additionalData: new TextEncoder().encode(recoveryProtocol) },
+    key,
+    ciphertext,
+  ));
+  if (decrypted.length !== recoveryPlaintextBytes) throw new Error("Recovery envelope is invalid.");
+  const length = new DataView(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength).getUint16(0, false);
+  if (length < 1 || length > recoveryPlaintextBytes - 2) throw new Error("Recovery envelope is invalid.");
+  const privateKey = decrypted.slice(2, 2 + length);
+  decrypted.fill(0);
+  return privateKey;
+}
+
+function canonicalRecoveryMessage(challengeId, challenge) {
+  return new TextEncoder().encode(`${recoveryProtocol}\n${challengeId}\n${challenge}`);
+}
+
+async function signRecoveryChallenge(privateKeyBytes, challengeId, challenge) {
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    privateKeyBytes,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+  const signature = new Uint8Array(await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    privateKey,
+    canonicalRecoveryMessage(challengeId, challenge),
+  ));
+  privateKeyBytes.fill(0);
+  return toBase64(p1363SignatureToDer(signature));
+}
+
+function p1363SignatureToDer(signature) {
+  if (signature.length !== 64) throw new Error("Recovery proof is invalid.");
+  const encodeInteger = (value) => {
+    let offset = 0;
+    while (offset < value.length - 1 && value[offset] === 0) offset += 1;
+    let bytes = value.slice(offset);
+    if (bytes[0] & 0x80) bytes = Uint8Array.from([0, ...bytes]);
+    return Uint8Array.from([0x02, bytes.length, ...bytes]);
+  };
+  const r = encodeInteger(signature.slice(0, 32));
+  const s = encodeInteger(signature.slice(32));
+  return Uint8Array.from([0x30, r.length + s.length, ...r, ...s]);
+}
+
 async function encryptJson(value) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -1029,6 +1150,93 @@ async function restoreVault(masterPassword) {
     .map(({ item }) => item)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   state.selectedId = state.items[0]?.id || "";
+}
+
+function setRecoveryMode(enabled) {
+  $("recoveryFields").classList.toggle("hidden", !enabled);
+  $("recoveryToggleButton").classList.toggle("hidden", enabled);
+  if (enabled) $("masterPassword").focus();
+  else {
+    $("recoveryNewPassword").value = "";
+    $("recoveryConfirmPassword").value = "";
+  }
+}
+
+async function recoverAccount() {
+  const email = $("email").value.trim();
+  const masterPassword = $("masterPassword").value;
+  const password = $("recoveryNewPassword").value;
+  if (!email) {
+    setStatus("Email is required.", "warning");
+    return;
+  }
+  if (masterPassword.length < 12) {
+    setStatus("Use at least 12 characters for the master password.", "warning");
+    return;
+  }
+  if (password.length < 12) {
+    setStatus("Use at least 12 characters for the new account password.", "warning");
+    return;
+  }
+  if (password !== $("recoveryConfirmPassword").value) {
+    setStatus("Confirm new account password does not match.", "warning");
+    return;
+  }
+  $("recoverAccountButton").disabled = true;
+  setStatus("Verifying master-protected recovery key locally...", "neutral");
+  try {
+    const challenge = await publicApi("/api/auth/recovery/challenge", { email });
+    if (challenge.protocol !== recoveryProtocol) throw new Error("Recovery protocol is unsupported.");
+    const privateKey = await decryptRecoveryPrivateKey(challenge.envelope, masterPassword);
+    const proof = await signRecoveryChallenge(privateKey, challenge.challengeId, challenge.challenge);
+    const recovery = await createRecoveryMaterial(masterPassword);
+    const result = await publicApi("/api/auth/recovery/complete", {
+      challengeId: challenge.challengeId,
+      proof,
+      password,
+      recovery,
+    });
+    state.token = result.token;
+    state.userId = result.userId;
+    localStorage.setItem("gv.token", state.token);
+    localStorage.setItem("gv.userId", state.userId);
+    $("emailLabel").textContent = email.split("@")[0] || "admin";
+    await restoreVault(masterPassword);
+    $("masterPassword").value = "";
+    setRecoveryMode(false);
+    render();
+    setStatus("Account password reset and vault restored.", "success");
+  } catch (error) {
+    const message = error instanceof Error && error.message === "Recovery temporarily unavailable"
+      ? error.message
+      : "Recovery could not be completed.";
+    setStatus(message, "warning");
+  } finally {
+    $("recoverAccountButton").disabled = false;
+  }
+}
+
+async function setupRecovery() {
+  if (!state.token || !state.masterPassword) {
+    setStatus("Sign in and unlock the vault before enabling recovery.", "warning");
+    return;
+  }
+  const password = $("accountPassword").value;
+  if (!password) {
+    setStatus("Re-enter the current account password, then enable recovery.", "warning");
+    $("accountPassword").focus();
+    return;
+  }
+  $("recoverySetupButton").disabled = true;
+  setStatus("Rotating master-protected recovery material...", "neutral");
+  try {
+    const recovery = await createRecoveryMaterial(state.masterPassword);
+    await api("/api/auth/recovery/setup", { password, recovery });
+    $("accountPassword").value = "";
+    setStatus("Account recovery is enabled with newly rotated material.", "success");
+  } finally {
+    $("recoverySetupButton").disabled = false;
+  }
 }
 
 $("unlockButton").addEventListener("click", async () => {
@@ -1193,6 +1401,10 @@ $("items").addEventListener("click", (event) => {
 $("registerButton").addEventListener("click", () => auth("/api/auth/register", true).catch((error) => setStatus(error.message, "warning")));
 $("loginButton").addEventListener("click", () => auth("/api/auth/login").catch((error) => setStatus(error.message, "warning")));
 $("syncButton").addEventListener("click", () => syncVault().catch((error) => setStatus(error.message, "warning")));
+$("recoveryToggleButton").addEventListener("click", () => setRecoveryMode(true));
+$("recoveryCancelButton").addEventListener("click", () => setRecoveryMode(false));
+$("recoverAccountButton").addEventListener("click", () => recoverAccount());
+$("recoverySetupButton").addEventListener("click", () => setupRecovery().catch((error) => setStatus(error.message, "warning")));
 $("generatorNavButton").addEventListener("click", () => {
   document.querySelector(".generator").scrollIntoView({ block: "start", behavior: "smooth" });
   $("generateButton").focus({ preventScroll: true });

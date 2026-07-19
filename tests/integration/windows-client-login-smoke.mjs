@@ -5,6 +5,7 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { createRecoveryMaterial } from "../helpers/recovery-material.mjs";
 
 const root = resolve(".");
 
@@ -22,7 +23,7 @@ test("Windows desktop client performs real server-backed login smoke", { skip: p
     const base = `http://127.0.0.1:${port}`;
     const email = `windows-smoke-${Date.now()}@example.local`;
     const password = "change-me-strong-password";
-    const register = await post(base, "/api/auth/register", { email, password });
+    const register = await post(base, "/api/auth/register", { email, password, recovery: createRecoveryMaterial("windows-smoke-master").recovery });
     assert.ok(register.token, "test account registration returns a token");
 
     await run("dotnet", [

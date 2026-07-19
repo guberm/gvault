@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>GVault</title>
-    <link rel="stylesheet" href="./styles.css?v=480" />
+    <link rel="stylesheet" href="./styles.css?v=501" />
   </head>
   <body>
     <main class="app-shell">
@@ -71,6 +71,7 @@
           <button id="registerButton" class="plain-button" type="button">Register</button>
           <button id="loginButton" class="plain-button" type="button">Login</button>
           <button id="syncButton" class="plain-button" type="button">Sync</button>
+          <button id="recoverySetupButton" class="plain-button" type="button" disabled>Enable / rotate recovery</button>
           <div id="status" class="sync-status" role="status">Connect a server and unlock the vault.</div>
         </header>
 
@@ -100,6 +101,23 @@
             <input id="confirmMasterPassword" type="password" autocomplete="new-password" />
           </label>
           <button id="unlockButton" type="button">Unlock vault</button>
+          <button id="recoveryToggleButton" class="plain-button" type="button">Forgot account password?</button>
+          <div id="recoveryFields" class="recovery-fields hidden">
+            <div>
+              <strong>Recover account access</strong>
+              <p>Enter the master password to decrypt your recovery key locally, then choose a new account password.</p>
+            </div>
+            <label class="field">
+              <span>New account password</span>
+              <input id="recoveryNewPassword" type="password" autocomplete="new-password" />
+            </label>
+            <label class="field">
+              <span>Confirm new account password</span>
+              <input id="recoveryConfirmPassword" type="password" autocomplete="new-password" />
+            </label>
+            <button id="recoverAccountButton" type="button">Recover account</button>
+            <button id="recoveryCancelButton" class="secondary-button" type="button">Cancel recovery</button>
+          </div>
         </section>
 
         <section id="vaultPanel" class="vault-layout hidden" aria-label="Unlocked vault workspace">
@@ -221,6 +239,6 @@
         </footer>
       </section>
     </main>
-    <script src="./app.js?v=500" type="module"></script>
+    <script src="./app.js?v=501" type="module"></script>
   </body>
 </html>
