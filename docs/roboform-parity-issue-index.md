@@ -498,8 +498,8 @@ Parent issue: #31 — https://github.com/guberm/gvault/issues/31
 - [ ] #367 Require re-auth for sensitive actions. — https://github.com/guberm/gvault/issues/367
 - [ ] #368 PIN unlock setting. — https://github.com/guberm/gvault/issues/368
 - [ ] #369 Biometric unlock setting. — https://github.com/guberm/gvault/issues/369
-- [ ] #370 Device/session management. — https://github.com/guberm/gvault/issues/370
-- [ ] #371 Revoke device/session. — https://github.com/guberm/gvault/issues/371
+- [x] #370 Device/session management. — https://github.com/guberm/gvault/issues/370 — bounded session listing/revocation/logout APIs completed by #483 / PR #504
+- [x] #371 Revoke device/session. — https://github.com/guberm/gvault/issues/371 — completed by #483 / PR #504 with live Web and physical Android acceptance
 
 ## 13. Settings — 13.3 Browser/autofill/autosave
 
@@ -533,7 +533,7 @@ Parent issue: #34 — https://github.com/guberm/gvault/issues/34
 - [ ] #387 Zero-knowledge boundary documented. — https://github.com/guberm/gvault/issues/387
 - [x] #388 Master password handling documented. — https://github.com/guberm/gvault/issues/388 — account login/registration/vault restoration contract implemented by #500
 - [ ] #389 Key derivation documented. — https://github.com/guberm/gvault/issues/389
-- [ ] #390 Device/session token model documented. — https://github.com/guberm/gvault/issues/390
+- [x] #390 Device/session token model documented. — https://github.com/guberm/gvault/issues/390 — completed by #483 / PR #504
 - [ ] #391 Secure sharing crypto documented. — https://github.com/guberm/gvault/issues/391
 - [ ] #392 Backup/restore security documented. — https://github.com/guberm/gvault/issues/392
 - [x] #393 Recovery limitations documented. — https://github.com/guberm/gvault/issues/393
