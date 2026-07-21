@@ -1,6 +1,6 @@
 {
   "name": "@gvault/sync",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@gvault/vault-models": "0.1.12"
+    "@gvault/vault-models": "0.1.13"
   }
 }

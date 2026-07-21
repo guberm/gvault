@@ -191,17 +191,37 @@ export class RecoveryChallengeStore {
 export class FixedWindowRateLimiter {
   private readonly buckets = new Map<string, { count: number; resetAt: number }>();
 
-  constructor(private readonly limit: number, private readonly windowMs: number) {}
+  constructor(
+    private readonly limit: number,
+    private readonly windowMs: number,
+    private readonly maxBuckets = 10_000,
+  ) {}
+
+  canAllow(key: string, now = Date.now()): boolean {
+    const current = this.buckets.get(key);
+    return !current || current.resetAt <= now || current.count < this.limit;
+  }
 
   allow(key: string, now = Date.now()): boolean {
     const current = this.buckets.get(key);
     if (!current || current.resetAt <= now) {
+      if (!current) this.ensureCapacity(now);
       this.buckets.set(key, { count: 1, resetAt: now + this.windowMs });
       return true;
     }
     if (current.count >= this.limit) return false;
     current.count += 1;
     return true;
+  }
+
+  private ensureCapacity(now: number): void {
+    if (this.buckets.size < this.maxBuckets) return;
+    for (const [key, bucket] of this.buckets) {
+      if (bucket.resetAt <= now) this.buckets.delete(key);
+      if (this.buckets.size < this.maxBuckets) return;
+    }
+    const oldestKey = this.buckets.keys().next().value;
+    if (oldestKey) this.buckets.delete(oldestKey);
   }
 }
 

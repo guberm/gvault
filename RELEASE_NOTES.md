@@ -1,3 +1,18 @@
+# GVault 0.1.13
+
+API authentication abuse-controls release.
+
+Changed:
+- every JSON API route now rejects malformed bodies with `400` and declared or streamed bodies above the configurable 1 MiB default with `413`;
+- registration, login, and authenticated recovery setup now share independent per-account and per-source fixed-window limits before synchronous `scrypt` work, with bounded key maps;
+- recovery-specific limits use the same request-source boundary, and limited auth audit events contain only hashed identifiers;
+- forwarded client addresses are ignored unless `GV_TRUST_PROXY=true`; the nginx example overwrites `X-Forwarded-For` and documents the sole-ingress trust requirement;
+- self-hosted environment, Compose, security, threat-model, audit, and parity documentation now describe the production settings and process-local residual risk.
+
+Validation:
+- strict RED/GREEN integration coverage for declared and chunked body limits, malformed JSON, account/source isolation, trusted-proxy behavior, registration, login, and recovery setup;
+- full repository gate, independent Reviewer approval, and local/public production acceptance for `400`, `413`, `429`, isolated normal login, service health, and the v0.1.13 marker.
+
 # GVault 0.1.12
 
 Bounded server-session lifecycle release.

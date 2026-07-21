@@ -28,6 +28,11 @@ import { JsonStore } from "./storage.js";
 const product = "GVault";
 const dataDir = process.env.GV_DATA_DIR ?? "./data";
 const allowedOrigins = new Set((process.env.GV_ALLOWED_ORIGINS ?? "*").split(",").map((origin) => origin.trim()));
+const jsonBodyLimitBytes = positiveInteger(process.env.GV_JSON_BODY_LIMIT_BYTES, 1024 * 1024);
+const trustProxy = process.env.GV_TRUST_PROXY === "true";
+const authWindowMs = positiveInteger(process.env.GV_AUTH_WINDOW_MS, 60 * 1000);
+const authAccountLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_AUTH_ACCOUNT_LIMIT, 20), authWindowMs);
+const authOriginLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_AUTH_ORIGIN_LIMIT, 100), authWindowMs);
 const store = new JsonStore(dataDir);
 const sessions = new SessionStore({
   ttlMs: positiveInteger(process.env.GV_SESSION_TTL_MS, SESSION_TTL_MS),
@@ -50,6 +55,12 @@ function positiveInteger(value: string | undefined, fallback: number): number {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+class RequestBodyError extends Error {
+  constructor(readonly status: 400 | 413, message: string) {
+    super(message);
+  }
+}
+
 function sendJson(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(value));
@@ -65,19 +76,70 @@ function recoveryAudit(req: IncomingMessage, event: string, outcome: string, sub
     event,
     outcome,
     subject: redactForAudit(subject),
-    source: redactForAudit(req.socket.remoteAddress ?? "unknown"),
+    source: redactForAudit(requestSource(req)),
   })}`);
 }
 
 function recoveryLimitKey(req: IncomingMessage, subject = ""): string {
-  return `${redactForAudit(subject)}:${redactForAudit(req.socket.remoteAddress ?? "unknown")}`;
+  return `${redactForAudit(subject)}:${redactForAudit(requestSource(req))}`;
+}
+
+function requestSource(req: IncomingMessage): string {
+  if (trustProxy) {
+    const forwarded = req.headers["x-forwarded-for"];
+    const candidate = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(",", 1)[0]?.trim();
+    if (candidate) return candidate;
+  }
+  return req.socket.remoteAddress ?? "unknown";
+}
+
+function allowAuthentication(req: IncomingMessage, res: ServerResponse, subject: string): boolean {
+  const accountKey = redactForAudit(subject);
+  const originKey = redactForAudit(requestSource(req));
+  const now = Date.now();
+  if (authAccountLimiter.canAllow(accountKey, now) && authOriginLimiter.canAllow(originKey, now)) {
+    authAccountLimiter.allow(accountKey, now);
+    authOriginLimiter.allow(originKey, now);
+    return true;
+  }
+  console.info(`[auth-audit] ${JSON.stringify({
+    at: nowIso(),
+    event: "rate-limit",
+    subject: accountKey,
+    source: originKey,
+  })}`);
+  sendError(res, 429, "Authentication temporarily unavailable");
+  return false;
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const declaredLength = Number(req.headers["content-length"]);
+  if (Number.isFinite(declaredLength) && declaredLength > jsonBodyLimitBytes) {
+    req.resume();
+    throw new RequestBodyError(413, "Request body too large");
+  }
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  let receivedBytes = 0;
+  for await (const chunk of req.iterator({ destroyOnReturn: false })) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    receivedBytes += bytes.length;
+    if (receivedBytes > jsonBodyLimitBytes) {
+      req.resume();
+      throw new RequestBodyError(413, "Request body too large");
+    }
+    chunks.push(bytes);
+  }
   if (chunks.length === 0) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new RequestBodyError(400, "JSON body must be an object");
+    }
+    return parsed as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof RequestBodyError) throw error;
+    throw new RequestBodyError(400, "Malformed JSON");
+  }
 }
 
 function setCors(req: IncomingMessage, res: ServerResponse): void {
@@ -160,6 +222,7 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 400, error instanceof Error ? error.message : "Registration is invalid");
       return;
     }
+    if (!allowAuthentication(req, res, email)) return;
     const state = store.read();
     if (state.users.some((user) => user.email === email)) {
       sendError(res, 409, "Account already exists");
@@ -183,6 +246,7 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
     const body = await readJson(req);
     const email = requireNonEmpty(body.email, "email").toLowerCase();
     const password = requireNonEmpty(body.password, "password");
+    if (!allowAuthentication(req, res, email)) return;
     const user = store.read().users.find((candidate) => candidate.email === email);
     if (!user || !verifyPassword(password, user)) {
       sendError(res, 401, "Invalid credentials");
@@ -284,6 +348,7 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
     const state = store.read();
     const user = state.users.find((candidate) => candidate.id === userId);
     const password = typeof body.password === "string" ? body.password : "";
+    if (user && !allowAuthentication(req, res, user.email)) return;
     if (!user || !verifyPassword(password, user)) {
       recoveryAudit(req, "setup", "denied", user?.email);
       sendError(res, 401, "Invalid credentials");
@@ -384,7 +449,13 @@ const port = Number(process.env.GV_SERVER_PORT ?? "8080");
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   createServer((req, res) => {
-    route(req, res).catch(() => sendError(res, 500, "Internal server error"));
+    route(req, res).catch((error) => {
+      if (error instanceof RequestBodyError) {
+        if (error.status === 413) res.setHeader("connection", "close");
+        sendError(res, error.status, error.message);
+      }
+      else sendError(res, 500, "Internal server error");
+    });
   }).listen(port, host, () => {
     console.log(`${product} server listening on http://${host}:${port}`);
   });

@@ -14,6 +14,11 @@
 | `GV_SERVER_PORT` | `8080` | Server port |
 | `GV_DATA_DIR` | `./data` | Persistent storage directory |
 | `GV_ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist |
+| `GV_JSON_BODY_LIMIT_BYTES` | `1048576` | Maximum actual or declared JSON request-body bytes |
+| `GV_TRUST_PROXY` | `false` | Trust the first `X-Forwarded-For` address; enable only behind a sanitizing trusted proxy |
+| `GV_AUTH_WINDOW_MS` | `60000` | Fixed authentication rate-limit window in milliseconds |
+| `GV_AUTH_ACCOUNT_LIMIT` | `20` | Authentication attempts allowed per normalized account identifier per window |
+| `GV_AUTH_ORIGIN_LIMIT` | `100` | Authentication attempts allowed per request source per window |
 | `GV_SESSION_TTL_MS` | `86400000` | Fixed bearer-session lifetime in milliseconds |
 | `GV_SESSION_MAX_PER_USER` | `10` | Newest active sessions retained per user |
 | `GV_SESSION_MAX_TOTAL` | `10000` | Active-session capacity for one server process |
@@ -21,6 +26,22 @@
 Session settings must be positive integers. Expired and capacity-evicted tokens
 are rejected with `401 Unauthorized`. Sessions are held in memory, so every
 server restart invalidates all active tokens.
+
+JSON routes reject a declared or streamed body above
+`GV_JSON_BODY_LIMIT_BYTES` with `413 Request body too large`; malformed JSON is
+rejected with `400 Malformed JSON`. Authentication work that can reach
+synchronous `scrypt` is guarded by independent account and source fixed-window
+limits. Registration, login, and authenticated recovery setup share those
+buckets; recovery completion retains its stricter recovery-specific limiter.
+The buckets are process-local and reset on restart, so a multi-instance
+deployment needs an external distributed limiter and monitoring. Each limiter
+retains at most 10,000 active keys and evicts the oldest key at capacity.
+
+By default, the source is the direct socket address and any client-supplied
+`X-Forwarded-For` value is ignored. Set `GV_TRUST_PROXY=true` only when the Node
+server cannot be reached except through a trusted reverse proxy that overwrites
+`X-Forwarded-For`. The supplied nginx example uses `$remote_addr` for that
+reason. Do not combine trusted-proxy mode with an Internet-reachable Node port.
 
 ## Backup
 
@@ -49,4 +70,6 @@ backup/restore runbook; those checklist items remain open.
 
 ## Reverse proxy
 
-See `infra/reverse-proxy/nginx.conf`.
+See `infra/reverse-proxy/nginx.conf`. Its 1 MiB ingress limit matches the server
+default; keep the proxy and `GV_JSON_BODY_LIMIT_BYTES` settings aligned if either
+is changed.
