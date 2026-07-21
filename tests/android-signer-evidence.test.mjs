@@ -30,3 +30,14 @@ test("Android signer fingerprint tolerates separators without accepting a differ
     undefined,
   );
 });
+
+test("Android signer fingerprint survives a native stderr line wrap", () => {
+  const separated = trustedFingerprint.match(/.{1,2}/g).join("-");
+  const wrappedEvidence = [
+    "apksigner.bat : Signer #1 certificate SHA-256 digest:",
+    separated,
+    "Signer #1 certificate SHA-1 digest: d69545afdcb9fa9123d615e1aeb7bfdc6983ff3e",
+  ].join("\n");
+
+  assert.equal(extractSignerSha256(wrappedEvidence), trustedFingerprint);
+});

@@ -3,15 +3,14 @@ export function combineSignerEvidence({ stdout = "", stderr = "" }) {
 }
 
 export function extractSignerSha256(evidence) {
-  const digestLine = normalizeSignerEvidence(evidence)
-    .split("\n")
-    .find((line) => /Signer #1 certificate SHA-256 digest:/i.test(line));
-  if (!digestLine) return undefined;
+  const normalized = normalizeSignerEvidence(evidence);
+  const sha256Label = normalized.search(/SHA-?256/i);
+  if (sha256Label === -1) return undefined;
 
-  const fingerprint = digestLine
-    .replace(/^.*Signer #1 certificate SHA-256 digest:\s*/i, "")
-    .replace(/[^0-9a-f]/gi, "")
-    .toLowerCase();
+  const candidate = normalized
+    .slice(sha256Label)
+    .match(/(?:[0-9a-f]{2}(?:[:\s-]?)){32}/i)?.[0];
+  const fingerprint = candidate?.replace(/[^0-9a-f]/gi, "").toLowerCase();
   return /^[0-9a-f]{64}$/.test(fingerprint) ? fingerprint : undefined;
 }
 
