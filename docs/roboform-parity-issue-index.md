@@ -569,7 +569,7 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [x] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486 — 11-character rejection and 12-character acceptance verified on Pixel 7 Pro
 - [x] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487 — PRs #495/#496, live acceptance at `43eb1b8`
 - [x] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488 — live device-created record accepted by shared validator
-- [ ] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489
+- [x] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489 — v0.1.15 exact/dot-boundary matcher with focused core and real Chrome extension compatibility acceptance
 - [ ] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490
 - [ ] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491
 - [ ] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492

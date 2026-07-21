@@ -1,6 +1,6 @@
 {
   "name": "@gvault/browser-extension",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "type": "module",
   "scripts": {
     "build": "node build.mjs"

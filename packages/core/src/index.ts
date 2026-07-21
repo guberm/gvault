@@ -82,7 +82,10 @@ export function searchVault(items: VaultItem[], query: string): VaultItem[] {
 export function findLoginsForUrl(items: VaultItem[], url: string): LoginItem[] {
   const host = normalizeUrlHost(url);
   return items.filter((item): item is LoginItem => {
-    return item.type === "login" && item.urls.some((candidate) => host.endsWith(normalizeUrlHost(candidate)));
+    return item.type === "login" && item.urls.some((candidate) => {
+      const candidateHost = normalizeUrlHost(candidate);
+      return host === candidateHost || host.endsWith(`.${candidateHost}`);
+    });
   });
 }
 

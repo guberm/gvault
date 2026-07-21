@@ -1,3 +1,17 @@
+# GVault 0.1.15
+
+Dot-boundary URL matching security release.
+
+Changed:
+- the shared core matcher now accepts only an exact host or a dot-delimited subdomain;
+- lookalike sibling domains such as `notexample.com` no longer match credentials saved for `example.com`;
+- caller audit confirms the exported matcher currently has no production callers, while the browser extension's independent runtime matcher already enforces the same dot boundary.
+
+Validation:
+- strict RED/GREEN core coverage for exact host, subdomain, lookalike sibling, and parent-suffix cases;
+- full repository gate and independent CodeRabbit review;
+- real Google Chrome extension compatibility acceptance across the same four host boundaries.
+
 # GVault 0.1.14
 
 Public API error-boundary hotfix.
