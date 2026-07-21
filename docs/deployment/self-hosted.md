@@ -43,7 +43,144 @@ server cannot be reached except through a trusted reverse proxy that overwrites
 `X-Forwarded-For`. The supplied nginx example uses `$remote_addr` for that
 reason. Do not combine trusted-proxy mode with an Internet-reachable Node port.
 
-## Backup
+## Durable JSON store
+
+`GV_DATA_DIR/gvault-store.json` is the primary schema-v1 store. Every mutation
+holds `gvault-store.json.lock`, validates the current state, writes through a
+unique temporary file, fsyncs it, atomically replaces the primary, and fsyncs
+the data directory. Before replacement, the last valid primary is atomically
+copied to `gvault-store.json.bak`. All three files are local-node state and must
+live on a filesystem with local atomic rename semantics; do not share this data
+directory between hosts.
+
+The lock contains the local writer PID and a random ownership token. A later
+writer removes it only when that PID is no longer alive. An interrupted writer
+that leaves incomplete lock metadata is treated as stale after 10 seconds. A
+live writer is never preempted; callers fail after a 10-second acquisition
+timeout rather than writing concurrently.
+
+Reads accept only schema version 1 and validate users, recovery envelopes,
+devices, and encrypted-record shapes. If the primary is malformed but the
+rollback snapshot is valid, the server emits a recovery warning and reads the
+rollback. The next successful mutation repairs the primary without replacing
+that valid rollback. If neither file validates, startup or the request fails
+closed; never replace both copies before preserving incident evidence.
+
+### Operator backup
+
+Use a filesystem backup in addition to the per-mutation rollback snapshot. The
+following offline procedure gives one exact point-in-time file. Set
+`HEALTH_URL` to the managed listener when it differs from the default; the
+verified public deployment below uses `http://127.0.0.1:55174/healthz`.
+
+```sh
+set -eu
+DATA_DIR=/home/mg/.local/share/gvault-data
+BACKUP_DIR="$DATA_DIR/operator-backups"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${GV_SERVER_PORT:-8080}/healthz}"
+SERVICE_STOPPED=0
+restart_if_needed() {
+  status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$SERVICE_STOPPED" -eq 1 ]; then systemctl --user start gvault-public.service || true; fi
+  exit "$status"
+}
+trap restart_if_needed EXIT HUP INT TERM
+systemctl --user stop gvault-public.service
+SERVICE_STOPPED=1
+install -d -m 700 "$BACKUP_DIR"
+install -m 600 "$DATA_DIR/gvault-store.json" "$BACKUP_DIR/gvault-store-$STAMP.json"
+systemctl --user start gvault-public.service
+SERVICE_STOPPED=0
+curl --fail --silent "$HEALTH_URL"
+trap - EXIT HUP INT TERM
+```
+
+Store copies on separate encrypted media according to the operator's retention
+policy. They contain account hashes, device metadata, recovery envelopes, and
+client-encrypted vault records; treat them as sensitive even though vault item
+plaintext is not present.
+
+Validate a candidate without exposing its contents by staging it under the
+expected filename and invoking the production validator:
+
+```sh
+set -eu
+CANDIDATE=/path/to/gvault-store-backup.json
+CHECK_DIR="$(mktemp -d)"
+trap 'rm -rf "$CHECK_DIR"' EXIT HUP INT TERM
+install -m 600 "$CANDIDATE" "$CHECK_DIR/gvault-store.json"
+GV_CHECK_DIR="$CHECK_DIR" node --input-type=module -e \
+  'import { JsonStore } from "./apps/server/dist/storage.js"; new JsonStore(process.env.GV_CHECK_DIR).read(); console.log("schema-v1 valid")'
+```
+
+### Operator restore
+
+The restore procedure stages the candidate once, validates that exact staged
+file, then stops the only writer. It preserves the current primary, rollback,
+and lock as incident evidence. Any failure after the live primary is replaced
+automatically reinstalls the preserved primary before restarting the service.
+
+```sh
+set -eu
+DATA_DIR=/home/mg/.local/share/gvault-data
+CANDIDATE=/path/to/gvault-store-backup.json
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${GV_SERVER_PORT:-8080}/healthz}"
+STAGE_DIR="$(mktemp -d)"
+STAGED_STORE="$STAGE_DIR/gvault-store.json"
+INCIDENT_DIR="$DATA_DIR/incidents/$(date -u +%Y%m%dT%H%M%SZ)"
+SERVICE_STOPPED=0
+ROLLBACK_REQUIRED=0
+restore_cleanup() {
+  status=$?
+  trap - EXIT HUP INT TERM
+  if [ "$ROLLBACK_REQUIRED" -eq 1 ]; then
+    systemctl --user stop gvault-public.service || true
+    install -m 600 "$INCIDENT_DIR/gvault-store.json" "$DATA_DIR/gvault-store.json" || true
+    if [ -e "$INCIDENT_DIR/gvault-store.json.bak" ]; then
+      install -m 600 "$INCIDENT_DIR/gvault-store.json.bak" "$DATA_DIR/gvault-store.json.bak" || true
+    else
+      rm -f "$DATA_DIR/gvault-store.json.bak"
+    fi
+    rm -f "$DATA_DIR/gvault-store.json.lock" "$DATA_DIR/gvault-store.json.restore"
+    systemctl --user start gvault-public.service || true
+  elif [ "$SERVICE_STOPPED" -eq 1 ]; then
+    systemctl --user start gvault-public.service || true
+  fi
+  rm -rf "$STAGE_DIR"
+  exit "$status"
+}
+trap restore_cleanup EXIT HUP INT TERM
+install -m 600 "$CANDIDATE" "$STAGED_STORE"
+GV_CHECK_DIR="$STAGE_DIR" node --input-type=module -e \
+  'import { JsonStore } from "./apps/server/dist/storage.js"; new JsonStore(process.env.GV_CHECK_DIR).read(); console.log("schema-v1 valid")'
+systemctl --user stop gvault-public.service
+SERVICE_STOPPED=1
+install -d -m 700 "$INCIDENT_DIR"
+install -m 600 "$DATA_DIR/gvault-store.json" "$INCIDENT_DIR/gvault-store.json"
+for file in gvault-store.json.bak gvault-store.json.lock; do
+  if [ -e "$DATA_DIR/$file" ]; then install -m 600 "$DATA_DIR/$file" "$INCIDENT_DIR/$file"; fi
+done
+ROLLBACK_REQUIRED=1
+install -m 600 "$STAGED_STORE" "$DATA_DIR/gvault-store.json.restore"
+mv -f "$DATA_DIR/gvault-store.json.restore" "$DATA_DIR/gvault-store.json"
+rm -f "$DATA_DIR/gvault-store.json.bak" "$DATA_DIR/gvault-store.json.lock"
+systemctl --user start gvault-public.service
+SERVICE_STOPPED=0
+curl --fail --silent "$HEALTH_URL"
+ROLLBACK_REQUIRED=0
+trap - EXIT HUP INT TERM
+rm -rf "$STAGE_DIR"
+```
+
+After health passes, perform an authenticated login and sync pull for a known
+account. Roll back by stopping the service and reinstalling the preserved
+primary only if that preserved file validates. These filesystem procedures
+restore the whole server state; the authenticated backup API below restores
+only encrypted records into one account and has separate known limitations.
+
+## Backup API
 
 Authenticated users can call `POST /api/backup/export`. The export includes encrypted vault records, devices, and non-secret account metadata.
 

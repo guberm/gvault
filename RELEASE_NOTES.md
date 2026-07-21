@@ -1,3 +1,19 @@
+# GVault 0.1.16
+
+Durable single-node JSON storage release.
+
+Changed:
+- every server read validates the complete schema-v1 persistence envelope and fails closed when neither the primary nor rollback file is valid;
+- every account, recovery, device, sync, and backup-import mutation now runs behind one exclusive cross-process writer lock;
+- commits use unique temporary files, file and directory fsync, atomic replacement, `0600` permissions, and a validated `gvault-store.json.bak` rollback snapshot;
+- dead writer locks are recovered without accepting a live writer's lock, and the operator runbook documents offline backup, validation, restore, and rollback handling;
+- the JSON format remains a bounded single-node option; transactional storage is still required for multi-node scale-out.
+
+Validation:
+- strict RED/GREEN tests for malformed/unknown schemas, corrupt-primary rollback, pre-replacement snapshots, dead-writer recovery, and 12 concurrent Node writer processes;
+- existing recovery, session, sync-isolation, and server backup/import smoke contracts;
+- full repository gate and independent Reviewer approval.
+
 # GVault 0.1.15
 
 Dot-boundary URL matching security release.

@@ -1,7 +1,7 @@
 # Known Limitations
 
 - The web UI keeps decrypted prototype items in memory only; encrypted persistent local cache is not implemented yet.
-- The server storage layer is a synchronous whole-file JSON rewrite with no schema validation, locking, transaction isolation, or corruption recovery. Replace or explicitly harden it before multi-user/concurrent production use (#490).
+- The server JSON store now validates schema v1, serializes local writers, atomically fsyncs replacements, and keeps a validated rollback snapshot. It still blocks one Node process during whole-file mutations and is not a shared-filesystem or multi-node database; migrate to a transactional store before unbounded scale-out.
 - Bearer sessions have fixed expiry, bounded retention, listing, revocation, and logout, but remain in-memory, have no refresh policy, and are not cryptographically device-bound; a server restart invalidates every session.
 - JSON request bodies are bounded and synchronous authentication work has process-local account/source rate limits, but there is no distributed limiter, persistent account lockout, or multi-instance coordination.
 - Android has a packaged preview APK with server-backed auth/vault flows and Keystore-encrypted, expiring Autofill cache. PIN/biometric unlock are not implemented.
