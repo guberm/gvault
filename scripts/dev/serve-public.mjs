@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
-import { route } from "../../apps/server/dist/index.js";
+import { handleRequest } from "../../apps/server/dist/index.js";
 
 const root = process.cwd();
 const webDir = join(root, "apps", "web", "dist");
@@ -26,7 +26,7 @@ function safeWebPath(urlPath) {
 createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   if (url.pathname === "/healthz" || url.pathname.startsWith("/api/")) {
-    await route(req, res);
+    await handleRequest(req, res);
     return;
   }
 

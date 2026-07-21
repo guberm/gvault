@@ -444,18 +444,25 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
   sendError(res, 404, "Not found");
 }
 
+export async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  try {
+    await route(req, res);
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      if (error.status === 413) res.setHeader("connection", "close");
+      sendError(res, error.status, error.message);
+      return;
+    }
+    sendError(res, 500, "Internal server error");
+  }
+}
+
 const host = process.env.GV_SERVER_HOST ?? "127.0.0.1";
 const port = Number(process.env.GV_SERVER_PORT ?? "8080");
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   createServer((req, res) => {
-    route(req, res).catch((error) => {
-      if (error instanceof RequestBodyError) {
-        if (error.status === 413) res.setHeader("connection", "close");
-        sendError(res, error.status, error.message);
-      }
-      else sendError(res, 500, "Internal server error");
-    });
+    void handleRequest(req, res);
   }).listen(port, host, () => {
     console.log(`${product} server listening on http://${host}:${port}`);
   });
