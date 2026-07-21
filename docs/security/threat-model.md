@@ -58,7 +58,7 @@ parity security feature is complete.
 | Medium | Lower-revision replay wins by timestamp | A stale record has a later `updatedAt` | A lower revision replaces a higher revision in shared merge | Revisions and timestamps are both available. | Make revision authoritative and use timestamp only for equal revisions (#494). |
 | Medium | Local device compromise while unlocked | Malware/screenscraper reads client memory or DOM | Plaintext vault exposure | Lock/unlock state exists; server does not hold plaintext. | Native secure storage, biometric unlock, local encrypted cache, and OS-level hardening remain incomplete. |
 | Medium | Browser autofill field confusion | Malicious page tricks extension/autofill matching | Credential fill into wrong origin/form | Existing Autofill tests cover feasible paths; setup guidance now exists. | Dedicated browser autofill security review remains open. |
-| Low | Server data corruption | Process crash or concurrent writes affect JSON store | Availability/integrity incident | Store writes via temp file then rename. | Use a transactional database for production deployment. |
+| Low | Server data corruption | Process crash or concurrent local writers affect JSON store | Availability/integrity incident | Schema-v1 validation, exclusive local writer lock, unique temp files, fsync-backed atomic replacement, and a validated rollback snapshot. | Monitor recovery warnings, follow the tested backup/restore runbook, and use a transactional database for multi-node scale-out. |
 
 ## Non-goals and limits
 

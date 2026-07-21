@@ -31,5 +31,7 @@ Future production sync should add per-device vector clocks and explicit conflict
 
 Audit note: the current shared merge helper can let a lower revision override a
 higher revision when the lower revision has a later timestamp. Revision-first
-merge semantics are tracked by #494. The synchronous JSON store also remains a
-single-writer prototype rather than a transactional production data layer (#490).
+merge semantics are tracked by #494. The JSON store is a bounded single-node
+deployment option: validated schema-v1 reads, an exclusive cross-process writer
+lock, fsync-backed atomic replacement, and a validated rollback snapshot protect
+integrity, but a transactional database remains the scale-out target.

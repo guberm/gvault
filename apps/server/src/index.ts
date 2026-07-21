@@ -43,11 +43,13 @@ const recoveryChallenges = new RecoveryChallengeStore();
 const recoveryWindowMs = positiveInteger(process.env.GV_RECOVERY_WINDOW_MS, 15 * 60 * 1000);
 const recoveryChallengeLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_RECOVERY_CHALLENGE_LIMIT, 5), recoveryWindowMs);
 const recoveryCompleteLimiter = new FixedWindowRateLimiter(positiveInteger(process.env.GV_RECOVERY_COMPLETE_LIMIT, 5), recoveryWindowMs);
-const recoveryState = store.read();
+let recoveryState = store.read();
 if (!recoveryState.recoveryDummySecret) {
-  recoveryState.recoveryDummySecret = randomBytes(32).toString("base64url");
-  store.write(recoveryState);
+  recoveryState = store.mutate((state) => {
+    if (!state.recoveryDummySecret) state.recoveryDummySecret = randomBytes(32).toString("base64url");
+  });
 }
+if (!recoveryState.recoveryDummySecret) throw new Error("Recovery dummy secret initialization failed");
 const recoveryDummySecret = recoveryState.recoveryDummySecret;
 
 function positiveInteger(value: string | undefined, fallback: number): number {
@@ -235,8 +237,16 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 400, error instanceof Error ? error.message : "Registration is invalid");
       return;
     }
-    state.users.push(user);
-    store.write(state);
+    let registered = false;
+    store.mutate((current) => {
+      if (current.users.some((candidate) => candidate.email === email)) return false;
+      current.users.push(user);
+      registered = true;
+    });
+    if (!registered) {
+      sendError(res, 409, "Account already exists");
+      return;
+    }
     const session = sessions.create(user.id, sessionDeviceName(body.deviceName));
     sendJson(res, 201, sessionResponse(session, user.id));
     return;
@@ -299,6 +309,7 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 401, "Recovery could not be completed");
       return;
     }
+    const expectedVerifier = user.recovery!.verifier;
     let password: string;
     let recovery;
     try {
@@ -311,7 +322,22 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 400, error instanceof Error ? error.message : "Recovery material is invalid");
       return;
     }
-    store.write(state);
+    let updated = false;
+    store.mutate((current) => {
+      const currentUser = current.users.find((candidate) => candidate.id === user.id);
+      if (!currentUser || currentUser.recovery?.verifier !== expectedVerifier) return false;
+      Object.assign(currentUser, {
+        passwordSalt: user.passwordSalt,
+        passwordHash: user.passwordHash,
+        recovery: user.recovery
+      });
+      updated = true;
+    });
+    if (!updated) {
+      recoveryAudit(req, "complete", "stale-rotation", user.email);
+      sendError(res, 409, "Recovery state changed; request a new challenge");
+      return;
+    }
     const session = sessions.create(user.id, sessionDeviceName(body.deviceName));
     recoveryAudit(req, "complete", "succeeded", user.email);
     sendJson(res, 200, sessionResponse(session, user.id));
@@ -362,8 +388,19 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       sendError(res, 400, error instanceof Error ? error.message : "Recovery material is invalid");
       return;
     }
-    user.recovery = { ...recovery, updatedAt: nowIso() };
-    store.write(state);
+    const expectedVerifier = user.recovery?.verifier;
+    const nextRecovery = { ...recovery, updatedAt: nowIso() };
+    let updated = false;
+    store.mutate((current) => {
+      const currentUser = current.users.find((candidate) => candidate.id === user.id);
+      if (!currentUser || currentUser.recovery?.verifier !== expectedVerifier) return false;
+      currentUser.recovery = nextRecovery;
+      updated = true;
+    });
+    if (!updated) {
+      sendError(res, 409, "Recovery state changed; retry setup");
+      return;
+    }
     recoveryAudit(req, "setup", "succeeded", user.email);
     sendJson(res, 200, { recoveryEnabled: true });
     return;
@@ -371,7 +408,6 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
 
   if (req.method === "POST" && url.pathname === "/api/devices/register") {
     const body = await readJson(req);
-    const state = store.read();
     const device = {
       id: uid("dev"),
       userId,
@@ -380,8 +416,7 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
       createdAt: nowIso(),
       lastSeenAt: nowIso()
     };
-    state.devices.push(device);
-    store.write(state);
+    store.mutate((state) => { state.devices.push(device); });
     sendJson(res, 201, device);
     return;
   }
@@ -397,17 +432,18 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
   if (req.method === "POST" && url.pathname === "/api/sync/push") {
     const body = await readJson(req);
     const incoming = Array.isArray(body.records) ? body.records.map((record) => assertEncryptedRecord(record, userId)) : [];
-    const state = store.read();
-    const existing = state.records.filter((record) => record.ownerId === userId);
-    const conflicts = detectConflicts(existing, incoming);
-    const conflictIds = new Set(conflicts.map((record) => record.id));
-    for (const record of incoming.filter((item) => !conflictIds.has(item.id))) {
-      const index = state.records.findIndex((candidate) => candidate.ownerId === userId && candidate.id === record.id);
-      if (index >= 0) state.records[index] = record;
-      else state.records.push(record);
-    }
-    store.write(state);
-    const records = store.read().records.filter((record) => record.ownerId === userId);
+    let conflicts: EncryptedVaultRecord[] = [];
+    const state = store.mutate((current) => {
+      const existing = current.records.filter((record) => record.ownerId === userId);
+      conflicts = detectConflicts(existing, incoming);
+      const conflictIds = new Set(conflicts.map((record) => record.id));
+      for (const record of incoming.filter((item) => !conflictIds.has(item.id))) {
+        const index = current.records.findIndex((candidate) => candidate.ownerId === userId && candidate.id === record.id);
+        if (index >= 0) current.records[index] = record;
+        else current.records.push(record);
+      }
+    });
+    const records = state.records.filter((record) => record.ownerId === userId);
     sendJson(res, 200, { serverTime: nowIso(), records, conflicts });
     return;
   }
@@ -432,11 +468,9 @@ export async function route(req: IncomingMessage, res: ServerResponse): Promise<
     const body = await readJson(req);
     const path = requireNonEmpty(body.path, "path");
     const backup = JSON.parse(readFileSync(path, "utf8")) as { records?: EncryptedVaultRecord[] };
-    const state = store.read();
-    for (const record of backup.records ?? []) {
-      state.records.push({ ...record, ownerId: userId });
-    }
-    store.write(state);
+    store.mutate((state) => {
+      for (const record of backup.records ?? []) state.records.push({ ...record, ownerId: userId });
+    });
     sendJson(res, 200, { importedRecords: backup.records?.length ?? 0 });
     return;
   }
