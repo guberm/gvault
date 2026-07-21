@@ -563,9 +563,9 @@ Parent audit: #482 — https://github.com/guberm/gvault/issues/482
 
 Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07-17.md)
 
-- [ ] #483 Server session expiry, revocation, and logout. — https://github.com/guberm/gvault/issues/483
+- [x] #483 Server session expiry, revocation, and logout. — https://github.com/guberm/gvault/issues/483 — fixed expiry, bounded retention, list/revoke/logout, Web proof, and Pixel 7 Pro acceptance in v0.1.12
 - [x] #484 Android Autofill plaintext SharedPreferences. — https://github.com/guberm/gvault/issues/484 — Keystore AES-GCM plus Pixel 7 Pro restart/sign-out proof
-- [ ] #485 Request-size and authentication rate limits. — https://github.com/guberm/gvault/issues/485
+- [x] #485 Request-size and authentication rate limits. — https://github.com/guberm/gvault/issues/485 — declared/streamed JSON bounds, account/source pre-scrypt limits, and trusted-proxy configuration in v0.1.13
 - [x] #486 Android master-password minimum. — https://github.com/guberm/gvault/issues/486 — 11-character rejection and 12-character acceptance verified on Pixel 7 Pro
 - [x] #487 Web blank-password fallback. — https://github.com/guberm/gvault/issues/487 — PRs #495/#496, live acceptance at `43eb1b8`
 - [x] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488 — live device-created record accepted by shared validator

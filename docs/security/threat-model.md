@@ -25,7 +25,7 @@ parity security feature is complete.
 | Server account credential | High | Client input; server verifies hash | Authenticates to the server API but is separate from the master password. |
 | Recovery private key | Critical | Client memory; master-protected recovery envelope | Authorizes account-password reset by signing a one-time server challenge. It is never sent to or stored as plaintext by the server. |
 | Recovery public verifier and envelope | High | Server JSON store; public recovery challenge response | The verifier checks proofs; the envelope permits offline master-password guessing but does not reveal the private key without successful AEAD decryption. |
-| Session token | High | Client local storage / process memory; server in-memory session map | Bearer token grants API access until server restart or manual loss of token state. |
+| Session token | High | Client local storage / process memory; server in-memory session map | Bearer token grants API access until fixed expiry, explicit revocation/logout, capacity eviction, or server restart. |
 | Backup JSON files | High | `GV_DATA_DIR/backups` | Include encrypted records and account/device metadata for the authenticated user. |
 | Server data directory | High | `GV_DATA_DIR` | Integrity and confidentiality boundary for users, hashes, devices, records, backups. |
 
@@ -35,7 +35,7 @@ parity security feature is complete.
 | --- | --- | --- | --- |
 | Browser/client local runtime | `apps/web/public/app.js` | Master password remains client-side; vault records are encrypted before sync. | Plaintext exists in memory while unlocked; web client stores bearer token in `localStorage`. |
 | Client to server API | `apps/server/src/index.ts` | Bearer token required for sync/device/backup routes; record `ownerId` is set from session, not client input. | Server default CORS allows `*` unless `GV_ALLOWED_ORIGINS` is configured. |
-| Server auth endpoints | `apps/server/src/index.ts`, `apps/server/src/auth.ts` | Account passwords are minimum 12 characters, salted with random salt, hashed with `scrypt`, and compared with `timingSafeEqual`. Recovery uses single-use expiring challenges, proof verification, rotation, generic enumeration-resistant failures, audit redaction, and recovery-specific rate limits. | General login/API rate limiting and account lockout remain open in #485. |
+| Server auth endpoints | `apps/server/src/index.ts`, `apps/server/src/auth.ts` | Account passwords are minimum 12 characters, salted with random salt, hashed with `scrypt`, and compared with `timingSafeEqual`. JSON bodies are capped; registration/login/setup have account and source limits before `scrypt`; recovery uses single-use expiring challenges, proof verification, rotation, generic enumeration-resistant failures, audit redaction, and recovery-specific limits. | Limiter state is process-local; distributed enforcement, persistent lockout, and abuse alerting remain deployment hardening. |
 | Crypto envelope | `packages/crypto/src/index.ts` | AES-256-GCM authenticated encryption; PBKDF2-SHA256; random 128-bit salt and 96-bit nonce; Web and Android reject master passwords shorter than 12 characters. | Shared crypto uses 210,000 iterations while Web/Android use 150,000 and record metadata does not carry KDF parameters (#493). |
 | Sync write path | `apps/server/src/index.ts`, `packages/sync/src/index.ts` | Validates encrypted-record shape and collection; detects equal/newer revision conflicts; scopes stored records to session user. | Server cannot validate encrypted payload semantics without plaintext access. |
 | Backup export/import | `apps/server/src/index.ts` | Export is authenticated and includes only current user records; import rewrites record ownership to the authenticated user. | Import reads a server-local `path` supplied by the authenticated client; this is acceptable for current smoke tooling but should be replaced by upload/object selection before production claims. |
@@ -48,10 +48,10 @@ parity security feature is complete.
 | Priority | Threat | Abuse path | Impact | Existing mitigation | Remaining action |
 | --- | --- | --- | --- | --- | --- |
 | High | Server or storage breach attempts to read vault contents | Attacker steals `gvault-store.json` / backups | Encrypted vault records exposed for offline attack | Vault fields are encrypted client-side; server stores encrypted blobs only. | Keep master password guidance strong; consider stronger KDF/memory-hard parameters before production hardening. |
-| High | Online account-password guessing | Attacker repeatedly calls login endpoint | Account takeover and access to encrypted records/backups | `scrypt` hashes and constant-time compare protect stored password hashes. | Add rate limiting, lockout, telemetry, and abuse monitoring. |
+| High | Online account-password guessing | Attacker repeatedly calls login endpoint | Account takeover and access to encrypted records/backups | `scrypt` hashes, constant-time comparison, and pre-scrypt per-account/per-source fixed-window limits. | Add persistent/distributed lockout, telemetry, and abuse monitoring. |
 | High | Stolen server recovery data is replayed | Attacker steals the public verifier and encrypted private-key envelope | Account-password reset attempt | The verifier is public-key material rather than a reusable secret; completing recovery requires an ECDSA proof from the master-decrypted private key. Challenges are expiring and single-use. | Protect master-password strength; monitor recovery audit outcomes. |
 | High | Recovery endpoint enumerates accounts | Attacker compares challenge/reset responses | Account discovery and targeted guessing | Known, unknown, and unenrolled accounts receive the same challenge shape and generic proof failure; dummy envelopes and equal rate-limit policy are used. | Production monitoring should alert on distributed enumeration attempts. |
-| High | Bearer-token theft from client | XSS/local malware/browser profile theft reads `gv.token` | API access as user until token invalid | Tokens are 256-bit random and scoped by session. | Add token expiry/revocation; prefer platform secure storage where available; keep XSS surface small. |
+| High | Bearer-token theft from client | XSS/local malware/browser profile theft reads `gv.token` | API access as user until token invalid | Tokens are 256-bit random, scoped by session, fixed-expiry, and revocable. | Prefer platform secure storage where available; keep XSS surface small. |
 | High | Authenticated backup import path abuse | User supplies unexpected server-local path to `/api/backup/import` | Reads/imports records from unintended server-local JSON file if accessible | Route is authenticated; imported record ownership is rewritten to current user. | Replace path-based import with uploaded backup content or server-managed backup IDs. |
 | Medium | Cross-origin abuse in permissive deployments | `GV_ALLOWED_ORIGINS=*` accepts browser requests from any origin | Increases impact of stolen tokens / malicious pages | Authorization header is still required for protected API routes. | Configure explicit origins for public deployments. |
 | Medium | Sync conflict / replay misuse | Client pushes older or conflicting encrypted records | Data integrity loss or stale records | `detectConflicts` blocks equal/newer server revision overwrite with different ciphertext. | Add richer conflict UX, audit trail, and device/session history. |
@@ -75,11 +75,12 @@ parity security feature is complete.
 ## Recommended follow-up actions
 
 - [ ] Configure production `GV_ALLOWED_ORIGINS` to explicit trusted origins.
-- [ ] Add server-side login/API rate limiting and account lockout.
+- [x] Bound JSON bodies and add process-local account/source authentication rate limits before synchronous password work. (#485)
+- [ ] Add persistent/distributed account lockout, telemetry, and abuse monitoring.
 - [x] Add zero-knowledge account-password recovery using a master-protected,
   client-held signing key, single-use challenges, rotation, audit redaction,
   enumeration resistance, and recovery-specific rate limits. (#501)
-- [ ] Add session expiry, revocation, and device/session management.
+- [x] Add session expiry, revocation, and device/session management. (#483)
 - [x] Encrypt and expire Android Autofill cache data; remove legacy plaintext values. (#484; Pixel 7 Pro restart/sign-out acceptance)
 - [ ] Version and align cross-client KDF parameters.
 - [ ] Enforce dot-boundary domain matching and revision-first sync merging.

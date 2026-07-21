@@ -42,9 +42,9 @@ cross-client reuse contract.
 - Encrypted local cache in every client.
 - Formal attachment encryption flow.
 - Security review of browser autofill edge cases.
-- Rate limiting and account lockout on the server.
-- Session expiry, revocation, and server-side logout (#483).
-- Bounded request parsing and authentication abuse controls (#485).
+- Distributed authentication rate limiting, persistent account lockout, and
+  multi-instance abuse coordination; the implemented fixed-window account/source
+  buckets are process-local.
 - Versioned cross-client KDF metadata and migration (#493).
 - Production CSP and security headers (#491).
 

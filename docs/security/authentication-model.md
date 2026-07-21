@@ -111,6 +111,33 @@ Evidence: `apps/server/src/auth.ts`.
 This server account password is only for API authentication. It is separate from
 vault encryption and cannot decrypt vault records by itself.
 
+## Request and authentication abuse controls
+
+Evidence: `apps/server/src/index.ts`, `infra/reverse-proxy/nginx.conf`.
+
+Every JSON route enforces the actual streamed byte count as well as a declared
+`Content-Length`. The default maximum is 1 MiB and can be changed with
+`GV_JSON_BODY_LIMIT_BYTES`. Oversized bodies receive `413 Request body too large`
+and malformed JSON receives `400 Malformed JSON` before route business logic.
+
+Registration, login, and authenticated recovery setup share two independent
+fixed-window limits before any `scrypt` hash or verification: one keyed by the
+normalized account identifier and one keyed by request source. The defaults are
+20 attempts per account and 100 per source in 60 seconds; operators configure
+them with `GV_AUTH_ACCOUNT_LIMIT`, `GV_AUTH_ORIGIN_LIMIT`, and
+`GV_AUTH_WINDOW_MS`. Recovery completion retains its separate, stricter
+pre-scrypt recovery limiter. Limited authentication receives the same
+`429 Authentication temporarily unavailable` response and audit output contains
+only truncated SHA-256 identifiers.
+
+The request source is the direct socket address by default, and untrusted
+`X-Forwarded-For` headers are ignored. `GV_TRUST_PROXY=true` uses the first
+forwarded address only for deployments whose trusted reverse proxy is the sole
+server ingress and overwrites that header. Each limiter keeps at most 10,000
+active keys and evicts the oldest key at capacity. All buckets are in-memory and
+reset on process restart; distributed enforcement and persistent lockout remain
+future hardening.
+
 ## Login and bearer sessions
 
 Evidence: `apps/server/src/index.ts`, `apps/server/src/auth.ts`.
@@ -198,13 +225,11 @@ The current implementation intentionally keeps the auth model small. These are
 
 - Persistent server sessions across process restarts.
 - Refresh tokens or sliding renewal.
-- General login/API rate limiting, lockout, MFA, passkeys, or email verification.
+- Persistent account lockout, distributed/multi-instance rate limiting, MFA,
+  passkeys, or email verification.
 - Device-bound session tokens or per-device authentication keys.
 - Recovery of a forgotten master password or encrypted vault contents without it.
 - Server-side access to the vault master password or plaintext vault contents.
-
-Request-body limits and rate limiting around synchronous authentication work are
-tracked in #485.
 
 See [recovery-limitations.md](./recovery-limitations.md) for the lost master
 password boundary and [threat-model.md](./threat-model.md) for residual risks.

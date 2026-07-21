@@ -3,7 +3,7 @@
 - The web UI keeps decrypted prototype items in memory only; encrypted persistent local cache is not implemented yet.
 - The server storage layer is a synchronous whole-file JSON rewrite with no schema validation, locking, transaction isolation, or corruption recovery. Replace or explicitly harden it before multi-user/concurrent production use (#490).
 - Bearer sessions have fixed expiry, bounded retention, listing, revocation, and logout, but remain in-memory, have no refresh policy, and are not cryptographically device-bound; a server restart invalidates every session.
-- The unauthenticated HTTP body reader is unbounded, and synchronous `scrypt` login/register work has no rate limiting or lockout (#485).
+- JSON request bodies are bounded and synchronous authentication work has process-local account/source rate limits, but there is no distributed limiter, persistent account lockout, or multi-instance coordination.
 - Android has a packaged preview APK with server-backed auth/vault flows and Keystore-encrypted, expiring Autofill cache. PIN/biometric unlock are not implemented.
 - Web and Android separate regular account login from local master-password vault unlock and implement zero-knowledge account-password recovery. A forgotten master password remains unrecoverable; pre-v0.1.11 accounts must opt in explicitly before account recovery is available.
 - A truly recordless new vault has no ciphertext or tombstone with which clients can authenticate a master-password candidate; there is not yet an explicit encrypted key-verification marker.

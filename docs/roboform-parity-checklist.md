@@ -577,7 +577,7 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 
 - [x] #483 Server session expiry, revocation, logout, and bounded lifecycle.
 - [x] #484 Android encrypted Autofill storage and physical-device restart/lock proof. (Pixel 7 Pro, Android 17/API 37)
-- [ ] #485 Request-size bounds and rate limiting around synchronous authentication work.
+- [x] #485 Request-size bounds, malformed/oversized 4xx responses, pre-scrypt account/source rate limits, and explicit trusted-proxy handling.
 - [x] #486 One cross-client minimum master-password policy, including Android device proof. (11 rejected, 12 accepted on Pixel 7 Pro)
 - [x] #487 Web blank account-password validation without a fallback credential. (PRs #495/#496; live commit `43eb1b8` verified with zero auth requests)
 - [x] #488 Canonical Android `VaultItem` timestamps and cross-client compatibility. (device-created live record accepted by shared validator)
