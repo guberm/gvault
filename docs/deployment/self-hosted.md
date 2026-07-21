@@ -54,6 +54,16 @@ allows HTTPS connections for a separately configured self-hosted server URL.
 QR enrollment scans uploaded images and therefore does not require camera
 permission.
 
+HTML and SPA fallback responses additionally send
+`Cache-Control: public, max-age=0, must-revalidate, no-transform`. The
+`no-transform` directive prevents a proxy such as Cloudflare from injecting an
+analytics beacon that the self-only CSP would block. When intermediaries honor
+the origin header, `max-age=0, must-revalidate` prevents a stale Web entry
+point. Ensure custom proxy/cache rules and Cloudflare Browser Cache TTL settings
+preserve rather than override the origin directive. Static assets, health, and
+API responses do not receive this public cache directive, so protected API data
+is never made publicly cacheable by this control.
+
 HSTS is honored by browsers only over HTTPS. Keep TLS termination in front of
 the built-in public wrapper, and preserve an equivalent policy when replacing
 that wrapper with a custom static host. Verify the effective public response,

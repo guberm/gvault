@@ -1,6 +1,6 @@
 {
   "name": "@gvault/crypto",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@gvault/shared-utils": "0.1.17"
+    "@gvault/shared-utils": "0.1.18"
   }
 }

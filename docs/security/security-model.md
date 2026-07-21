@@ -45,6 +45,9 @@ least-privilege Permissions-Policy. HTTPS API connections remain permitted so a
 user can configure a separate self-hosted server URL; clipboard write remains
 available to the same origin for password and TOTP copy actions. Uploaded QR
 images use `BarcodeDetector` and do not request camera access.
+HTML responses also use `no-transform` and request immediate revalidation so an
+edge proxy cannot inject analytics JavaScript without an explicit operator
+override; the public cache directive is not applied to health or API responses.
 
 ## Not yet production complete
 

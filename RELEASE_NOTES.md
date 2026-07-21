@@ -1,3 +1,18 @@
+# GVault 0.1.18
+
+Cloudflare-safe CSP enforcement hotfix.
+
+Changed:
+- public HTML and SPA fallback responses now send `Cache-Control: public, max-age=0, must-revalidate, no-transform`;
+- Cloudflare therefore preserves the origin HTML instead of injecting its Web Analytics beacon, keeping third-party JavaScript outside the password-manager DOM;
+- health and API responses do not receive the public cache directive;
+- security, deployment, audit, requirements, and known-limitations documentation now record the intermediary-transformation boundary.
+
+Validation:
+- strict RED/GREEN integration coverage for HTML and SPA fallback `no-transform` plus non-public health/API responses;
+- full repository gate and independent Reviewer approval;
+- exact-commit production deployment with five-route header checks and zero-error live Chromium clipboard/BarcodeDetector-fallback acceptance.
+
 # GVault 0.1.17
 
 Production Web response-hardening release.
