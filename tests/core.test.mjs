@@ -32,7 +32,28 @@ test("URL matching finds login records by normalized host", () => {
     updatedAt: new Date().toISOString(),
     customFields: []
   }];
+  assert.equal(findLoginsForUrl(items, "https://example.com/account").length, 1);
   assert.equal(findLoginsForUrl(items, "https://www.example.com/account").length, 1);
+});
+
+test("URL matching enforces a dot-delimited host boundary", () => {
+  const items = [{
+    id: "item_1",
+    type: "login",
+    title: "Example",
+    username: "demo",
+    password: "secret",
+    urls: ["https://example.com/login"],
+    tags: [],
+    favorite: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    customFields: []
+  }];
+
+  const matchCounts = ["https://notexample.com", "https://example.com.evil"]
+    .map((url) => findLoginsForUrl(items, url).length);
+  assert.deepEqual(matchCounts, [0, 0]);
 });
 
 test("canonical authenticator model validates and keeps its seed out of search", () => {

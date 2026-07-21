@@ -9,7 +9,6 @@
 - A truly recordless new vault has no ciphertext or tombstone with which clients can authenticate a master-password candidate; there is not yet an explicit encrypted key-verification marker.
 - Windows and Linux remain incomplete preview clients; Windows has a settings surface and login smoke path but not a full native vault workflow.
 - Browser extension supports manual/session fill, generator, domain rules, and save/update prompts, but it does not yet authenticate or pull encrypted vault records from the server.
-- Shared URL matching accepts lookalike sibling domains because it uses suffix matching without a dot boundary (#489).
 - Shared crypto emits a 210,000-iteration envelope while Web and Android derive with 150,000 iterations, and synced records do not carry KDF metadata needed for safe migration (#493).
 - Shared sync merge can let a lower revision win when its timestamp is later instead of using the timestamp only as an equal-revision tie-breaker (#494).
 - The public Web response does not yet provide a restrictive CSP, HSTS, `nosniff`, Referrer-Policy, or Permissions-Policy (#491).

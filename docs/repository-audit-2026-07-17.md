@@ -41,7 +41,7 @@ This is a source/runtime audit, not an external penetration-test certification.
 | [#486](https://github.com/guberm/gvault/issues/486) | Android accepts master passwords below the shared/Web 12-character minimum. | Fixed: Android auth and crypto enforce 12 characters; Pixel 7 Pro rejected 11 characters with actionable copy and accepted 12. |
 | [#487](https://github.com/guberm/gvault/issues/487) | Blank Web account password became the fixed `change-me-strong-password` credential. | Closed after strict browser TDD, PRs #495/#496, deploy, and live acceptance at `43eb1b8`. |
 | [#488](https://github.com/guberm/gvault/issues/488) | Android Login JSON omits canonical `createdAt`/`updatedAt` fields. | Fixed: create/edit preserve canonical timestamps and fields; a physical-device-created record passed the shared `isVaultItem` validator after live pull/decryption. |
-| [#489](https://github.com/guberm/gvault/issues/489) | Shared URL matching accepts lookalike sibling domains. | Open; runtime proof showed `example.com` matching `notexample.com`. |
+| [#489](https://github.com/guberm/gvault/issues/489) | Shared URL matching accepts lookalike sibling domains. | Fixed in v0.1.15: exact and dot-delimited subdomains match, while sibling and parent-suffix lookalikes are rejected; all callers were audited and the independent extension matcher passed compatibility acceptance. |
 | [#490](https://github.com/guberm/gvault/issues/490) | JSON storage lacks transactional concurrency, validation, and recovery guarantees. | Open. |
 | [#491](https://github.com/guberm/gvault/issues/491) | Live Web lacks CSP and the expected browser security headers. | Open; verified against the public response. |
 | [#492](https://github.com/guberm/gvault/issues/492) | No mandatory CI/cross-browser workflow exists, and parallel browser files contend for runtime resources. | Open; the local full test gate is serialized by this audit fix, but mandatory CI/platform lanes remain. |
@@ -131,4 +131,4 @@ The Web, Android, and extension surfaces received the UI normalization merged in
 the extension still lacks server-backed auth/pull, Windows/Linux remain preview
 clients, and many parity checklist items remain open. The repository is now
   consistent about those limits, and the remaining audit follow-up queue starts
-  at #489.
+  at #490.

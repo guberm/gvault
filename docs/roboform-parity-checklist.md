@@ -581,7 +581,7 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [x] #486 One cross-client minimum master-password policy, including Android device proof. (11 rejected, 12 accepted on Pixel 7 Pro)
 - [x] #487 Web blank account-password validation without a fallback credential. (PRs #495/#496; live commit `43eb1b8` verified with zero auth requests)
 - [x] #488 Canonical Android `VaultItem` timestamps and cross-client compatibility. (device-created live record accepted by shared validator)
-- [ ] #489 Dot-boundary-safe URL matching for lookalike domains.
+- [x] #489 Dot-boundary-safe URL matching for lookalike domains. (v0.1.15 exact/subdomain acceptance plus sibling and parent-suffix rejection)
 - [ ] #490 Durable, validated, concurrency-safe server storage.
 - [ ] #491 Production CSP and browser security headers.
 - [ ] #492 Mandatory CI and deterministic cross-browser gates.
