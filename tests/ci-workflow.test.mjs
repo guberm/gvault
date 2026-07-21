@@ -35,6 +35,9 @@ test("mandatory CI defines isolated quality and platform gates", async () => {
   for (const command of ["npm run build", "npm run lint", "npm test", "npm run smoke:server", "npm audit --audit-level=high"]) {
     assert.match(quality, new RegExp(`run: ${command.replaceAll(" ", "\\s+")}`), `quality gate runs ${command}`);
   }
+  assert.match(quality, /npx playwright install --with-deps chromium/, "quality installs the lockfile-matched Playwright Chromium");
+  assert.match(quality, /GV_CHROME_EXECUTABLE/, "quality routes shared Chrome tests to the installed Playwright runtime");
+  assert.match(quality, /GV_CHROME_PATH/, "quality routes QR/TOTP Chrome tests to the installed Playwright runtime");
   assert.match(quality, /node scripts\/ci\/check-build-artifacts\.mjs\s*$/m, "quality validates the full build");
 
   const chrome = jobBlocks.get("chrome");

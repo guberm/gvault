@@ -25,6 +25,13 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      - name: Install the lockfile-matched Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Route shared browser tests to Playwright Chromium
+        run: |
+          BROWSER_PATH=$(node --input-type=module -e "import { chromium } from 'playwright'; process.stdout.write(chromium.executablePath())")
+          echo "GV_CHROME_EXECUTABLE=$BROWSER_PATH" >> "$GITHUB_ENV"
+          echo "GV_CHROME_PATH=$BROWSER_PATH" >> "$GITHUB_ENV"
       - name: Build workspaces
         run: npm run build
       - name: Lint sources

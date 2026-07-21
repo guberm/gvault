@@ -82,7 +82,8 @@ async function checkAndroid() {
   const recordedEvidence = normalizeEvidence(await readFile(resolve(root, `${base}.verify.txt`), "utf8"));
   if (actualEvidence !== recordedEvidence) throw new Error(`${base}.verify.txt does not match the APK signer evidence`);
 
-  const fingerprint = actualEvidence.match(/Signer #1 certificate SHA-256 digest: ([0-9a-f]{64})/i)?.[1]?.toLowerCase();
+  const printedDigest = actualEvidence.match(/Signer #1 certificate SHA-256 digest:\s*([0-9a-f:\s-]+)/i)?.[1];
+  const fingerprint = printedDigest?.replace(/[^0-9a-f]/gi, "").toLowerCase();
   if (fingerprint !== previewSignerSha256) {
     throw new Error(`${base}.apk signer is ${String(fingerprint)}, expected trusted preview signer ${previewSignerSha256}`);
   }
