@@ -1,3 +1,17 @@
+# GVault 0.1.14
+
+Public API error-boundary hotfix.
+
+Changed:
+- the production Web/API wrapper now uses the same bounded API error handler as the standalone server;
+- malformed and oversized JSON requests return `400`/`413` without terminating the managed public process;
+- integration coverage verifies both responses and a healthy follow-up request through `scripts/dev/serve-public.mjs`.
+
+Validation:
+- strict RED/GREEN reproduction of the production `ECONNRESET` and service crash;
+- full repository gate and independent Reviewer approval;
+- exact-commit production deployment and public acceptance for `400`, declared/chunked `413`, account `429`, isolated normal login, sanitized proxy source, service stability, and the v0.1.14 marker.
+
 # GVault 0.1.13
 
 API authentication abuse-controls release.
@@ -11,7 +25,7 @@ Changed:
 
 Validation:
 - strict RED/GREEN integration coverage for declared and chunked body limits, malformed JSON, account/source isolation, trusted-proxy behavior, registration, login, and recovery setup;
-- full repository gate, independent Reviewer approval, and local/public production acceptance for `400`, `413`, `429`, isolated normal login, service health, and the v0.1.13 marker.
+- full repository gate and independent Reviewer approval; live malformed-body acceptance subsequently exposed the public-wrapper error boundary fixed in v0.1.14.
 
 # GVault 0.1.12
 
