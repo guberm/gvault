@@ -68,6 +68,27 @@ dedicated security contract remain tracked by #346, #347, #351, #352, and #392.
 This snapshot does not prove host-reboot survival, TLS renewal, or a complete
 backup/restore runbook; those checklist items remain open.
 
+## Verified abuse-control deployment (2026-07-21)
+
+- Production checkout and `gvault-public.service` run exact merge commit
+  `a35811fa29c940b0cc3bee245911b155e355d799` (v0.1.14).
+- The managed service applies a 1 MiB JSON limit, a 60-second authentication
+  window, per-account limit 20, and per-source limit 100.
+- `cloudflared-gvault.service` is the sole public route to
+  `http://127.0.0.1:55174`, but live spoof testing proved that this tunnel
+  preserves a client-supplied `X-Forwarded-For` value. Production therefore
+  keeps `GV_TRUST_PROXY=false`, ignores that header, and uses the direct
+  loopback source for the process-local source bucket. Consequently,
+  `GV_AUTH_ORIGIN_LIMIT=100` is one tunnel-wide bucket rather than a per-client
+  limit. Enforce per-client limits at the Cloudflare edge, or put a trusted
+  proxy that overwrites the client-address header in front of Node; retain
+  `GV_TRUST_PROXY=false` for the current tunnel until one of those controls is
+  in place.
+- Public acceptance returned JSON `400` for malformed input, `413` for both
+  declared and chunked oversized bodies, `429` after the account limit, and
+  `200` for an independent account login. The managed process stayed active
+  with zero post-deploy crash markers.
+
 ## Reverse proxy
 
 See `infra/reverse-proxy/nginx.conf`. Its 1 MiB ingress limit matches the server
