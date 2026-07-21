@@ -139,7 +139,7 @@ Invoke-Checked $apksigner @(
   $apk
 )
 
-& $apksigner verify --print-certs $apk | Out-File -Encoding utf8 (Join-Path $out "gvault-android-v$version.verify.txt")
+& $apksigner verify --print-certs $apk 2>&1 | Out-File -Encoding utf8 (Join-Path $out "gvault-android-v$version.verify.txt")
 if ($LASTEXITCODE -ne 0) { throw "APK signature verification failed" }
 
 Write-Output $apk

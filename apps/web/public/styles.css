@@ -62,10 +62,10 @@ h2 { font-size: 16px; line-height: 1.25; }
 .secondary-button, .plain-button { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
 
 .workspace { min-width: 0; display: grid; grid-template-rows: auto auto 1fr auto; }
-.server-bar { min-height: 56px; display: flex; align-items: center; gap: 18px; border-bottom: 1px solid var(--border); background: var(--surface); padding: 0 26px; }
-.inline-field { display: flex; align-items: center; gap: 12px; min-width: 460px; }
+.server-bar { min-height: 56px; display: flex; flex-wrap: wrap; align-items: center; gap: 18px; border-bottom: 1px solid var(--border); background: var(--surface); padding: 12px 26px; }
+.inline-field { display: flex; flex: 1 1 460px; align-items: center; gap: 12px; min-width: 0; }
 .inline-field span { font-weight: 650; }
-.inline-field input { border: 0; min-height: 32px; padding: 0; }
+.inline-field input { min-width: 0; border: 0; min-height: 32px; padding: 0; }
 .connected { padding: 3px 9px; border-radius: 999px; background: #dcfce7; color: #15803d; font-size: 12px; }
 .account-pill { margin-left: auto; padding-left: 18px; border-left: 1px solid var(--border); display: flex; align-items: center; gap: 12px; white-space: nowrap; }
 .sync-status { color: var(--muted); font-weight: 650; }

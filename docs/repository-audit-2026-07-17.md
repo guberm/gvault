@@ -44,7 +44,7 @@ This is a source/runtime audit, not an external penetration-test certification.
 | [#489](https://github.com/guberm/gvault/issues/489) | Shared URL matching accepts lookalike sibling domains. | Fixed in v0.1.15: exact and dot-delimited subdomains match, while sibling and parent-suffix lookalikes are rejected; all callers were audited and the independent extension matcher passed compatibility acceptance. |
 | [#490](https://github.com/guberm/gvault/issues/490) | JSON storage lacks transactional concurrency, validation, and recovery guarantees. | Fixed in v0.1.16: schema-v1 validation, one cross-process mutation boundary, dead-writer recovery, unique fsync-backed atomic replacements, validated rollback fallback, concurrency/crash tests, and an operator backup/restore runbook. |
 | [#491](https://github.com/guberm/gvault/issues/491) | Live Web lacks CSP and the expected browser security headers. | Fixed across v0.1.17/v0.1.18: the public Web/API boundary applies the restrictive policy across HTML, static, health, and API responses, while HTML-only `no-transform` prevents Cloudflare analytics injection without publicly caching APIs. |
-| [#492](https://github.com/guberm/gvault/issues/492) | No mandatory CI/cross-browser workflow exists, and parallel browser files contend for runtime resources. | Open; the local full test gate is serialized by this audit fix, but mandatory CI/platform lanes remain. |
+| [#492](https://github.com/guberm/gvault/issues/492) | No mandatory CI/cross-browser workflow exists, and parallel browser files contend for runtime resources. | Fixed in v0.1.19: protected `main` requires an isolated full gate plus real Chrome, Edge, packaged Firefox, and signed Android APK lanes; locked installs, dependency audit, artifact validation, and physical Android acceptance complete the evidence chain. |
 | [#493](https://github.com/guberm/gvault/issues/493) | Shared crypto uses 210,000 PBKDF2 iterations while Web/Android use 150,000, with no KDF metadata in synced records. | Open; runtime cross-client decryption proof failed as expected. |
 | [#494](https://github.com/guberm/gvault/issues/494) | A lower sync revision can override a higher revision when its timestamp is later. | Open; runtime revision 9 vs. 10 proof confirmed. |
 
@@ -71,6 +71,11 @@ acceptance criteria.
 - The serialized full `npm run check` gate passed 133/133 tests, followed by
   server smoke 1/1; the prior parallel run reproduced the browser contention
   now documented in #492.
+- v0.1.19 moved the serialized full gate and real Chrome, Edge, Firefox, and
+  Android builds into five isolated mandatory GitHub checks. Every job uses
+  `npm ci`; the full gate also audits dependencies and validates all portable
+  build artifacts, while the Android lane retains its signed APK and signer
+  evidence.
 - A packaged Firefox XPI was temporarily installed in real Mozilla Firefox; the
   MV3 runtime loaded and Firefox storage → background → content-script Autofill
   filled only the intended credential fields. The test passed 1/1 and left no
@@ -130,5 +135,5 @@ The Web, Android, and extension surfaces received the UI normalization merged in
 #481. This audit did not convert preview/session-only surfaces into full clients:
 the extension still lacks server-backed auth/pull, Windows/Linux remain preview
 clients, and many parity checklist items remain open. The repository is now
-  consistent about those limits, and the remaining audit follow-up queue starts
-  at #490.
+consistent about those limits, and the remaining audit follow-up queue starts
+at #493.

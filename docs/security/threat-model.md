@@ -42,6 +42,7 @@ parity security feature is complete.
 | Server storage | `apps/server/src/storage.ts` | Atomic temp-file rename and `0600` writes. | JSON-file storage is not a hardened multi-user database and does not provide encryption-at-rest by itself. |
 | Deployment TLS/reverse proxy | `scripts/dev/serve-public.mjs`, `docs/deployment/self-hosted.md`, live service evidence in issue #491 | The built-in public wrapper applies a restrictive CSP and browser headers to Web, static, health, and API responses; HTML requests immediate revalidation and is marked `no-transform` so edge analytics cannot inject third-party script. | TLS termination and host hardening remain deployment responsibilities; alternate response wrappers and cache overrides must preserve both the policy and transformation boundary. |
 | Android Autofill cache | `MobileAutofillSessionStore.java`, `MobileAutofillSessionPolicy.java`, `GVaultAutofillService.java` | Cached values are encrypted with an Android Keystore AES-256-GCM key, require an in-process unlock grant, expire after 15 minutes, and are cleared on app start, sign-out, expiry, or decryption failure. Legacy plaintext preference keys are removed before unlock/load. | Plaintext still exists in process memory while the user has an active unlock grant; a compromised unlocked device remains outside this cache-at-rest mitigation. |
+| Source-to-main change control | `.github/workflows/ci.yml`, `scripts/ci/check-build-artifacts.mjs`, `docs/deployment/continuous-integration.md` | Protected `main` requires isolated locked-install quality, Chrome, Edge, Firefox, and signed Android APK checks; tests are serialized within the full gate and generated artifacts are validated before merge. | GitHub-hosted runners and referenced actions remain supply-chain dependencies; hosted Android builds do not replace physical-device acceptance. |
 
 ## Threats and mitigations
 
@@ -58,6 +59,7 @@ parity security feature is complete.
 | Medium | Lower-revision replay wins by timestamp | A stale record has a later `updatedAt` | A lower revision replaces a higher revision in shared merge | Revisions and timestamps are both available. | Make revision authoritative and use timestamp only for equal revisions (#494). |
 | Medium | Local device compromise while unlocked | Malware/screenscraper reads client memory or DOM | Plaintext vault exposure | Lock/unlock state exists; server does not hold plaintext. | Native secure storage, biometric unlock, local encrypted cache, and OS-level hardening remain incomplete. |
 | Medium | Browser autofill field confusion | Malicious page tricks extension/autofill matching | Credential fill into wrong origin/form | Existing Autofill tests cover feasible paths; setup guidance now exists. | Dedicated browser autofill security review remains open. |
+| Medium | CI or dependency supply-chain compromise | A hosted runner, action, registry package, or lockfile change produces an untrusted build | Malicious code or artifact reaches `main` | Protected required checks, immutable action revisions, `npm ci`, dependency audit, isolated platform jobs, artifact validation, and reviewed pull requests. | Monitor upstream actions/runners, review lockfile changes, and keep pinned action revisions current. |
 | Low | Server data corruption | Process crash or concurrent local writers affect JSON store | Availability/integrity incident | Schema-v1 validation, exclusive local writer lock, unique temp files, fsync-backed atomic replacement, and a validated rollback snapshot. | Monitor recovery warnings, follow the tested backup/restore runbook, and use a transactional database for multi-node scale-out. |
 
 ## Non-goals and limits
@@ -85,7 +87,7 @@ parity security feature is complete.
 - [ ] Version and align cross-client KDF parameters.
 - [ ] Enforce dot-boundary domain matching and revision-first sync merging.
 - [x] Add production browser security headers. (#491)
-- [ ] Add mandatory CI and cross-browser gates. (#492)
+- [x] Add mandatory isolated quality, dependency, artifact, Chrome, Edge, Firefox, and Android APK gates on protected `main`. (#492)
 - [ ] Replace path-based backup import with upload content or server-managed backup IDs.
 - [ ] Complete the dedicated docs for authentication model, zero-knowledge boundary, key derivation, backup/restore security, and recovery limits.
 - [ ] Perform a dedicated browser autofill security review.
