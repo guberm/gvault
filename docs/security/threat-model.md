@@ -40,7 +40,7 @@ parity security feature is complete.
 | Sync write path | `apps/server/src/index.ts`, `packages/sync/src/index.ts` | Validates encrypted-record shape and collection; detects equal/newer revision conflicts; scopes stored records to session user. | Server cannot validate encrypted payload semantics without plaintext access. |
 | Backup export/import | `apps/server/src/index.ts` | Export is authenticated and includes only current user records; import rewrites record ownership to the authenticated user. | Import reads a server-local `path` supplied by the authenticated client; this is acceptable for current smoke tooling but should be replaced by upload/object selection before production claims. |
 | Server storage | `apps/server/src/storage.ts` | Atomic temp-file rename and `0600` writes. | JSON-file storage is not a hardened multi-user database and does not provide encryption-at-rest by itself. |
-| Deployment TLS/reverse proxy | `docs/deployment/self-hosted.md`, live service evidence in Proof/E2E docs | Public service is intended to run behind HTTPS. | TLS termination and host hardening are deployment responsibilities; the live response currently lacks CSP, HSTS, `nosniff`, Referrer-Policy, and Permissions-Policy (#491). |
+| Deployment TLS/reverse proxy | `scripts/dev/serve-public.mjs`, `docs/deployment/self-hosted.md`, live service evidence in issue #491 | The built-in public wrapper applies a restrictive CSP, one-year HSTS, `nosniff`, frame denial, no-referrer policy, and a least-privilege Permissions-Policy to Web, static, health, and API responses. | TLS termination and host hardening remain deployment responsibilities; alternate response wrappers must preserve an equivalent policy. |
 | Android Autofill cache | `MobileAutofillSessionStore.java`, `MobileAutofillSessionPolicy.java`, `GVaultAutofillService.java` | Cached values are encrypted with an Android Keystore AES-256-GCM key, require an in-process unlock grant, expire after 15 minutes, and are cleared on app start, sign-out, expiry, or decryption failure. Legacy plaintext preference keys are removed before unlock/load. | Plaintext still exists in process memory while the user has an active unlock grant; a compromised unlocked device remains outside this cache-at-rest mitigation. |
 
 ## Threats and mitigations
@@ -84,7 +84,8 @@ parity security feature is complete.
 - [x] Encrypt and expire Android Autofill cache data; remove legacy plaintext values. (#484; Pixel 7 Pro restart/sign-out acceptance)
 - [ ] Version and align cross-client KDF parameters.
 - [ ] Enforce dot-boundary domain matching and revision-first sync merging.
-- [ ] Add production browser security headers and mandatory CI gates.
+- [x] Add production browser security headers. (#491)
+- [ ] Add mandatory CI and cross-browser gates. (#492)
 - [ ] Replace path-based backup import with upload content or server-managed backup IDs.
 - [ ] Complete the dedicated docs for authentication model, zero-knowledge boundary, key derivation, backup/restore security, and recovery limits.
 - [ ] Perform a dedicated browser autofill security review.

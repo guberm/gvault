@@ -1,3 +1,19 @@
+# GVault 0.1.17
+
+Production Web response-hardening release.
+
+Changed:
+- the built-in public Web/API wrapper now applies one restrictive browser policy to HTML, static assets, health, and API responses;
+- the policy limits scripts and styles to the same origin, blocks framing and plugins, prevents MIME sniffing and referrer leakage, and disables unused powerful APIs;
+- HTTPS API connections remain available for separately configured self-hosted servers, while same-origin clipboard write and uploaded-image QR scanning remain functional;
+- deployment, security, threat-model, audit, requirements, and known-limitations documentation now describe the implemented and residual boundaries.
+
+Validation:
+- strict RED/GREEN integration coverage across Web, static, health, and API response paths;
+- sequential Chromium regression coverage for password/TOTP clipboard behavior and BarcodeDetector QR enrollment;
+- full repository gate and independent Reviewer approval;
+- exact-commit production deployment with public header and live Chromium acceptance.
+
 # GVault 0.1.16
 
 Durable single-node JSON storage release.

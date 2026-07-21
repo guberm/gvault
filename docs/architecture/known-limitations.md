@@ -11,7 +11,7 @@
 - Browser extension supports manual/session fill, generator, domain rules, and save/update prompts, but it does not yet authenticate or pull encrypted vault records from the server.
 - Shared crypto emits a 210,000-iteration envelope while Web and Android derive with 150,000 iterations, and synced records do not carry KDF metadata needed for safe migration (#493).
 - Shared sync merge can let a lower revision win when its timestamp is later instead of using the timestamp only as an equal-revision tie-breaker (#494).
-- The public Web response does not yet provide a restrictive CSP, HSTS, `nosniff`, Referrer-Policy, or Permissions-Policy (#491).
+- The built-in public Web/API wrapper sends a restrictive CSP and browser security headers. Custom static hosting or alternate response wrappers must preserve an equivalent policy; the CSP permits HTTPS connections so users can select a separate self-hosted server URL.
 - The repository has no mandatory CI workflow; build, dependency, and cross-browser gates currently depend on operator execution (#492).
 - Web settings/account management and trash/restore workflows are not implemented yet.
 - Attachments are represented in the sync model but no upload/download flow is implemented yet.

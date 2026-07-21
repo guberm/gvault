@@ -583,7 +583,7 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [x] #488 Canonical Android `VaultItem` timestamps and cross-client compatibility. (device-created live record accepted by shared validator)
 - [x] #489 Dot-boundary-safe URL matching for lookalike domains. (v0.1.15 exact/subdomain acceptance plus sibling and parent-suffix rejection)
 - [x] #490 Durable, validated, concurrency-safe server storage. (v0.1.16 schema validation, serialized writers, atomic fsync/rollback recovery, multi-process tests, and operator runbook)
-- [ ] #491 Production CSP and browser security headers.
+- [x] #491 Production CSP and browser security headers. (v0.1.17 shared public-response boundary with static/API header coverage and live Chromium acceptance)
 - [ ] #492 Mandatory CI and deterministic cross-browser gates.
 - [ ] #493 Versioned, interoperable KDF metadata across shared, Web, and Android clients.
 - [ ] #494 Revision-first sync merge semantics.

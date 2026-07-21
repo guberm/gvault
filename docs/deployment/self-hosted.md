@@ -43,6 +43,28 @@ server cannot be reached except through a trusted reverse proxy that overwrites
 `X-Forwarded-For`. The supplied nginx example uses `$remote_addr` for that
 reason. Do not combine trusted-proxy mode with an Internet-reachable Node port.
 
+## Public Web security headers
+
+`scripts/dev/serve-public.mjs` applies the production browser policy before
+routing every request, so HTML, static assets, `/healthz`, and `/api/*`
+responses share the same headers. The policy restricts scripts and styles to
+the same origin; blocks framing, plugins, referrers, and unused powerful APIs;
+enables one-year HSTS and `nosniff`; permits same-origin clipboard write; and
+allows HTTPS connections for a separately configured self-hosted server URL.
+QR enrollment scans uploaded images and therefore does not require camera
+permission.
+
+HSTS is honored by browsers only over HTTPS. Keep TLS termination in front of
+the built-in public wrapper, and preserve an equivalent policy when replacing
+that wrapper with a custom static host. Verify the effective public response,
+not only proxy configuration, for example:
+
+```sh
+curl --silent --show-error --dump-header - --output /dev/null https://vault.example.com/
+curl --silent --show-error --dump-header - --output /dev/null https://vault.example.com/app.js
+curl --silent --show-error --dump-header - --output /dev/null https://vault.example.com/healthz
+```
+
 ## Durable JSON store
 
 `GV_DATA_DIR/gvault-store.json` is the primary schema-v1 store. Every mutation
