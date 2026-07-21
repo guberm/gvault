@@ -584,7 +584,7 @@ Audit report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026-07
 - [x] #489 Dot-boundary-safe URL matching for lookalike domains. (v0.1.15 exact/subdomain acceptance plus sibling and parent-suffix rejection)
 - [x] #490 Durable, validated, concurrency-safe server storage. (v0.1.16 schema validation, serialized writers, atomic fsync/rollback recovery, multi-process tests, and operator runbook)
 - [x] #491 Production CSP and browser security headers. (v0.1.17 shared response policy plus v0.1.18 HTML `no-transform`, five-route header proof, and zero-error live Chromium acceptance)
-- [ ] #492 Mandatory CI and deterministic cross-browser gates.
+- [x] #492 Mandatory CI and deterministic cross-browser gates. (v0.1.19 protected `main`: isolated quality, real Chrome/Edge/Firefox, signed Android APK, dependency audit, artifact checks, and physical-device acceptance)
 - [ ] #493 Versioned, interoperable KDF metadata across shared, Web, and Android clients.
 - [ ] #494 Revision-first sync merge semantics.
 - [x] #500 Regular account login separated from master-password registration and local vault restoration.

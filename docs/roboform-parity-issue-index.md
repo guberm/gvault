@@ -572,7 +572,7 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [x] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489 — v0.1.15 exact/dot-boundary matcher with focused core and real Chrome extension compatibility acceptance
 - [x] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490 — v0.1.16 schema validation, cross-process serialization, atomic fsync/rollback recovery, multi-process tests, and operator runbook
 - [x] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491 — v0.1.17 headers plus v0.1.18 HTML `no-transform`, five-route proof, and zero-error live Chromium acceptance
-- [ ] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492
+- [x] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492 — v0.1.19 protected `main` with isolated quality/Chrome/Edge/Firefox/Android checks, dependency audit, artifact validation, retained APK, and physical-device acceptance
 - [ ] #493 Cross-client KDF metadata drift. — https://github.com/guberm/gvault/issues/493
 - [ ] #494 Revision-first sync merge. — https://github.com/guberm/gvault/issues/494
 - [x] #500 Account login/master-password flow separation. — https://github.com/guberm/gvault/issues/500

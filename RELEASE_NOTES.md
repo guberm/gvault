@@ -1,3 +1,22 @@
+# GVault 0.1.19
+
+Mandatory CI and platform-gate release.
+
+Changed:
+- every pull request and `main` push now runs isolated quality, Chrome, Edge, Firefox, and Android APK jobs;
+- the full gate uses the lockfile, serializes unit/integration tests, smokes the server, audits dependencies, and validates all portable build artifacts;
+- real Chrome, Edge, and packaged Firefox extension runtimes execute in separate runners so profiles, ports, displays, and processes cannot contend;
+- the Windows Android lane builds and validates a signed preview APK, records signer evidence, and retains both artifacts;
+- protected `main` requires all five stable checks, including strict up-to-date branch enforcement;
+- the CI runbook preserves physical Android device acceptance as an explicit gate for mobile behavior.
+
+Validation:
+- strict RED/GREEN tests for the workflow, job/command contract, artifact checker, deterministic serialization, and documentation;
+- full local build/lint/test/server-smoke/dependency-audit and artifact gates;
+- independent Reviewer approval and all five GitHub checks;
+- signed v0.1.19 APK installation and acceptance on a physical Android device;
+- exact-commit production deployment and public version/health acceptance.
+
 # GVault 0.1.18
 
 Cloudflare-safe CSP enforcement hotfix.
