@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 const root = resolve(".");
 const workflowPath = resolve(root, ".github/workflows/ci.yml");
 const artifactCheckPath = resolve(root, "scripts/ci/check-build-artifacts.mjs");
+const androidBuildPath = resolve(root, "scripts/build/build-android-apk.ps1");
 const ciDocPath = resolve(root, "docs/deployment/continuous-integration.md");
 
 test("mandatory CI defines isolated quality and platform gates", async () => {
@@ -64,7 +65,15 @@ test("mandatory CI defines isolated quality and platform gates", async () => {
 
 test("artifact checker and CI operating contract are versioned", async () => {
   assert.ok(existsSync(artifactCheckPath), "artifact checker must exist");
+  assert.ok(existsSync(androidBuildPath), "Android build script must exist");
   assert.ok(existsSync(ciDocPath), "CI operating documentation must exist");
+
+  const androidBuild = await readFile(androidBuildPath, "utf8");
+  assert.match(
+    androidBuild,
+    /apksigner verify --print-certs \$apk 2>&1 \| Out-File/,
+    "Android signer evidence records certificate output from both process streams",
+  );
 
   const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
   assert.match(packageJson.scripts.test, /--test-concurrency=1/, "the full test gate is serialized");

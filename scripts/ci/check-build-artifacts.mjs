@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { stat, readFile, readdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import {
+  combineSignerEvidence,
+  extractSignerSha256,
+  normalizeSignerEvidence,
+} from "./android-signer-evidence.mjs";
 
 const root = resolve(".");
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
@@ -78,12 +83,11 @@ async function checkAndroid() {
   });
   if (result.status !== 0) throw new Error(result.stderr || result.stdout || `apksigner exited with ${result.status}`);
 
-  const actualEvidence = normalizeEvidence(result.stdout);
-  const recordedEvidence = normalizeEvidence(await readFile(resolve(root, `${base}.verify.txt`), "utf8"));
+  const actualEvidence = combineSignerEvidence(result);
+  const recordedEvidence = normalizeSignerEvidence(await readFile(resolve(root, `${base}.verify.txt`), "utf8"));
   if (actualEvidence !== recordedEvidence) throw new Error(`${base}.verify.txt does not match the APK signer evidence`);
 
-  const printedDigest = actualEvidence.match(/Signer #1 certificate SHA-256 digest:\s*([0-9a-f:\s-]+)/i)?.[1];
-  const fingerprint = printedDigest?.replace(/[^0-9a-f]/gi, "").toLowerCase();
+  const fingerprint = extractSignerSha256(actualEvidence);
   if (fingerprint !== previewSignerSha256) {
     throw new Error(`${base}.apk signer is ${String(fingerprint)}, expected trusted preview signer ${previewSignerSha256}`);
   }
@@ -105,10 +109,6 @@ async function findApkSigner() {
   const apksigner = join(buildToolsRoot, versions[0], process.platform === "win32" ? "apksigner.bat" : "apksigner");
   await requireAbsoluteFile(apksigner);
   return apksigner;
-}
-
-function normalizeEvidence(value) {
-  return value.replace(/^\uFEFF/, "").replaceAll("\r\n", "\n").trim();
 }
 
 async function requireNonEmpty(relativePath) {
