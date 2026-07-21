@@ -47,6 +47,28 @@ test("public web/API wrapper returns oversized-body errors without exiting", asy
   }
 });
 
+test("public web/API wrapper sets restrictive browser security headers", async () => {
+  const server = await startPublicServer();
+  const expected = {
+    "content-security-policy": "default-src 'self'; base-uri 'none'; connect-src 'self' https:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self'",
+    "strict-transport-security": "max-age=31536000",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "no-referrer",
+    "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), clipboard-read=(), clipboard-write=(self)",
+  };
+
+  try {
+    for (const [path, status] of [["/", 200], ["/app.js", 200], ["/styles.css", 200], ["/healthz", 200], ["/api/auth/sessions", 401]]) {
+      const response = await rawRequest(server.base, path, undefined, {});
+      assert.equal(response.status, status, path);
+      for (const [header, value] of Object.entries(expected)) assert.equal(response.headers[header], value, `${path} ${header}`);
+    }
+  } finally {
+    await server.stop();
+  }
+});
+
 async function startPublicServer(environment = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), "gvault-public-abuse-controls-"));
   const port = await reservePort();
@@ -96,10 +118,17 @@ function rawRequest(base, path, body, headers) {
       let responseBody = "";
       res.setEncoding("utf8");
       res.on("data", (chunk) => { responseBody += chunk; });
-      res.once("end", () => resolve({
-        status: res.statusCode,
-        body: responseBody ? JSON.parse(responseBody) : null,
-      }));
+      res.once("end", () => {
+        try {
+          resolve({
+            status: res.statusCode,
+            headers: res.headers,
+            body: responseBody && res.headers["content-type"]?.includes("application/json") ? JSON.parse(responseBody) : responseBody || null,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
     });
     req.once("error", reject);
     if (body !== undefined) req.end(body);

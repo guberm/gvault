@@ -571,7 +571,7 @@ Evidence report: [`docs/repository-audit-2026-07-17.md`](./repository-audit-2026
 - [x] #488 Android canonical `VaultItem` contract. — https://github.com/guberm/gvault/issues/488 — live device-created record accepted by shared validator
 - [x] #489 Lookalike-domain URL matching. — https://github.com/guberm/gvault/issues/489 — v0.1.15 exact/dot-boundary matcher with focused core and real Chrome extension compatibility acceptance
 - [x] #490 JSON-store durability and concurrency. — https://github.com/guberm/gvault/issues/490 — v0.1.16 schema validation, cross-process serialization, atomic fsync/rollback recovery, multi-process tests, and operator runbook
-- [ ] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491
+- [x] #491 Production CSP and security headers. — https://github.com/guberm/gvault/issues/491 — v0.1.17 restrictive shared public-response policy with static/API tests and live Chromium acceptance
 - [ ] #492 Mandatory CI and cross-browser gates. — https://github.com/guberm/gvault/issues/492
 - [ ] #493 Cross-client KDF metadata drift. — https://github.com/guberm/gvault/issues/493
 - [ ] #494 Revision-first sync merge. — https://github.com/guberm/gvault/issues/494

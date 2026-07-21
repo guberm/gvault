@@ -36,6 +36,16 @@ reach the server; every successful reset rotates the key. See
 enumeration resistance, recovery-specific rate limits, audit boundary, and
 cross-client reuse contract.
 
+## Browser response hardening
+
+The built-in public Web/API wrapper applies the same policy to HTML, static
+assets, health, and API responses: a self-only script/style baseline, disabled
+framing and plugins, one-year HSTS, MIME-sniff prevention, no referrers, and a
+least-privilege Permissions-Policy. HTTPS API connections remain permitted so a
+user can configure a separate self-hosted server URL; clipboard write remains
+available to the same origin for password and TOTP copy actions. Uploaded QR
+images use `BarcodeDetector` and do not request camera access.
+
 ## Not yet production complete
 
 - Native secure storage and biometric unlock.
@@ -46,7 +56,6 @@ cross-client reuse contract.
   multi-instance abuse coordination; the implemented fixed-window account/source
   buckets are process-local.
 - Versioned cross-client KDF metadata and migration (#493).
-- Production CSP and security headers (#491).
 
 The repository-wide security/correctness disposition is recorded in
 [`docs/repository-audit-2026-07-17.md`](../repository-audit-2026-07-17.md).
