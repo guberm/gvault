@@ -7,6 +7,7 @@ const root = process.cwd();
 const webDir = join(root, "apps", "web", "dist");
 const host = process.env.GV_PUBLIC_HOST ?? "127.0.0.1";
 const port = Number(process.env.GV_PUBLIC_PORT ?? "55174");
+const htmlCacheControl = "public, max-age=0, must-revalidate, no-transform";
 const securityHeaders = {
   "content-security-policy": "default-src 'self'; base-uri 'none'; connect-src 'self' https:; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self'",
   "strict-transport-security": "max-age=31536000",
@@ -42,11 +43,14 @@ createServer(async (req, res) => {
   try {
     const filePath = safeWebPath(url.pathname);
     const body = await readFile(filePath);
-    res.writeHead(200, { "content-type": contentType(filePath) });
+    const type = contentType(filePath);
+    if (extname(filePath).toLowerCase() === ".html") res.setHeader("cache-control", htmlCacheControl);
+    res.writeHead(200, { "content-type": type });
     res.end(body);
   } catch {
     const fallback = join(webDir, "index.html");
     const body = await readFile(fallback);
+    res.setHeader("cache-control", htmlCacheControl);
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     res.end(body);
   }

@@ -69,6 +69,25 @@ test("public web/API wrapper sets restrictive browser security headers", async (
   }
 });
 
+test("public web/API wrapper prevents HTML transformation without publicly caching APIs", async () => {
+  const server = await startPublicServer();
+
+  try {
+    for (const path of ["/", "/settings"]) {
+      const response = await rawRequest(server.base, path, undefined, {});
+      assert.equal(response.status, 200, path);
+      assert.equal(response.headers["cache-control"], "public, max-age=0, must-revalidate, no-transform", path);
+    }
+
+    for (const path of ["/app.js", "/styles.css", "/healthz", "/api/auth/sessions"]) {
+      const response = await rawRequest(server.base, path, undefined, {});
+      assert.equal(response.headers["cache-control"]?.includes("public") ?? false, false, path);
+    }
+  } finally {
+    await server.stop();
+  }
+});
+
 async function startPublicServer(environment = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), "gvault-public-abuse-controls-"));
   const port = await reservePort();
