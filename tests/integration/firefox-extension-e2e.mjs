@@ -10,7 +10,6 @@ import { join, resolve } from "node:path";
 const root = resolve(".");
 const firefoxExtensionPath = join(root, "apps/browser-extension/dist/firefox");
 const extensionId = "extension@gvault.local";
-const extensionUuid = "00000000-0000-4000-8000-00000000a482";
 
 test("Firefox packaged extension loads and autofills a matching login", { skip: !firefoxExecutable() && "Mozilla Firefox executable not found" }, async () => {
   assert.ok(existsSync(firefoxExtensionPath), "Firefox extension build exists");
@@ -37,7 +36,6 @@ test("Firefox packaged extension loads and autofills a matching login", { skip: 
             binary: firefoxExecutable(),
             args: ["-headless"],
             prefs: {
-              "extensions.webextensions.uuids": JSON.stringify({ [extensionId]: extensionUuid }),
               "network.proxy.type": 0,
               "xpinstall.signatures.required": false
             }
@@ -52,8 +50,9 @@ test("Firefox packaged extension loads and autofills a matching login", { skip: 
     assert.equal(installedId, extensionId, "packaged Firefox extension installed as a temporary add-on");
 
     await webdriver(driverPort, `/session/${sessionId}/moz/context`, { context: "chrome" });
-    await webdriver(driverPort, `/session/${sessionId}/url`, { url: `moz-extension://${extensionUuid}/options.html` });
+    const extensionBaseUrl = await execute(driverPort, sessionId, `return WebExtensionPolicy.getByID(${JSON.stringify(extensionId)}).getURL("");`);
     await webdriver(driverPort, `/session/${sessionId}/moz/context`, { context: "content" });
+    await webdriver(driverPort, `/session/${sessionId}/url`, { url: `${extensionBaseUrl}options.html` });
     const loadedName = await execute(driverPort, sessionId, "return chrome.runtime.getManifest().name;");
     assert.equal(loadedName, "GVault for Firefox", "real Firefox loaded the packaged extension runtime");
 
