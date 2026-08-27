@@ -260,6 +260,29 @@ backup/restore runbook; those checklist items remain open.
 
 ## Reverse proxy
 
-See `infra/reverse-proxy/nginx.conf`. Its 1 MiB ingress limit matches the server
-default; keep the proxy and `GV_JSON_BODY_LIMIT_BYTES` settings aligned if either
-is changed.
+The production Cloudflare Tunnel route is versioned as the non-secret template
+`infra/reverse-proxy/cloudflared-gvault.yml.example`. Copy it to a protected
+runtime file, replace both placeholders, and point the managed service at that
+exact file:
+
+```sh
+install -d -m 700 "$HOME/.cloudflared"
+install -m 600 infra/reverse-proxy/cloudflared-gvault.yml.example "$HOME/.cloudflared/gvault.yml"
+# Replace REPLACE_WITH_TUNNEL_UUID and REPLACE_WITH_USER locally. Do not commit credentials.
+cloudflared --config "$HOME/.cloudflared/gvault.yml" tunnel ingress validate
+cloudflared --config "$HOME/.cloudflared/gvault.yml" tunnel ingress rule https://gvault.guber.dev/healthz
+```
+
+The managed unit must run `cloudflared --config
+$HOME/.cloudflared/gvault.yml tunnel run`. The final `http_status:404` rule keeps
+unlisted hostnames closed. Production keeps `GV_TRUST_PROXY=false` because the
+current tunnel preserves client-supplied `X-Forwarded-For` values.
+
+Production verification on 2026-08-27 confirmed the route file is mode `0600`,
+the user service is enabled with linger, `cloudflared tunnel ingress validate`
+returns `OK`, and `https://gvault.guber.dev/healthz` matches the managed loopback
+listener at `http://127.0.0.1:55174/healthz`.
+
+For direct TLS termination, see `infra/reverse-proxy/nginx.conf`. Its 1 MiB
+ingress limit matches the server default; keep the proxy and
+`GV_JSON_BODY_LIMIT_BYTES` settings aligned if either is changed.

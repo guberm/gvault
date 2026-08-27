@@ -1,3 +1,19 @@
+# GVault 0.1.20
+
+Persistent production-route release.
+
+Changed:
+- the `gvault.guber.dev` Cloudflare Tunnel ingress route is versioned as a non-secret deployment template;
+- the deployment runbook defines its protected runtime path, placeholder handling, validation commands, managed-service contract, and deny-by-default fallback;
+- the packaged Firefox smoke uses the browser UI context required by current Firefox/Geckodriver for extension-internal navigation;
+- issue #40, the parity checklist, and the generated issue index now reflect the verified file-backed route.
+
+Validation:
+- strict RED/GREEN coverage for the versioned route, loopback origin, fallback rule, and absence of a production tunnel UUID;
+- the packaged Firefox extension loads and autofills through its real current runtime;
+- production route validation, managed-service restart, and matching local/public health acceptance;
+- full repository gate, independent Reviewer approval, protected-branch CI, and exact-commit deployment.
+
 # GVault 0.1.19
 
 Mandatory CI and platform-gate release.
