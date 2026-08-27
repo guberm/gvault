@@ -29,7 +29,7 @@ This is a working snapshot, not a final product claim.
 | Browser extension | Manual/session fill, generator, domain rules, and save/update prompts exist; clean install now defaults to `https://gvault.guber.dev` | Needs real popup login/register, encrypted vault pull, and server-backed credential suggestions |
 | Windows desktop | Preview client has settings and a server login smoke path | Needs full login/register-first vault list/detail/editor and tray/taskbar UX |
 | Linux desktop/CLI | Stub/preview | Needs decision: CLI or GUI, then real login/register/list/get/create/edit/delete |
-| Deployment | `gvault.guber.dev` runs through managed `gvault-public.service`; controlled restart, production data directory, and local/public health were verified on 2026-07-17 | Still needs reboot/TLS-renewal proof, file-backed route reconciliation, and a complete backup/restore runbook |
+| Deployment | `gvault.guber.dev` runs through managed `gvault-public.service`; the file-backed Cloudflare Tunnel route, controlled restart, production data directory, and local/public health are verified | Still needs reboot/TLS-renewal proof and a complete backup/restore runbook |
 
 ## Non-negotiable product rules
 

@@ -14,7 +14,7 @@ Target public service: `https://gvault.guber.dev`
 
 ## Current verified snapshot
 
-Last updated: 2026-07-18
+Last updated: 2026-08-27
 
 - [x] `gvault.guber.dev` resolves publicly to the intended service endpoint.
 - [x] Web client can open at `https://gvault.guber.dev`.
@@ -36,7 +36,7 @@ Last updated: 2026-07-18
 - [x] `gvault.guber.dev` points to public IP instead of Cloudflare Tunnel-only route.
 - [x] Public HTTPS returns GVault web UI.
 - [x] Public auth/register API works through `https://gvault.guber.dev`.
-- [ ] Persist reverse-proxy route in file-backed Caddy config or equivalent.
+- [x] Persist reverse-proxy route in file-backed Caddy config or equivalent. (#40; versioned non-secret Cloudflare Tunnel template plus validated mode-0600 production route)
 - [x] Run GVault server as a managed service. (#41; `gvault-public.service` verified active on 2026-07-17)
 - [x] Run GVault web/proxy as a managed service. (#42; the managed public service serves API and Web assets)
 - [ ] Remove dependence on ad-hoc SSH tunnels for production availability.
