@@ -51,7 +51,9 @@ test("Firefox packaged extension loads and autofills a matching login", { skip: 
     const installedId = await webdriver(driverPort, `/session/${sessionId}/moz/addon/install`, { path: xpi, temporary: true });
     assert.equal(installedId, extensionId, "packaged Firefox extension installed as a temporary add-on");
 
+    await webdriver(driverPort, `/session/${sessionId}/moz/context`, { context: "chrome" });
     await webdriver(driverPort, `/session/${sessionId}/url`, { url: `moz-extension://${extensionUuid}/options.html` });
+    await webdriver(driverPort, `/session/${sessionId}/moz/context`, { context: "content" });
     const loadedName = await execute(driverPort, sessionId, "return chrome.runtime.getManifest().name;");
     assert.equal(loadedName, "GVault for Firefox", "real Firefox loaded the packaged extension runtime");
 
@@ -108,7 +110,7 @@ async function buildXpi(artifactsDir) {
 }
 
 function startGeckoDriver(port) {
-  const { command, args } = npxCommand(["--yes", "geckodriver", "--port", String(port)]);
+  const { command, args } = npxCommand(["--yes", "geckodriver", "--allow-system-access", "--port", String(port)]);
   return spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
 }
 
