@@ -1,3 +1,18 @@
+# GVault 0.1.21
+
+Managed public-route release.
+
+Changed:
+- the production `cloudflared-gvault.service` unit is versioned and runs Cloudflare Tunnel directly from the protected file-backed route;
+- the deployment runbook installs and validates the user unit, enables it with linger, and explicitly excludes SSH forwarding from the availability path;
+- issue #43, the parity checklist, and the generated issue index now reflect the verified managed route.
+
+Validation:
+- strict RED/GREEN coverage for the versioned unit, direct cloudflared command, restart policy, boot target, and absence of SSH/autossh;
+- live process/cgroup evidence that systemd owns the route and no SSH forward targets GVault or port 55174;
+- managed-unit restart plus matching local/public health and v0.1.21 Web markers;
+- full repository gate, independent Reviewer approval, protected-branch CI, and exact-commit deployment.
+
 # GVault 0.1.20
 
 Persistent production-route release.

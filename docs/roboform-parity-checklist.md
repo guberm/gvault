@@ -39,7 +39,7 @@ Last updated: 2026-08-27
 - [x] Persist reverse-proxy route in file-backed Caddy config or equivalent. (#40; versioned non-secret Cloudflare Tunnel template plus validated mode-0600 production route)
 - [x] Run GVault server as a managed service. (#41; `gvault-public.service` verified active on 2026-07-17)
 - [x] Run GVault web/proxy as a managed service. (#42; the managed public service serves API and Web assets)
-- [ ] Remove dependence on ad-hoc SSH tunnels for production availability.
+- [x] Remove dependence on ad-hoc SSH tunnels for production availability. (#43; versioned managed cloudflared unit plus direct systemd-owned production route evidence)
 - [x] Verify service restart survival. (#44; controlled restart followed by local and public health checks)
 - [ ] Verify host reboot survival.
 - [ ] Verify TLS renewal path.

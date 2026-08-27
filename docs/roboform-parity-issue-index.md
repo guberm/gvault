@@ -2,7 +2,7 @@
 
 Generated from `docs/roboform-parity-checklist.md`.
 
-Total unchecked checklist task issues linked here: 274
+Total unchecked checklist task issues linked here: 273
 Missing task issues: 0
 
 Section-level issues: #1–#35. Granular task issues are linked below.
@@ -21,7 +21,7 @@ Parent issue: #1 — https://github.com/guberm/gvault/issues/1
 - [x] #40 Persist reverse-proxy route in file-backed Caddy config or equivalent. — https://github.com/guberm/gvault/issues/40
 - [x] #41 Run GVault server as a managed service. — https://github.com/guberm/gvault/issues/41
 - [x] #42 Run GVault web/proxy as a managed service. — https://github.com/guberm/gvault/issues/42
-- [ ] #43 Remove dependence on ad-hoc SSH tunnels for production availability. — https://github.com/guberm/gvault/issues/43
+- [x] #43 Remove dependence on ad-hoc SSH tunnels for production availability. — https://github.com/guberm/gvault/issues/43
 - [x] #44 Verify service restart survival. — https://github.com/guberm/gvault/issues/44
 - [ ] #45 Verify host reboot survival. — https://github.com/guberm/gvault/issues/45
 - [ ] #46 Verify TLS renewal path. — https://github.com/guberm/gvault/issues/46

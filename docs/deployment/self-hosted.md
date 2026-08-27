@@ -271,17 +271,31 @@ install -m 600 infra/reverse-proxy/cloudflared-gvault.yml.example "$HOME/.cloudf
 # Replace REPLACE_WITH_TUNNEL_UUID and REPLACE_WITH_USER locally. Do not commit credentials.
 cloudflared --config "$HOME/.cloudflared/gvault.yml" tunnel ingress validate
 cloudflared --config "$HOME/.cloudflared/gvault.yml" tunnel ingress rule https://gvault.guber.dev/healthz
+install -d -m 700 "$HOME/.config/systemd/user"
+install -m 644 infra/systemd/cloudflared-gvault.service "$HOME/.config/systemd/user/cloudflared-gvault.service"
+systemd-analyze --user verify "$HOME/.config/systemd/user/cloudflared-gvault.service"
+systemctl --user daemon-reload
+systemctl --user enable cloudflared-gvault.service
+sudo loginctl enable-linger "$USER"
+test "$(loginctl show-user "$USER" -p Linger --value)" = yes
+systemctl --user restart cloudflared-gvault.service
+systemctl --user is-active --quiet cloudflared-gvault.service
+systemctl --user show cloudflared-gvault.service -p ExecStart --value | grep -F -- "--config $HOME/.cloudflared/gvault.yml tunnel run"
 ```
 
-The managed unit must run `cloudflared --config
-$HOME/.cloudflared/gvault.yml tunnel run`. The final `http_status:404` rule keeps
+The versioned user unit runs `cloudflared` directly from systemd, uses `%h` for
+the account home, and restarts independently of interactive login sessions. It
+does not invoke `ssh` or `autossh`; SSH remains an administration transport, not
+part of the public availability path. The final `http_status:404` rule keeps
 unlisted hostnames closed. Production keeps `GV_TRUST_PROXY=false` because the
 current tunnel preserves client-supplied `X-Forwarded-For` values.
 
 Production verification on 2026-08-27 confirmed the route file is mode `0600`,
-the user service is enabled with linger, `cloudflared tunnel ingress validate`
-returns `OK`, and `https://gvault.guber.dev/healthz` matches the managed loopback
-listener at `http://127.0.0.1:55174/healthz`.
+the user service is enabled with linger, its process is owned by the systemd
+user cgroup, no SSH forwarding process targets GVault or port `55174`,
+`cloudflared tunnel ingress validate` returns `OK`, and
+`https://gvault.guber.dev/healthz` matches the managed loopback listener at
+`http://127.0.0.1:55174/healthz`.
 
 For direct TLS termination, see `infra/reverse-proxy/nginx.conf`. Its 1 MiB
 ingress limit matches the server default; keep the proxy and

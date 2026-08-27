@@ -1,0 +1,14 @@
+[Unit]
+Description=Cloudflare Tunnel for gvault.guber.dev
+After=network-online.target gvault-public.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/env cloudflared --config %h/.cloudflared/gvault.yml tunnel run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
